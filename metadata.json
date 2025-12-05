@@ -1,0 +1,5 @@
+{
+  "name": "MotoTracker - Market Extension",
+  "description": "A comprehensive car marketplace tracker (Otomoto, etc.) simulating a browser extension. Tracks price history, VIN, and specifications with AI-powered data extraction.",
+  "requestFramePermissions": []
+}
