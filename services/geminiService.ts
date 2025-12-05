@@ -1,7 +1,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { CarListing, ListingStatus } from "../types";
+import { CarListing, ListingStatus, GeminiCallHistoryEntry } from "../types";
 import { getGeminiApiKey, recordGeminiCall } from "./settingsService";
 import { normalizeUrl, cleanVin } from "../utils/formatters";
+
+// Unified Gemini API interface
+// All Gemini calls in the application should go through this service
+
+// Helper to format JSON response for display
+const formatJsonResponse = (data: unknown): string => {
+  try {
+    return JSON.stringify(data, null, 2);
+  } catch {
+    return String(data);
+  }
+};
 
 // Generate ID: prefer VIN if available, otherwise use normalized URL hash
 const generateListingId = (vin: string | undefined, normalizedUrl: string): string => {
@@ -10,6 +22,41 @@ const generateListingId = (vin: string | undefined, normalizedUrl: string): stri
     return `vin_${validVin}`;
   }
   return `url_${btoa(normalizedUrl).substring(0, 16)}`;
+};
+
+// Create Gemini AI instance
+const createGeminiClient = async (): Promise<GoogleGenAI> => {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+// Record a successful Gemini call
+const recordSuccess = async (url: string, prompt: string, response: unknown): Promise<void> => {
+  const entry: GeminiCallHistoryEntry = {
+    id: crypto.randomUUID(),
+    url,
+    promptPreview: prompt,
+    response: formatJsonResponse(response),
+    status: 'success',
+    timestamp: new Date().toISOString(),
+  };
+  await recordGeminiCall(entry);
+};
+
+// Record a failed Gemini call
+const recordError = async (url: string, prompt: string, error: string): Promise<void> => {
+  const entry: GeminiCallHistoryEntry = {
+    id: crypto.randomUUID(),
+    url,
+    promptPreview: prompt,
+    error,
+    status: 'error',
+    timestamp: new Date().toISOString(),
+  };
+  await recordGeminiCall(entry);
 };
 
 const parseCarDataWithGemini = async (
@@ -30,13 +77,8 @@ const parseCarDataWithGemini = async (
   if (!pageTitle || typeof pageTitle !== 'string') {
     throw new Error("Page title is missing or invalid");
   }
-  
-  const apiKey = await getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
-  }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = await createGeminiClient();
 
   // Schema for structured output
   const responseSchema = {
@@ -92,15 +134,11 @@ const parseCarDataWithGemini = async (
 
     if (!response.text) throw new Error("No response from AI");
 
-    await recordGeminiCall({
-      id: crypto.randomUUID(),
-      url,
-      promptPreview: prompt,
-      timestamp: new Date().toISOString(),
-    });
-
     const data = JSON.parse(response.text);
     
+    // Record successful call with response
+    await recordSuccess(url, prompt, data);
+
     // Validate the parsed data with specific type checks
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
       throw new Error("AI response is missing or has invalid title");
@@ -146,13 +184,13 @@ const parseCarDataWithGemini = async (
       postedDate: data.postedDate || new Date().toISOString(),
       dateAdded: new Date().toISOString(),
       lastChecked: new Date().toISOString(),
+      lastRefreshStatus: 'success',
     };
 
   } catch (error) {
-    // Log error for debugging in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.error("Gemini Extraction Error:", error);
-    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Record the error
+    await recordError(url, prompt, errorMessage);
     throw error;
   }
 };
@@ -174,12 +212,7 @@ const refreshListingWithGemini = async (
     throw new Error("Page content is empty or invalid");
   }
 
-  const apiKey = await getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = await createGeminiClient();
 
   // Schema for refresh - only need price and status
   const responseSchema = {
@@ -220,14 +253,10 @@ const refreshListingWithGemini = async (
 
     if (!response.text) throw new Error("No response from AI");
 
-    await recordGeminiCall({
-      id: crypto.randomUUID(),
-      url,
-      promptPreview: prompt,
-      timestamp: new Date().toISOString(),
-    });
-
     const data = JSON.parse(response.text);
+
+    // Record successful call with response
+    await recordSuccess(url, prompt, data);
 
     // Determine status
     let status = ListingStatus.ACTIVE;
@@ -244,9 +273,9 @@ const refreshListingWithGemini = async (
     };
 
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error("Gemini Refresh Error:", error);
-    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Record the error
+    await recordError(url, prompt, errorMessage);
     throw error;
   }
 };

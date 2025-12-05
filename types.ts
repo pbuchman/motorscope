@@ -36,6 +36,9 @@ export interface CarListing {
   dateAdded: string;
   lastChecked: string;
   postedDate?: string;
+  // Refresh status tracking
+  lastRefreshStatus?: 'success' | 'error' | 'pending';
+  lastRefreshError?: string;
 }
 
 
@@ -45,11 +48,16 @@ export interface GeminiCallHistoryEntry {
   id: string;
   url: string;
   promptPreview: string;
+  response?: string; // JSON response (formatted)
+  error?: string; // Error message if failed
+  status: 'success' | 'error';
   timestamp: string;
 }
 
 export interface GeminiStats {
   totalCalls: number;
+  successCount: number;
+  errorCount: number;
   history: GeminiCallHistoryEntry[];
 }
 
