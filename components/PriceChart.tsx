@@ -17,7 +17,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ history, currency }) => {
 
   if (data.length < 2) {
     return (
-      <div className="h-40 flex items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-gray-100">
+      <div className="h-48 flex items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-gray-100">
         Not enough data for history chart yet.
       </div>
     );
