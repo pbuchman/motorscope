@@ -12,15 +12,15 @@ export const getListings = async (): Promise<CarListing[]> => {
 
 export const saveListing = async (listing: CarListing): Promise<void> => {
   const listings = await getListings();
-  const normalizedUrl = normalizeUrl(listing.url);
+  const normalizedUrl = normalizeUrl(listing.source.url);
 
   // Find by ID or normalized URL
   const existingIndex = listings.findIndex((l) =>
-    l.id === listing.id || normalizeUrl(l.url) === normalizedUrl
+    l.id === listing.id || normalizeUrl(l.source.url) === normalizedUrl
   );
 
   if (existingIndex >= 0) {
-    // Update existing, preserving history
+    // Update existing, preserving history and timestamps
     const existing = listings[existingIndex];
     
     // Check if price changed during this manual re-save
@@ -34,19 +34,19 @@ export const saveListing = async (listing: CarListing): Promise<void> => {
 
     listings[existingIndex] = { 
       ...listing, 
-      url: normalizedUrl,
       priceHistory: existing.priceHistory,
-      dateAdded: existing.dateAdded,
+      firstSeenAt: existing.firstSeenAt,
       postedDate: existing.postedDate ?? listing.postedDate,
+      lastSeenAt: new Date().toISOString(),
       // Preserve VIN if already set (never overwrite with empty)
-      details: {
-        ...listing.details,
-        vin: existing.details.vin || listing.details.vin
-      }
+      vehicle: {
+        ...listing.vehicle,
+        vin: existing.vehicle.vin || listing.vehicle.vin
+      },
     };
   } else {
-    // Add new with normalized URL
-    listings.push({ ...listing, url: normalizedUrl });
+    // Add new listing
+    listings.push(listing);
   }
   await extensionStorage.set(STORAGE_KEY, listings);
 };
@@ -83,10 +83,10 @@ export const refreshListing = async (
     // Update refresh status
     item.lastRefreshStatus = refreshStatus;
     if (refreshStatus === 'success') {
-      item.lastChecked = new Date().toISOString();
+      item.lastSeenAt = new Date().toISOString();
       item.lastRefreshError = undefined;
     } else {
-      // On error, don't update lastChecked, but store the error
+      // On error, don't update lastSeenAt, but store the error
       item.lastRefreshError = refreshError;
     }
 

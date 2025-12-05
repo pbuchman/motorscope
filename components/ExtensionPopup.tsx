@@ -57,7 +57,7 @@ const ExtensionPopup: React.FC = () => {
   const checkIfSaved = async (url: string) => {
     const normalizedUrl = normalizeUrl(url);
     const listings = await getListings();
-    const existing = listings.find(l => normalizeUrl(l.url) === normalizedUrl);
+    const existing = listings.find(l => normalizeUrl(l.source.url) === normalizedUrl);
     setSavedItem(existing || null);
   };
 
@@ -81,7 +81,7 @@ const ExtensionPopup: React.FC = () => {
       setPreviewData(listingData as CarListing);
 
       // Check if VIN is missing
-      if (!listingData.details?.vin) {
+      if (!listingData.vehicle?.vin) {
         setShowVinWarning(true);
       }
       
@@ -203,25 +203,25 @@ const ExtensionPopup: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex items-center gap-1 text-slate-600">
                   <Car className="w-3 h-3" />
-                  <span>{previewData.details?.make} {previewData.details?.model}</span>
+                  <span>{previewData.vehicle?.make} {previewData.vehicle?.model}</span>
                 </div>
                 <div className="flex items-center gap-1 text-slate-600">
                   <Calendar className="w-3 h-3" />
-                  <span>{previewData.details?.year}</span>
+                  <span>{previewData.vehicle?.productionYear}</span>
                 </div>
                 <div className="flex items-center gap-1 text-slate-600">
                   <Gauge className="w-3 h-3" />
-                  <span>{previewData.details?.mileage?.toLocaleString()} km</span>
+                  <span>{previewData.vehicle?.mileage?.value?.toLocaleString()} {previewData.vehicle?.mileage?.unit || 'km'}</span>
                 </div>
                 <div className="flex items-center gap-1 text-slate-600">
                   <Fuel className="w-3 h-3" />
-                  <span>{previewData.details?.fuelType}</span>
+                  <span>{previewData.vehicle?.engine?.fuelType}</span>
                 </div>
               </div>
 
-              {previewData.details?.vin ? (
+              {previewData.vehicle?.vin ? (
                 <div className="mt-3 bg-green-50 border border-green-200 rounded px-2 py-1">
-                  <span className="text-xs text-green-700 font-mono">VIN: {previewData.details.vin}</span>
+                  <span className="text-xs text-green-700 font-mono">VIN: {previewData.vehicle.vin}</span>
                 </div>
               ) : (
                 <div className="mt-3 bg-amber-50 border border-amber-200 rounded px-2 py-1">
@@ -229,14 +229,19 @@ const ExtensionPopup: React.FC = () => {
                 </div>
               )}
 
-              {previewData.details?.engineCapacity && (
-                <p className="text-xs text-slate-500 mt-2">Engine: {previewData.details.engineCapacity}</p>
+              {previewData.vehicle?.engine?.capacityCc && (
+                <p className="text-xs text-slate-500 mt-2">Engine: {(previewData.vehicle.engine.capacityCc / 1000).toFixed(1)}L</p>
               )}
-              {previewData.details?.transmission && (
-                <p className="text-xs text-slate-500">Transmission: {previewData.details.transmission}</p>
+              {previewData.vehicle?.drivetrain?.transmissionType && (
+                <p className="text-xs text-slate-500">Transmission: {previewData.vehicle.drivetrain.transmissionType}</p>
               )}
-              {previewData.details?.location && (
-                <p className="text-xs text-slate-500">Location: {previewData.details.location}</p>
+              {previewData.location?.city && (
+                <p className="text-xs text-slate-500">Location: {previewData.location.city}{previewData.location.region ? `, ${previewData.location.region}` : ''}</p>
+              )}
+              {previewData.seller?.phone && (
+                <a href={`tel:${previewData.seller.phone}`} className="text-xs text-blue-600 hover:underline">
+                  📞 {previewData.seller.phone}
+                </a>
               )}
             </div>
 
@@ -303,37 +308,43 @@ const ExtensionPopup: React.FC = () => {
                    <div className="grid grid-cols-2 gap-1 text-xs mb-2">
                      <div className="flex items-center gap-1 text-slate-600">
                        <Car className="w-3 h-3" />
-                       <span className="truncate">{savedItem.details?.make} {savedItem.details?.model}</span>
+                       <span className="truncate">{savedItem.vehicle?.make} {savedItem.vehicle?.model}</span>
                      </div>
                      <div className="flex items-center gap-1 text-slate-600">
                        <Calendar className="w-3 h-3" />
-                       <span>{savedItem.details?.year}</span>
+                       <span>{savedItem.vehicle?.productionYear}</span>
                      </div>
                      <div className="flex items-center gap-1 text-slate-600">
                        <Gauge className="w-3 h-3" />
-                       <span>{savedItem.details?.mileage?.toLocaleString()} km</span>
+                       <span>{savedItem.vehicle?.mileage?.value?.toLocaleString()} {savedItem.vehicle?.mileage?.unit || 'km'}</span>
                      </div>
                      <div className="flex items-center gap-1 text-slate-600">
                        <Fuel className="w-3 h-3" />
-                       <span className="truncate">{savedItem.details?.fuelType}</span>
+                       <span className="truncate">{savedItem.vehicle?.engine?.fuelType}</span>
                      </div>
                    </div>
 
-                   {savedItem.details?.vin && (
+                   {savedItem.vehicle?.vin && (
                      <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
-                       <span className="text-[10px] text-green-700 font-mono">VIN: {savedItem.details.vin}</span>
+                       <span className="text-[10px] text-green-700 font-mono">VIN: {savedItem.vehicle.vin}</span>
                      </div>
+                   )}
+
+                   {savedItem.seller?.phone && (
+                     <a href={`tel:${savedItem.seller.phone}`} className="text-[10px] text-blue-600 hover:underline mb-2 block">
+                       📞 {savedItem.seller.phone}
+                     </a>
                    )}
 
                    {/* Tracking Info */}
                    <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
                      <span className="inline-flex items-center gap-1">
                        <Eye className="w-3 h-3" />
-                       Tracked since {formatEuropeanDateTime(savedItem.dateAdded)}
+                       Tracked since {formatEuropeanDateTime(savedItem.firstSeenAt)}
                      </span>
                      <span className="inline-flex items-center gap-1">
                        <RefreshCw className="w-3 h-3" />
-                       Last checked {formatEuropeanDateTime(savedItem.lastChecked)}
+                       Last checked {formatEuropeanDateTime(savedItem.lastSeenAt)}
                      </span>
                    </div>
 

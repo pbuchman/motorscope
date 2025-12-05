@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
 
     try {
       // Fetch the page content
-      const response = await fetch(listing.url, {
+      const response = await fetch(listing.source.url, {
         method: 'GET',
         mode: 'cors',
         credentials: 'omit',
@@ -88,7 +88,7 @@ const Dashboard: React.FC = () => {
         .substring(0, 20000);
 
       // Use Gemini to analyze the page and extract price/status
-      const result = await refreshListingWithGemini(listing.url, textContent, pageTitle);
+      const result = await refreshListingWithGemini(listing.source.url, textContent, pageTitle);
 
       // If Gemini returned a valid price, use it; otherwise keep existing
       const newPrice = result.price > 0 ? result.price : listing.currentPrice;
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
 
   const filteredListings = listings.filter(l => 
     l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    l.details.make.toLowerCase().includes(searchTerm.toLowerCase())
+    (l.vehicle.make || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

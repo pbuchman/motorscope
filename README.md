@@ -9,6 +9,19 @@ MotoTracker is a browser extension that uses Google Gemini AI to scrape, parse, 
 - **Price History**: Visualizes price changes over time for tracked vehicles.
 - **Dashboard**: A centralized view of all your tracked vehicles.
 
+## Data Schema
+
+Car listings are stored using a normalized JSON structure. See the full schema documentation:
+
+📄 **[Car Listing JSON Schema](./docs/car-listing-schema.json)**
+
+### Key data fields extracted:
+- **Vehicle**: VIN, make, model, year, mileage, engine specs, drivetrain, condition
+- **Pricing**: Current price, original price, price history, currency
+- **Origin**: Import country, registration country, seller location
+- **Condition**: Accident-free declaration, service history, new/used status
+- **Seller**: Type (private/dealer), name, company status
+
 ## Prerequisites
 
 1.  **Node.js**: Ensure you have Node.js installed.
