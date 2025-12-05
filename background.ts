@@ -91,6 +91,21 @@ const recordGeminiCall = async (url: string, prompt: string): Promise<void> => {
 
 // ============ Alarm Scheduling ============
 
+// Format time text for notifications
+const formatTimeText = (minutes: number): string => {
+  if (minutes < 1) {
+    return `${Math.round(minutes * 60)} seconds`;
+  } else if (minutes < 60) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  } else if (minutes < 1440) {
+    const hours = Math.round(minutes / 60);
+    return `${hours} hour${hours !== 1 ? 's' : ''}`;
+  } else {
+    const days = Math.round(minutes / 1440);
+    return `${days} day${days !== 1 ? 's' : ''}`;
+  }
+};
+
 // Chrome alarms have a minimum delay of ~1 minute in production
 // For shorter intervals, we still use alarms but with minimum delay
 const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promise<void> => {
@@ -309,15 +324,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
   });
 
   // Show notification when refresh completes
-  const nextRefreshMinutes = settings.checkFrequencyMinutes;
-  let timeText: string;
-  if (nextRefreshMinutes < 60) {
-    timeText = `${nextRefreshMinutes} minutes`;
-  } else if (nextRefreshMinutes < 1440) {
-    timeText = `${Math.round(nextRefreshMinutes / 60)} hours`;
-  } else {
-    timeText = `${Math.round(nextRefreshMinutes / 1440)} days`;
-  }
+  const timeText = formatTimeText(settings.checkFrequencyMinutes);
 
   chrome.notifications.create('refresh-complete', {
     type: 'basic',
@@ -367,6 +374,15 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
       if (typeof newFrequency === 'number' && newFrequency > 0) {
         console.log(`Settings changed, rescheduling alarm for ${newFrequency} minutes`);
         await scheduleAlarm(newFrequency);
+
+        // Show notification about schedule change
+        chrome.notifications.create('settings-changed', {
+          type: 'basic',
+          iconUrl: 'icon.png',
+          title: 'MotoTracker Schedule Updated',
+          message: `Refresh interval changed to ${formatTimeText(newFrequency)}.`,
+          priority: 0,
+        });
       }
     }
   }
