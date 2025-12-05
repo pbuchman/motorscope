@@ -4,8 +4,11 @@ import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefresh
 import { RefreshCw, Clock, Play } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
-// Frequency steps from 5 mins to 1 month (in minutes)
+// Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
 const FREQUENCY_STEPS = [
+  0.167,                       // 10 seconds
+  1,                           // 1 minute (60 seconds)
+  2,                           // 2 minutes (120 seconds)
   5, 10, 15, 30, 45,           // minutes
   60, 120, 180, 240, 360, 480, 720,  // hours (1h to 12h)
   1440, 2880, 4320,            // days (1d, 2d, 3d)
@@ -14,6 +17,10 @@ const FREQUENCY_STEPS = [
 ];
 
 const formatFrequency = (minutes: number): string => {
+  if (minutes < 1) {
+    const seconds = Math.round(minutes * 60);
+    return `${seconds} sec`;
+  }
   if (minutes < 60) return `${minutes} min`;
   if (minutes < 1440) return `${minutes / 60} hour${minutes / 60 > 1 ? 's' : ''}`;
   if (minutes < 10080) return `${minutes / 1440} day${minutes / 1440 > 1 ? 's' : ''}`;
@@ -191,7 +198,7 @@ const SettingsPage: React.FC = () => {
             </span>
           </div>
           <div className="flex justify-between text-xs text-slate-400 mt-1">
-            <span>5 min</span>
+            <span>10 sec</span>
             <span>1 month</span>
           </div>
           <p className="text-xs text-slate-400 mt-1">How often the background worker re-checks tracked listings.</p>
