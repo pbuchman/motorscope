@@ -2,29 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { getListings, saveListing, removeListing } from '../services/storageService';
 import { parseCarDataWithGemini } from '../services/geminiService';
 import { CarListing, PageContentResult } from '../types';
-import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel, Clock, Eye, RefreshCw } from 'lucide-react';
+import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel, Eye, RefreshCw } from 'lucide-react';
 import PriceChart from './PriceChart';
-
-// Format date in European format
-const formatEuropeanDateTime = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-};
-
-// Normalize URL by removing query parameters
-const normalizeUrl = (url: string): string => {
-  try {
-    const urlObj = new URL(url);
-    return `${urlObj.origin}${urlObj.pathname}`;
-  } catch {
-    return url;
-  }
-};
+import { formatEuropeanDateTime, normalizeUrl } from '../utils/formatters';
 
 const ExtensionPopup: React.FC = () => {
   const [currentUrl, setCurrentUrl] = useState<string>('');

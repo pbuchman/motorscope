@@ -1,32 +1,16 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PricePoint } from '../types';
+import { formatEuropeanDateShort, formatEuropeanDateTime } from '../utils/formatters';
 
 interface PriceChartProps {
   history: PricePoint[];
   currency: string;
 }
 
-const formatEuropeanDate = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  return `${day}/${month}`;
-};
-
-const formatEuropeanDateTime = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-};
-
 const PriceChart: React.FC<PriceChartProps> = ({ history, currency }) => {
   const data = history.map(h => ({
-    date: formatEuropeanDate(h.date),
+    date: formatEuropeanDateShort(h.date),
     price: h.price,
     fullDate: formatEuropeanDateTime(h.date),
   }));

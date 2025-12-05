@@ -1,32 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CarListing, ListingStatus } from "../types";
 import { getGeminiApiKey, recordGeminiCall } from "./settingsService";
-
-// Normalize URL by removing query parameters
-const normalizeUrl = (url: string): string => {
-  try {
-    const urlObj = new URL(url);
-    return `${urlObj.origin}${urlObj.pathname}`;
-  } catch {
-    return url;
-  }
-};
-
-// Validate VIN number - must be exactly 17 alphanumeric characters (excluding I, O, Q)
-const isValidVin = (vin: string | undefined | null): boolean => {
-  if (!vin || typeof vin !== 'string') return false;
-  const cleaned = vin.trim().toUpperCase();
-  // VIN must be exactly 17 characters, alphanumeric, no I, O, Q
-  const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
-  return vinRegex.test(cleaned);
-};
-
-// Clean and validate VIN - returns valid VIN or undefined
-const cleanVin = (vin: string | undefined | null): string | undefined => {
-  if (!vin || typeof vin !== 'string') return undefined;
-  const cleaned = vin.trim().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
-  return isValidVin(cleaned) ? cleaned : undefined;
-};
+import { normalizeUrl, cleanVin } from "../utils/formatters";
 
 // Generate ID: prefer VIN if available, otherwise use normalized URL hash
 const generateListingId = (vin: string | undefined, normalizedUrl: string): string => {

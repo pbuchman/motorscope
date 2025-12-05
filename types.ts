@@ -38,7 +38,6 @@ export interface CarListing {
   postedDate?: string;
 }
 
-export type ViewMode = 'DASHBOARD' | 'POPUP';
 
 export type AppView = 'dashboard' | 'popup' | 'settings';
 
