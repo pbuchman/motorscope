@@ -41,26 +41,26 @@ const createGeminiClient = async (): Promise<GoogleGenAI> => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Record a successful Gemini call
-const recordSuccess = async (url: string, prompt: string, response: unknown): Promise<void> => {
+// Record a successful Gemini call with full raw response
+const recordSuccess = async (url: string, prompt: string, rawResponse: unknown): Promise<void> => {
   const entry: GeminiCallHistoryEntry = {
     id: crypto.randomUUID(),
     url,
     promptPreview: prompt,
-    response: formatJsonResponse(response),
+    rawResponse: formatJsonResponse(rawResponse),
     status: 'success',
     timestamp: new Date().toISOString(),
   };
   await recordGeminiCall(entry);
 };
 
-// Record a failed Gemini call
-const recordError = async (url: string, prompt: string, error: string): Promise<void> => {
+// Record a failed Gemini call with full error response
+const recordError = async (url: string, prompt: string, errorResponse: string): Promise<void> => {
   const entry: GeminiCallHistoryEntry = {
     id: crypto.randomUUID(),
     url,
     promptPreview: prompt,
-    error,
+    error: errorResponse,
     status: 'error',
     timestamp: new Date().toISOString(),
   };
@@ -144,8 +144,18 @@ const parseCarDataWithGemini = async (
 
     const data = JSON.parse(response.text);
     
-    // Record successful call with response
-    await recordSuccess(url, prompt, data);
+    // Build full response object for logging (similar to REST API structure)
+    const fullResponse = {
+      text: response.text,
+      parsedData: data,
+      // @ts-ignore - SDK may expose these properties
+      usageMetadata: response.usageMetadata || null,
+      // @ts-ignore
+      modelVersion: response.modelVersion || "gemini-2.5-flash",
+    };
+
+    // Record successful call with full response
+    await recordSuccess(url, prompt, fullResponse);
 
     // Validate the parsed data with specific type checks
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
@@ -263,8 +273,18 @@ const refreshListingWithGemini = async (
 
     const data = JSON.parse(response.text);
 
-    // Record successful call with response
-    await recordSuccess(url, prompt, data);
+    // Build full response object for logging (similar to REST API structure)
+    const fullResponse = {
+      text: response.text,
+      parsedData: data,
+      // @ts-ignore - SDK may expose these properties
+      usageMetadata: response.usageMetadata || null,
+      // @ts-ignore
+      modelVersion: response.modelVersion || "gemini-2.5-flash",
+    };
+
+    // Record successful call with full response
+    await recordSuccess(url, prompt, fullResponse);
 
     // Determine status
     let status = ListingStatus.ACTIVE;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats, RefreshStatus } from '../types';
-import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS } from '../services/settingsService';
-import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle } from 'lucide-react';
+import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS, clearGeminiLogs } from '../services/settingsService';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2 } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
@@ -31,7 +31,7 @@ const formatFrequency = (minutes: number): string => {
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
-  const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
+  const [stats, setStats] = useState<GeminiStats>({ allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus>(DEFAULT_REFRESH_STATUS);
   const [countdown, setCountdown] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -189,28 +189,30 @@ const SettingsPage: React.FC = () => {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Check Frequency</label>
           <div className="flex items-center gap-4">
-            <input
-              type="range"
-              min={0}
-              max={FREQUENCY_STEPS.length - 1}
-              value={FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes) !== -1
-                ? FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes)
-                : FREQUENCY_STEPS.findIndex(s => s >= settings.checkFrequencyMinutes) || 0}
-              onChange={(e) => {
-                const stepIndex = parseInt(e.target.value, 10);
-                setSettings((prev) => ({ ...prev, checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex] }));
-              }}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <span className="w-24 text-sm font-medium text-slate-700 text-right">
+            <div className="flex-1">
+              <input
+                type="range"
+                min={0}
+                max={FREQUENCY_STEPS.length - 1}
+                value={FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes) !== -1
+                  ? FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes)
+                  : FREQUENCY_STEPS.findIndex(s => s >= settings.checkFrequencyMinutes) || 0}
+                onChange={(e) => {
+                  const stepIndex = parseInt(e.target.value, 10);
+                  setSettings((prev) => ({ ...prev, checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex] }));
+                }}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-slate-400 mt-1">
+                <span>10 sec</span>
+                <span>1 month</span>
+              </div>
+            </div>
+            <span className="w-20 text-sm font-medium text-slate-700 text-center bg-slate-100 px-2 py-1 rounded">
               {formatFrequency(settings.checkFrequencyMinutes)}
             </span>
           </div>
-          <div className="flex justify-between text-xs text-slate-400 mt-1">
-            <span>10 sec</span>
-            <span>1 month</span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">How often the background worker re-checks tracked listings.</p>
+          <p className="text-xs text-slate-400 mt-2">How often the background worker re-checks tracked listings.</p>
         </div>
 
         <button
@@ -363,7 +365,11 @@ const SettingsPage: React.FC = () => {
         </div>
       </section>
 
-      <GeminiUsageSection stats={stats} refreshing={refreshing} onRefresh={refreshStats} />
+      <GeminiUsageSection stats={stats} refreshing={refreshing} onRefresh={refreshStats} onClearLogs={async () => {
+        await clearGeminiLogs();
+        const latestStats = await getGeminiStats();
+        setStats(latestStats);
+      }} />
     </div>
   );
 };
@@ -373,11 +379,13 @@ interface GeminiUsageSectionProps {
   stats: GeminiStats;
   refreshing: boolean;
   onRefresh: () => void;
+  onClearLogs: () => void;
 }
 
-const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshing, onRefresh }) => {
+const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshing, onRefresh, onClearLogs }) => {
   const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [clearing, setClearing] = useState(false);
 
   const filteredHistory = stats.history.filter(entry => {
     if (filter === 'all') return true;
@@ -401,8 +409,11 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
     <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900">Gemini Usage</h2>
-        <div className="flex items-center gap-3 text-sm text-slate-500">
-          <span>Total: {stats.totalCalls}</span>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="text-slate-400" title="All-time total (never resets)">
+            All-time: {stats.allTimeTotalCalls || 0}
+          </span>
+          <span className="text-slate-500">Session: {stats.totalCalls}</span>
           <span className="text-green-600">✓ {stats.successCount || 0}</span>
           <span className="text-red-600">✗ {stats.errorCount || 0}</span>
           <button
@@ -410,8 +421,24 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
             onClick={onRefresh}
             disabled={refreshing}
             className="flex items-center gap-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
+            title="Refresh stats"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (confirm('Clear all Gemini logs and reset session counts? All-time total will be preserved.')) {
+                setClearing(true);
+                await onClearLogs();
+                setClearing(false);
+              }
+            }}
+            disabled={clearing || stats.history.length === 0}
+            className="flex items-center gap-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+            title="Clear logs (preserves all-time total)"
+          >
+            <Trash2 className={`w-4 h-4 ${clearing ? 'animate-pulse' : ''}`} />
           </button>
         </div>
       </div>
@@ -496,8 +523,8 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
                 )}
               </div>
 
-              {/* Response/Error section */}
-              {entry.response && (
+              {/* Response section (success) */}
+              {entry.rawResponse && (
                 <div>
                   <button
                     type="button"
@@ -507,18 +534,35 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
                     {expandedIds.has(`${entry.id}-response`) ? '▼' : '▶'} Response (JSON)
                   </button>
                   {expandedIds.has(`${entry.id}-response`) && (
-                    <pre className="text-xs text-green-700 mt-2 bg-green-50 p-3 rounded font-mono whitespace-pre-wrap max-h-64 overflow-y-auto border border-green-200">
-                      {entry.response}
+                    <pre className="text-xs text-green-700 mt-2 bg-green-50 p-3 rounded font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border border-green-200">
+                      {entry.rawResponse}
                     </pre>
                   )}
                 </div>
               )}
+              {/* Error section */}
               {entry.error && (
-                <div className="mt-2">
-                  <p className="text-xs text-red-600 font-medium">Error:</p>
-                  <pre className="text-xs text-red-600 mt-1 bg-red-50 p-2 rounded font-mono whitespace-pre-wrap border border-red-200">
-                    {entry.error}
-                  </pre>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(entry.id, 'response')}
+                    className="text-xs text-red-600 cursor-pointer hover:text-red-700"
+                  >
+                    {expandedIds.has(`${entry.id}-response`) ? '▼' : '▶'} Error Response
+                  </button>
+                  {expandedIds.has(`${entry.id}-response`) && (
+                    <pre className="text-xs text-red-600 mt-2 bg-red-50 p-3 rounded font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border border-red-200">
+                      {(() => {
+                        // Try to parse and format as JSON if possible
+                        try {
+                          const parsed = JSON.parse(entry.error);
+                          return JSON.stringify(parsed, null, 2);
+                        } catch {
+                          return entry.error;
+                        }
+                      })()}
+                    </pre>
+                  )}
                 </div>
               )}
             </article>

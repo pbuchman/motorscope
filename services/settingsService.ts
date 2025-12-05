@@ -47,13 +47,14 @@ export const saveSettings = async (settings: ExtensionSettings): Promise<void> =
 
 export const getGeminiStats = async (): Promise<GeminiStats> => {
   const stats = await extensionStorage.get<GeminiStats>(STORAGE_KEYS.geminiStats);
-  return stats || { totalCalls: 0, successCount: 0, errorCount: 0, history: [] };
+  return stats || { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] };
 };
 
 export const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<void> => {
   const stats = await getGeminiStats();
   const history = [entry, ...stats.history].slice(0, 200);
   await extensionStorage.set(STORAGE_KEYS.geminiStats, {
+    allTimeTotalCalls: (stats.allTimeTotalCalls || 0) + 1,
     totalCalls: stats.totalCalls + 1,
     successCount: entry.status === 'success' ? stats.successCount + 1 : stats.successCount,
     errorCount: entry.status === 'error' ? stats.errorCount + 1 : stats.errorCount,
@@ -61,8 +62,21 @@ export const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<v
   });
 };
 
+// Clear logs and session counts, but preserve allTimeTotalCalls
+export const clearGeminiLogs = async (): Promise<void> => {
+  const stats = await getGeminiStats();
+  await extensionStorage.set(STORAGE_KEYS.geminiStats, {
+    allTimeTotalCalls: stats.allTimeTotalCalls || 0,
+    totalCalls: 0,
+    successCount: 0,
+    errorCount: 0,
+    history: []
+  });
+};
+
+// Full reset (only used for testing/admin)
 export const resetGeminiStats = async (): Promise<void> => {
-  await extensionStorage.set(STORAGE_KEYS.geminiStats, { totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
+  await extensionStorage.set(STORAGE_KEYS.geminiStats, { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
 };
 
 export const DEFAULT_REFRESH_STATUS: RefreshStatus = {
