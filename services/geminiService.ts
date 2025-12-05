@@ -6,6 +6,14 @@ import { normalizeUrl, cleanVin } from "../utils/formatters";
 // Unified Gemini API interface
 // All Gemini calls in the application should go through this service
 
+// Error class for rate limiting - exported for use in background.ts
+export class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
+
 // Helper to format JSON response for display
 const formatJsonResponse = (data: unknown): string => {
   try {
@@ -274,8 +282,20 @@ const refreshListingWithGemini = async (
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Detect rate limiting from error message (Google AI SDK includes status codes in error messages)
+    const isRateLimited = errorMessage.includes('429') ||
+                          errorMessage.toLowerCase().includes('rate limit') ||
+                          errorMessage.toLowerCase().includes('quota exceeded') ||
+                          errorMessage.toLowerCase().includes('resource exhausted');
+
     // Record the error
     await recordError(url, prompt, errorMessage);
+
+    // Throw RateLimitError for rate limiting, regular error otherwise
+    if (isRateLimited) {
+      throw new RateLimitError(errorMessage);
+    }
     throw error;
   }
 };
