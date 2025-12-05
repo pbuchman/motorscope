@@ -8,6 +8,14 @@ interface CarCardProps {
   onRemove: (id: string) => void;
 }
 
+const formatEuropeanDate = (date: string | number): string => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
   // Compare current price with the previous price (if exists)
   // Ensure priceHistory has at least one entry before accessing
@@ -68,7 +76,7 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
           {listing.postedDate && (
             <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
               <Clock className="w-3 h-3 mr-1" />
-              Posted {new Date(listing.postedDate).toLocaleDateString()}
+              Posted {formatEuropeanDate(listing.postedDate)}
             </span>
           )}
           {listing.details.vin && (

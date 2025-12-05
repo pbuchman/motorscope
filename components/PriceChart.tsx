@@ -7,11 +7,28 @@ interface PriceChartProps {
   currency: string;
 }
 
+const formatEuropeanDate = (date: string | number): string => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  return `${day}/${month}`;
+};
+
+const formatEuropeanDateTime = (date: string | number): string => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
 const PriceChart: React.FC<PriceChartProps> = ({ history, currency }) => {
   const data = history.map(h => ({
-    date: new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatEuropeanDate(h.date),
     price: h.price,
-    fullDate: new Date(h.date).toLocaleString(),
+    fullDate: formatEuropeanDateTime(h.date),
   }));
 
   if (data.length < 2) {
