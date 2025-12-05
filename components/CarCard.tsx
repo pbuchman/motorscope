@@ -1,22 +1,26 @@
 import React from 'react';
 import { CarListing, ListingStatus } from '../types';
 import PriceChart from './PriceChart';
-import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock } from 'lucide-react';
+import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2 } from 'lucide-react';
 
 interface CarCardProps {
   listing: CarListing;
   onRemove: (id: string) => void;
+  onRefresh: (listing: CarListing) => void;
+  isRefreshing: boolean;
 }
 
-const formatEuropeanDate = (date: string | number): string => {
+const formatEuropeanDateTime = (date: string | number): string => {
   const d = new Date(date);
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
   const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
-const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
+const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefreshing }) => {
   // Compare current price with the previous price (if exists)
   // Ensure priceHistory has at least one entry before accessing
   const hasPriceHistory = listing.priceHistory && listing.priceHistory.length > 0;
@@ -27,7 +31,15 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
   const isHigherPrice = hasPriceHistory && listing.priceHistory.length > 1 && listing.currentPrice > previousPrice;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 relative">
+      {/* Loading Overlay */}
+      {isRefreshing && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+          <p className="text-sm font-medium text-slate-600">Refreshing...</p>
+        </div>
+      )}
+
       {/* Header Image & Status */}
       <div className="relative h-48 bg-gray-100">
         <img 
@@ -76,7 +88,7 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
           {listing.postedDate && (
             <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
               <Clock className="w-3 h-3 mr-1" />
-              Posted {formatEuropeanDate(listing.postedDate)}
+              Posted {formatEuropeanDateTime(listing.postedDate)}
             </span>
           )}
           {listing.details.vin && (
@@ -89,6 +101,18 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
                {listing.details.engineCapacity}
              </span>
           )}
+        </div>
+
+        {/* Tracking Info */}
+        <div className="flex flex-wrap gap-2 mb-4 text-[10px] text-slate-400">
+          <span className="inline-flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            Tracked since {formatEuropeanDateTime(listing.dateAdded)}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" />
+            Last checked {formatEuropeanDateTime(listing.lastChecked)}
+          </span>
         </div>
 
         {/* Chart */}
@@ -107,13 +131,23 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
           >
             Open Listing <ExternalLink className="w-3.5 h-3.5" />
           </a>
-          <button 
-            onClick={() => onRemove(listing.id)}
-            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-            title="Stop Tracking"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onRefresh(listing)}
+              disabled={isRefreshing}
+              className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors disabled:opacity-50"
+              title="Refresh listing"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => onRemove(listing.id)}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="Stop Tracking"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

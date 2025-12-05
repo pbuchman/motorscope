@@ -2,6 +2,24 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { CarListing, ListingStatus } from "../types";
 import { getGeminiApiKey, recordGeminiCall } from "./settingsService";
 
+// Normalize URL by removing query parameters
+const normalizeUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.origin}${urlObj.pathname}`;
+  } catch {
+    return url;
+  }
+};
+
+// Generate ID: prefer VIN if available, otherwise use normalized URL hash
+const generateListingId = (vin: string | undefined, normalizedUrl: string): string => {
+  if (vin && vin.trim().length > 0) {
+    return `vin_${vin.trim().toUpperCase()}`;
+  }
+  return `url_${btoa(normalizedUrl).substring(0, 16)}`;
+};
+
 const parseCarDataWithGemini = async (
   url: string,
   pageText: string,
@@ -85,7 +103,7 @@ const parseCarDataWithGemini = async (
     await recordGeminiCall({
       id: crypto.randomUUID(),
       url,
-      promptPreview: prompt.substring(0, 2000),
+      promptPreview: prompt,
       timestamp: new Date().toISOString(),
     });
 
@@ -105,12 +123,15 @@ const parseCarDataWithGemini = async (
       throw new Error("AI response is missing or has invalid details");
     }
 
-    // Generate a consistent ID from the URL (simple hash replacement)
-    const id = btoa(url).substring(0, 12);
+    // Normalize the URL (remove query params)
+    const normalizedUrl = normalizeUrl(url);
+
+    // Generate ID: prefer VIN if available
+    const id = generateListingId(data.details?.vin, normalizedUrl);
 
     return {
       id,
-      url,
+      url: normalizedUrl,
       title: data.title || pageTitle,
       thumbnailUrl: scrapedImageUrl || "https://placehold.co/600x400?text=No+Image",
       currentPrice: data.price,

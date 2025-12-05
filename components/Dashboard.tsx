@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { CarListing } from '../types';
-import { getListings, removeListing } from '../services/storageService';
+import { CarListing, ListingStatus } from '../types';
+import { getListings, removeListing, refreshListing } from '../services/storageService';
 import CarCard from './CarCard';
-import { Search, Car, CalendarDays } from 'lucide-react';
+import { Search, Car } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
 
   const loadData = async () => {
     const data = await getListings();
@@ -41,6 +42,72 @@ const Dashboard: React.FC = () => {
     if (confirm('Are you sure you want to stop tracking this car?')) {
       await removeListing(id);
       await loadData();
+    }
+  };
+
+  const handleRefresh = async (listing: CarListing) => {
+    // Add to refreshing set
+    setRefreshingIds(prev => new Set(prev).add(listing.id));
+
+    try {
+      // Fetch the page content
+      const response = await fetch(listing.url);
+
+      if (!response.ok) {
+        // Page is gone - mark as expired
+        await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED);
+        await loadData();
+        return;
+      }
+
+      const html = await response.text();
+
+      // Extract price from HTML using simple regex patterns
+      // This is a simplified approach - in production you'd want more robust parsing
+      let newPrice = listing.currentPrice;
+      let newStatus = ListingStatus.ACTIVE;
+
+      // Check if page indicates sold/expired
+      const lowerHtml = html.toLowerCase();
+      if (lowerHtml.includes('sprzedane') || lowerHtml.includes('sold') ||
+          lowerHtml.includes('niedostępne') || lowerHtml.includes('unavailable') ||
+          lowerHtml.includes('usunięte') || lowerHtml.includes('removed')) {
+        newStatus = ListingStatus.SOLD;
+      }
+
+      // Try to extract price - common patterns
+      const pricePatterns = [
+        /(\d{1,3}(?:[\s,]\d{3})*)\s*(?:PLN|zł|EUR|€)/gi,
+        /(?:price|cena)[^\d]*(\d{1,3}(?:[\s,]\d{3})*)/gi,
+      ];
+
+      for (const pattern of pricePatterns) {
+        const match = pattern.exec(html);
+        if (match) {
+          const priceStr = match[1].replace(/[\s,]/g, '');
+          const parsed = parseInt(priceStr, 10);
+          if (parsed > 0 && parsed < 100000000) { // Sanity check
+            newPrice = parsed;
+            break;
+          }
+        }
+      }
+
+      await refreshListing(listing.id, newPrice, listing.currency, newStatus);
+      await loadData();
+
+    } catch (error) {
+      // Network error or CORS - mark as potentially expired
+      console.error('Refresh failed:', error);
+      await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED);
+      await loadData();
+    } finally {
+      // Remove from refreshing set
+      setRefreshingIds(prev => {
+        const next = new Set(prev);
+        next.delete(listing.id);
+        return next;
+      });
     }
   };
 
@@ -85,7 +152,13 @@ const Dashboard: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredListings.map(listing => (
-            <CarCard key={listing.id} listing={listing} onRemove={handleRemove} />
+            <CarCard
+              key={listing.id}
+              listing={listing}
+              onRemove={handleRemove}
+              onRefresh={handleRefresh}
+              isRefreshing={refreshingIds.has(listing.id)}
+            />
           ))}
         </div>
       )}

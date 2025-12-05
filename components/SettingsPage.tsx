@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats } from '../types';
 import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings } from '../services/settingsService';
+import { RefreshCw } from 'lucide-react';
 
 // Frequency steps from 5 mins to 1 month (in minutes)
 const FREQUENCY_STEPS = [
@@ -34,6 +35,7 @@ const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, history: [] });
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
@@ -62,8 +64,11 @@ const SettingsPage: React.FC = () => {
   };
 
   const refreshStats = async () => {
+    setRefreshing(true);
     const latestStats = await getGeminiStats();
     setStats(latestStats);
+    // Keep spinning for at least 500ms so user sees the animation
+    setTimeout(() => setRefreshing(false), 500);
   };
 
   return (
@@ -131,23 +136,30 @@ const SettingsPage: React.FC = () => {
             <button
               type="button"
               onClick={refreshStats}
-              className="text-blue-600 hover:text-blue-700"
+              disabled={refreshing}
+              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
             >
-              Refresh
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
         {stats.history.length === 0 ? (
           <p className="text-sm text-slate-500">No Gemini calls recorded yet.</p>
         ) : (
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4 max-h-[600px] overflow-y-auto">
             {stats.history.map((entry) => (
               <article key={entry.id} className="border border-gray-100 rounded-lg p-4">
                 <p className="text-xs text-slate-400">{formatEuropeanDateTime(entry.timestamp)}</p>
                 <p className="text-sm font-medium text-slate-800 truncate">{entry.url}</p>
-                <pre className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                  {entry.promptPreview}
-                </pre>
+                <details className="mt-2">
+                  <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700">
+                    Show prompt ({entry.promptPreview.length.toLocaleString()} chars)
+                  </summary>
+                  <pre className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border border-slate-200">
+                    {entry.promptPreview}
+                  </pre>
+                </details>
               </article>
             ))}
           </div>

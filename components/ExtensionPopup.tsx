@@ -2,7 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { getListings, saveListing, removeListing } from '../services/storageService';
 import { parseCarDataWithGemini } from '../services/geminiService';
 import { CarListing, PageContentResult } from '../types';
-import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings } from 'lucide-react';
+import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel } from 'lucide-react';
+
+// Normalize URL by removing query parameters
+const normalizeUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.origin}${urlObj.pathname}`;
+  } catch {
+    return url;
+  }
+};
 
 const ExtensionPopup: React.FC = () => {
   const [currentUrl, setCurrentUrl] = useState<string>('');
@@ -10,6 +20,10 @@ const ExtensionPopup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [savedItem, setSavedItem] = useState<CarListing | null>(null);
   const [pageData, setPageData] = useState<PageContentResult | null>(null);
+
+  // Preview state for confirmation flow
+  const [previewData, setPreviewData] = useState<CarListing | null>(null);
+  const [showVinWarning, setShowVinWarning] = useState(false);
 
   useEffect(() => {
     // 1. Get Active Tab
@@ -49,12 +63,13 @@ const ExtensionPopup: React.FC = () => {
   }, []);
 
   const checkIfSaved = async (url: string) => {
+    const normalizedUrl = normalizeUrl(url);
     const listings = await getListings();
-    const existing = listings.find(l => l.url === url);
+    const existing = listings.find(l => normalizeUrl(l.url) === normalizedUrl);
     setSavedItem(existing || null);
   };
 
-  const handleBookmark = async () => {
+  const handleAnalyze = async () => {
     if (!pageData) {
       setError("Could not read page content. Refresh the page and try again.");
       return;
@@ -64,7 +79,6 @@ const ExtensionPopup: React.FC = () => {
     setError(null);
 
     try {
-      // Use the scraped content + Gemini to parse
       const listingData = await parseCarDataWithGemini(
         currentUrl, 
         pageData.content,
@@ -72,13 +86,11 @@ const ExtensionPopup: React.FC = () => {
         pageData.image
       );
       
-      const newListing = listingData as CarListing;
-      await saveListing(newListing);
-      setSavedItem(newListing);
-      
-      // Notify other views
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' });
+      setPreviewData(listingData as CarListing);
+
+      // Check if VIN is missing
+      if (!listingData.details?.vin) {
+        setShowVinWarning(true);
       }
       
     } catch (e: any) {
@@ -89,6 +101,29 @@ const ExtensionPopup: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmSave = async () => {
+    if (!previewData) return;
+
+    try {
+      await saveListing(previewData);
+      setSavedItem(previewData);
+      setPreviewData(null);
+      setShowVinWarning(false);
+
+      // Notify other views
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' });
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to save listing.");
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewData(null);
+    setShowVinWarning(false);
   };
 
   const handleUnbookmark = async () => {
@@ -139,8 +174,97 @@ const ExtensionPopup: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-5 flex flex-col items-center justify-center text-center">
-        {!isMarketplace && !savedItem ? (
+      <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto">
+        {/* Preview/Confirmation Screen */}
+        {previewData ? (
+          <div className="w-full">
+            {/* VIN Warning */}
+            {showVinWarning && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2 text-left">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-medium text-sm">VIN not detected</p>
+                  <p className="text-amber-600 text-xs mt-1">
+                    Without VIN, this car will be identified by URL only.
+                    The same car on different URLs will be treated as separate listings.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <h3 className="font-bold text-slate-800 mb-3 text-left">Confirm Details</h3>
+
+            {/* Preview Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-left mb-4">
+              {previewData.thumbnailUrl && (
+                <img
+                  src={previewData.thumbnailUrl}
+                  alt={previewData.title}
+                  className="w-full h-32 object-cover rounded mb-3"
+                />
+              )}
+              <p className="font-bold text-slate-900 mb-2">{previewData.title}</p>
+              <p className="text-blue-600 font-mono font-bold text-lg mb-3">
+                {previewData.currentPrice?.toLocaleString()} {previewData.currency}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-1 text-slate-600">
+                  <Car className="w-3 h-3" />
+                  <span>{previewData.details?.make} {previewData.details?.model}</span>
+                </div>
+                <div className="flex items-center gap-1 text-slate-600">
+                  <Calendar className="w-3 h-3" />
+                  <span>{previewData.details?.year}</span>
+                </div>
+                <div className="flex items-center gap-1 text-slate-600">
+                  <Gauge className="w-3 h-3" />
+                  <span>{previewData.details?.mileage?.toLocaleString()} km</span>
+                </div>
+                <div className="flex items-center gap-1 text-slate-600">
+                  <Fuel className="w-3 h-3" />
+                  <span>{previewData.details?.fuelType}</span>
+                </div>
+              </div>
+
+              {previewData.details?.vin ? (
+                <div className="mt-3 bg-green-50 border border-green-200 rounded px-2 py-1">
+                  <span className="text-xs text-green-700 font-mono">VIN: {previewData.details.vin}</span>
+                </div>
+              ) : (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                  <span className="text-xs text-amber-700">No VIN detected</span>
+                </div>
+              )}
+
+              {previewData.details?.engineCapacity && (
+                <p className="text-xs text-slate-500 mt-2">Engine: {previewData.details.engineCapacity}</p>
+              )}
+              {previewData.details?.transmission && (
+                <p className="text-xs text-slate-500">Transmission: {previewData.details.transmission}</p>
+              )}
+              {previewData.details?.location && (
+                <p className="text-xs text-slate-500">Location: {previewData.details.location}</p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancelPreview}
+                className="flex-1 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
+              >
+                {showVinWarning ? 'Save Anyway' : 'Save'}
+              </button>
+            </div>
+          </div>
+        ) : !isMarketplace && !savedItem ? (
           <div className="text-slate-500">
             <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <ExternalLink className="w-8 h-8 text-slate-400" />
@@ -188,11 +312,11 @@ const ExtensionPopup: React.FC = () => {
                    </p>
                  </div>
                  <button 
-                   onClick={handleBookmark}
+                   onClick={handleAnalyze}
                    disabled={!pageData}
                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                  >
-                   Add to Watchlist
+                   Analyze & Add to Watchlist
                  </button>
                  {error && (
                    <div className="flex items-start gap-2 text-left text-red-600 text-xs mt-4 bg-red-50 p-3 rounded border border-red-100">
