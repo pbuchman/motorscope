@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
 
 const clampFrequency = (value?: number): number => {
   const numeric = typeof value === 'number' && !Number.isNaN(value) ? value : DEFAULT_SETTINGS.checkFrequencyMinutes;
-  return Math.min(1440, Math.max(15, numeric));
+  return Math.min(43200, Math.max(5, numeric)); // 5 min to 1 month
 };
 
 export const getGeminiApiKey = async (): Promise<string> => {

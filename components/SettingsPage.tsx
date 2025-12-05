@@ -94,13 +94,23 @@ const SettingsPage: React.FC = () => {
   const triggerManualRefresh = async () => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       setTriggeringRefresh(true);
+      setStatusMessage('');
       try {
-        await chrome.runtime.sendMessage({ type: 'TRIGGER_MANUAL_REFRESH' });
+        const response = await chrome.runtime.sendMessage({ type: 'TRIGGER_MANUAL_REFRESH' });
+        if (response?.success) {
+          setStatusMessage('Refresh started in background.');
+        } else {
+          setStatusMessage('Failed to trigger refresh: ' + (response?.error || 'Unknown error'));
+        }
       } catch (e) {
         console.error('Failed to trigger refresh:', e);
+        setStatusMessage('Failed to trigger refresh. Is the extension loaded correctly?');
+      } finally {
+        // Delay to show the triggering state
+        setTimeout(() => setTriggeringRefresh(false), 1000);
       }
-      // Status will update via storage listener
-      setTimeout(() => setTriggeringRefresh(false), 1000);
+    } else {
+      setStatusMessage('Chrome runtime not available. Are you running in the extension context?');
     }
   };
 
@@ -111,7 +121,20 @@ const SettingsPage: React.FC = () => {
 
     try {
       await saveSettings(settings);
-      setStatusMessage('Settings saved successfully.');
+
+      // Explicitly trigger alarm reschedule
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        try {
+          await chrome.runtime.sendMessage({
+            type: 'RESCHEDULE_ALARM',
+            minutes: settings.checkFrequencyMinutes
+          });
+        } catch (e) {
+          console.log('Could not reschedule alarm via message, storage listener should handle it');
+        }
+      }
+
+      setStatusMessage('Settings saved successfully. Refresh schedule updated.');
     } catch (error) {
       setStatusMessage('Failed to save settings.');
     } finally {

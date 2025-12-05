@@ -263,6 +263,15 @@ const runBackgroundRefresh = async (): Promise<void> => {
 
   await updateRefreshStatus({ isRefreshing: true });
 
+  // Show notification when refresh starts
+  chrome.notifications.create('refresh-start', {
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: 'MotoTracker Refreshing',
+    message: `Starting refresh of ${listings.length} listing${listings.length !== 1 ? 's' : ''}...`,
+    priority: 0,
+  });
+
   let refreshedCount = 0;
   const updatedListings: CarListing[] = [];
 
@@ -291,7 +300,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     isRefreshing: false,
   });
 
-  // Show notification
+  // Show notification when refresh completes
   const nextRefreshMinutes = settings.checkFrequencyMinutes;
   let timeText: string;
   if (nextRefreshMinutes < 60) {
@@ -302,7 +311,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     timeText = `${Math.round(nextRefreshMinutes / 1440)} days`;
   }
 
-  chrome.notifications.create({
+  chrome.notifications.create('refresh-complete', {
     type: 'basic',
     iconUrl: 'icon.png',
     title: 'MotoTracker Refresh Complete',
@@ -344,8 +353,13 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     if (changes[STORAGE_KEYS.listings]) {
       chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' }).catch(() => {});
     }
-    if (changes[STORAGE_KEYS.settings]?.newValue?.checkFrequencyMinutes) {
-      await scheduleAlarm(changes[STORAGE_KEYS.settings].newValue.checkFrequencyMinutes);
+    // Check if settings changed - reschedule alarm
+    if (changes[STORAGE_KEYS.settings]?.newValue) {
+      const newFrequency = changes[STORAGE_KEYS.settings].newValue.checkFrequencyMinutes;
+      if (typeof newFrequency === 'number' && newFrequency > 0) {
+        console.log(`Settings changed, rescheduling alarm for ${newFrequency} minutes`);
+        await scheduleAlarm(newFrequency);
+      }
     }
   }
 });
@@ -353,8 +367,21 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 // Handle manual refresh trigger from UI
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'TRIGGER_MANUAL_REFRESH') {
-    runBackgroundRefresh().then(() => sendResponse({ success: true }));
+    runBackgroundRefresh()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => {
+        console.error('Manual refresh failed:', error);
+        sendResponse({ success: false, error: String(error) });
+      });
     return true; // Keep channel open for async response
+  }
+
+  if (request.type === 'RESCHEDULE_ALARM') {
+    const minutes = request.minutes || DEFAULT_FREQUENCY_MINUTES;
+    scheduleAlarm(minutes)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: String(error) }));
+    return true;
   }
 });
 
