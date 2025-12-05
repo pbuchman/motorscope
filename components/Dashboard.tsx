@@ -3,7 +3,7 @@ import { CarListing, ListingStatus } from '../types';
 import { getListings, removeListing, refreshListing } from '../services/storageService';
 import { refreshListingWithGemini } from '../services/geminiService';
 import CarCard from './CarCard';
-import { Search, Car } from 'lucide-react';
+import { Search, Car, Settings } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
@@ -139,6 +139,13 @@ const Dashboard: React.FC = () => {
               className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          <a
+            href="index.html?view=settings"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </a>
         </div>
       </header>
 

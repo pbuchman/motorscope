@@ -1,5 +1,5 @@
 // Background service worker for MotoTracker (ES Module)
-import { ListingStatus, CarListing, RefreshStatus, GeminiStats } from './types';
+import { ListingStatus, CarListing, RefreshStatus, GeminiStats, RefreshedListingInfo, RefreshPendingItem, RefreshErrorInfo } from './types';
 
 const CHECK_ALARM_NAME = 'moto_tracker_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
@@ -64,6 +64,12 @@ const getRefreshStatus = async (): Promise<RefreshStatus> => {
     nextRefreshTime: null,
     lastRefreshCount: 0,
     isRefreshing: false,
+    currentIndex: 0,
+    totalCount: 0,
+    currentListingTitle: null,
+    pendingItems: [],
+    recentlyRefreshed: [],
+    refreshErrors: [],
   };
 };
 
@@ -130,6 +136,13 @@ interface GeminiRefreshResult {
   status: ListingStatus;
 }
 
+// Helper to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Retry configuration for rate limiting
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 5000; // 5 seconds
+
 const refreshListingWithGemini = async (
   apiKey: string,
   url: string,
@@ -151,57 +164,80 @@ const refreshListingWithGemini = async (
     - If the page looks like a normal active listing, set isAvailable to true and isSold to false
   `;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              price: { type: 'number' },
-              currency: { type: 'string' },
-              isAvailable: { type: 'boolean' },
-              isSold: { type: 'boolean' },
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'object',
+                properties: {
+                  price: { type: 'number' },
+                  currency: { type: 'string' },
+                  isAvailable: { type: 'boolean' },
+                  isSold: { type: 'boolean' },
+                },
+                required: ['price', 'currency', 'isAvailable'],
+              },
             },
-            required: ['price', 'currency', 'isAvailable'],
-          },
-        },
-      }),
+          }),
+        }
+      );
+
+      // Handle rate limiting (429) with exponential backoff
+      if (response.status === 429) {
+        const retryDelay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
+        console.log(`Rate limited (429), waiting ${retryDelay}ms before retry ${attempt + 1}/${MAX_RETRIES}`);
+        await delay(retryDelay);
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text) {
+        throw new Error('No response from Gemini');
+      }
+
+      await recordGeminiCall(url, prompt);
+
+      const parsed = JSON.parse(text);
+
+      let status: ListingStatus = ListingStatus.ACTIVE;
+      if (parsed.isSold === true) {
+        status = ListingStatus.SOLD;
+      } else if (parsed.isAvailable === false) {
+        status = ListingStatus.EXPIRED;
+      }
+
+      return {
+        price: typeof parsed.price === 'number' && parsed.price > 0 ? parsed.price : 0,
+        currency: parsed.currency || 'PLN',
+        status,
+      };
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt < MAX_RETRIES - 1) {
+        const retryDelay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
+        console.log(`Error on attempt ${attempt + 1}, retrying in ${retryDelay}ms:`, error);
+        await delay(retryDelay);
+      }
     }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('No response from Gemini');
-  }
-
-  await recordGeminiCall(url, prompt);
-
-  const parsed = JSON.parse(text);
-
-  let status: ListingStatus = ListingStatus.ACTIVE;
-  if (parsed.isSold === true) {
-    status = ListingStatus.SOLD;
-  } else if (parsed.isAvailable === false) {
-    status = ListingStatus.EXPIRED;
-  }
-
-  return {
-    price: typeof parsed.price === 'number' && parsed.price > 0 ? parsed.price : 0,
-    currency: parsed.currency || 'PLN',
-    status,
-  };
+  throw lastError || new Error('Failed after max retries');
 };
 
 // ============ Refresh Single Listing ============
@@ -268,6 +304,13 @@ const refreshListing = async (listing: CarListing, apiKey: string): Promise<CarL
 // ============ Background Refresh All ============
 
 const runBackgroundRefresh = async (): Promise<void> => {
+  // Check if already refreshing - prevent concurrent refreshes
+  const currentStatus = await getRefreshStatus();
+  if (currentStatus.isRefreshing) {
+    console.log('Refresh already in progress, skipping');
+    return;
+  }
+
   const settings = await getSettings();
 
   if (!settings.geminiApiKey) {
@@ -284,7 +327,23 @@ const runBackgroundRefresh = async (): Promise<void> => {
     return;
   }
 
-  await updateRefreshStatus({ isRefreshing: true });
+  // Build initial pending items list
+  const pendingItems: RefreshPendingItem[] = listings.map(l => ({
+    id: l.id,
+    title: l.title,
+    url: l.url,
+    status: 'pending' as const,
+  }));
+
+  // Initialize refresh status with progress tracking and pending items
+  await updateRefreshStatus({
+    isRefreshing: true,
+    currentIndex: 0,
+    totalCount: listings.length,
+    currentListingTitle: null,
+    pendingItems,
+    recentlyRefreshed: [],
+  });
 
   // Show notification when refresh starts
   chrome.notifications.create('refresh-start', {
@@ -292,22 +351,82 @@ const runBackgroundRefresh = async (): Promise<void> => {
     iconUrl: 'icon.png',
     title: 'MotoTracker Refreshing',
     message: `Starting refresh of ${listings.length} listing${listings.length !== 1 ? 's' : ''}...`,
-    priority: 0,
+    priority: 2,
   });
 
   let refreshedCount = 0;
   const updatedListings: CarListing[] = [];
+  const recentlyRefreshed: RefreshedListingInfo[] = [];
+  const newErrors: RefreshErrorInfo[] = [];
 
-  for (const listing of listings) {
+  for (let i = 0; i < listings.length; i++) {
+    const listing = listings[i];
+
+    // Update pending items - mark current as refreshing
+    pendingItems[i] = { ...pendingItems[i], status: 'refreshing' };
+
+    // Update progress with current item being refreshed
+    await updateRefreshStatus({
+      currentIndex: i + 1,
+      totalCount: listings.length,
+      currentListingTitle: listing.title,
+      pendingItems: [...pendingItems],
+    });
+
     try {
       const updated = await refreshListing(listing, settings.geminiApiKey);
       updatedListings.push(updated);
       refreshedCount++;
-      // Small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Mark as success in pending items
+      pendingItems[i] = { ...pendingItems[i], status: 'success' };
+
+      recentlyRefreshed.push({
+        id: listing.id,
+        title: listing.title,
+        url: listing.url,
+        status: 'success',
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update status after each item
+      await updateRefreshStatus({
+        pendingItems: [...pendingItems],
+        recentlyRefreshed: [...recentlyRefreshed],
+      });
+
+      // Longer delay between requests to avoid rate limiting
+      await delay(2000);
     } catch (error) {
       console.error(`Error refreshing ${listing.url}:`, error);
       updatedListings.push(listing);
+
+      // Mark as error in pending items
+      pendingItems[i] = { ...pendingItems[i], status: 'error' };
+
+      const errorInfo: RefreshErrorInfo = {
+        id: listing.id,
+        title: listing.title,
+        url: listing.url,
+        error: String(error),
+        timestamp: new Date().toISOString(),
+      };
+      newErrors.push(errorInfo);
+
+      recentlyRefreshed.push({
+        id: listing.id,
+        title: listing.title,
+        url: listing.url,
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        error: String(error),
+      });
+
+      // Update status after each item
+      await updateRefreshStatus({
+        pendingItems: [...pendingItems],
+        recentlyRefreshed: [...recentlyRefreshed],
+      });
     }
   }
 
@@ -316,11 +435,21 @@ const runBackgroundRefresh = async (): Promise<void> => {
   const now = new Date().toISOString();
   const nextRefreshTime = new Date(Date.now() + settings.checkFrequencyMinutes * 60 * 1000).toISOString();
 
+  // Merge new errors with existing errors (keep last 100)
+  const existingErrors = currentStatus.refreshErrors || [];
+  const allErrors = [...newErrors, ...existingErrors].slice(0, 100);
+
   await updateRefreshStatus({
     lastRefreshTime: now,
     nextRefreshTime,
     lastRefreshCount: refreshedCount,
     isRefreshing: false,
+    currentIndex: 0,
+    totalCount: 0,
+    currentListingTitle: null,
+    pendingItems: [],
+    recentlyRefreshed: recentlyRefreshed.slice(0, 50),
+    refreshErrors: allErrors,
   });
 
   // Show notification when refresh completes
@@ -331,7 +460,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     iconUrl: 'icon.png',
     title: 'MotoTracker Refresh Complete',
     message: `Refreshed ${refreshedCount} listing${refreshedCount !== 1 ? 's' : ''}. Next refresh in ${timeText}.`,
-    priority: 0,
+    priority: 2,
   });
 
   // Notify UI
@@ -381,7 +510,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
           iconUrl: 'icon.png',
           title: 'MotoTracker Schedule Updated',
           message: `Refresh interval changed to ${formatTimeText(newFrequency)}.`,
-          priority: 0,
+          priority: 2,
         });
       }
     }
@@ -403,6 +532,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'RESCHEDULE_ALARM') {
     const minutes = request.minutes || DEFAULT_FREQUENCY_MINUTES;
     scheduleAlarm(minutes)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: String(error) }));
+    return true;
+  }
+
+  if (request.type === 'CLEAR_REFRESH_ERRORS') {
+    updateRefreshStatus({ refreshErrors: [] })
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: String(error) }));
     return true;
