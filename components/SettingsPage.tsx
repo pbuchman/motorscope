@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats, RefreshStatus } from '../types';
 import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS } from '../services/settingsService';
-import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Trash2, Loader2, Circle } from 'lucide-react';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
@@ -31,7 +31,7 @@ const formatFrequency = (minutes: number): string => {
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
-  const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, history: [] });
+  const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus>(DEFAULT_REFRESH_STATUS);
   const [countdown, setCountdown] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -361,91 +361,171 @@ const SettingsPage: React.FC = () => {
             <p className="text-sm text-slate-400">No recent refresh activity.</p>
           )}
         </div>
-
-        {/* Refresh Errors Section */}
-        {refreshStatus.refreshErrors && refreshStatus.refreshErrors.length > 0 && (
-          <div className="border-t border-gray-100 pt-4 mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
-                <XCircle className="w-4 h-4" />
-                Refresh Errors ({refreshStatus.refreshErrors.length})
-              </h3>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (typeof chrome !== 'undefined' && chrome.runtime) {
-                    await chrome.runtime.sendMessage({ type: 'CLEAR_REFRESH_ERRORS' });
-                  }
-                }}
-                className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-3 h-3" />
-                Clear All
-              </button>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {refreshStatus.refreshErrors.slice(0, 20).map((error, index) => (
-                <div
-                  key={`error-${error.id}-${index}`}
-                  className="p-2 bg-red-50 border border-red-100 rounded text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
-                    <span className="truncate flex-1 text-slate-700" title={error.url}>
-                      {error.url} <span className="text-slate-400">({error.title})</span>
-                    </span>
-                    <span className="text-xs text-slate-400 shrink-0">
-                      {formatEuropeanDateTimeWithSeconds(error.timestamp).split(' ')[1]}
-                    </span>
-                  </div>
-                  <p className="text-xs text-red-600 mt-1 ml-6 truncate" title={error.error}>
-                    {error.error}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
 
-      <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Gemini Usage</h2>
-          <div className="flex items-center gap-3 text-sm text-slate-500">
-            <span>Total calls: {stats.totalCalls}</span>
-            <button
-              type="button"
-              onClick={refreshStats}
-              disabled={refreshing}
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
+      <GeminiUsageSection stats={stats} refreshing={refreshing} onRefresh={refreshStats} />
+    </div>
+  );
+};
+
+// Gemini Usage Section as a separate component for cleanliness
+interface GeminiUsageSectionProps {
+  stats: GeminiStats;
+  refreshing: boolean;
+  onRefresh: () => void;
+}
+
+const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshing, onRefresh }) => {
+  const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const filteredHistory = stats.history.filter(entry => {
+    if (filter === 'all') return true;
+    return entry.status === filter;
+  });
+
+  const toggleExpanded = (id: string, section: 'prompt' | 'response') => {
+    const key = `${id}-${section}`;
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  return (
+    <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-slate-900">Gemini Usage</h2>
+        <div className="flex items-center gap-3 text-sm text-slate-500">
+          <span>Total: {stats.totalCalls}</span>
+          <span className="text-green-600">✓ {stats.successCount || 0}</span>
+          <span className="text-red-600">✗ {stats.errorCount || 0}</span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
-        {stats.history.length === 0 ? (
-          <p className="text-sm text-slate-500">No Gemini calls recorded yet.</p>
-        ) : (
-          <div className="space-y-4 max-h-[600px] overflow-y-auto">
-            {stats.history.map((entry) => (
-              <article key={entry.id} className="border border-gray-100 rounded-lg p-4">
-                <p className="text-xs text-slate-400">{formatEuropeanDateTimeWithSeconds(entry.timestamp)}</p>
-                <p className="text-sm font-medium text-slate-800 truncate">{entry.url}</p>
-                <details className="mt-2">
-                  <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700">
-                    Show prompt ({entry.promptPreview.length.toLocaleString()} chars)
-                  </summary>
-                  <pre className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border border-slate-200">
+      </div>
+
+      {/* Filter buttons */}
+      <div className="flex gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1 text-xs font-medium rounded-full ${
+            filter === 'all' 
+              ? 'bg-slate-700 text-white' 
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter('success')}
+          className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1 ${
+            filter === 'success' 
+              ? 'bg-green-600 text-white' 
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
+          }`}
+        >
+          <CheckCircle className="w-3 h-3" />
+          Success
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter('error')}
+          className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1 ${
+            filter === 'error' 
+              ? 'bg-red-600 text-white' 
+              : 'bg-red-50 text-red-700 hover:bg-red-100'
+          }`}
+        >
+          <XCircle className="w-3 h-3" />
+          Errors
+        </button>
+      </div>
+
+      {filteredHistory.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {filter === 'all' ? 'No Gemini calls recorded yet.' : `No ${filter} calls.`}
+        </p>
+      ) : (
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          {filteredHistory.map((entry) => (
+            <article
+              key={entry.id}
+              className={`border rounded-lg p-4 ${
+                entry.status === 'error' ? 'border-red-200 bg-red-50/50' : 'border-gray-100'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  {entry.status === 'success' ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  )}
+                  <p className="text-xs text-slate-400">{formatEuropeanDateTimeWithSeconds(entry.timestamp)}</p>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-slate-800 truncate mb-2" title={entry.url}>{entry.url}</p>
+
+              {/* Prompt section */}
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(entry.id, 'prompt')}
+                  className="text-xs text-blue-600 cursor-pointer hover:text-blue-700"
+                >
+                  {expandedIds.has(`${entry.id}-prompt`) ? '▼' : '▶'} Prompt ({entry.promptPreview.length.toLocaleString()} chars)
+                </button>
+                {expandedIds.has(`${entry.id}-prompt`) && (
+                  <pre className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded font-mono whitespace-pre-wrap max-h-64 overflow-y-auto border border-slate-200">
                     {entry.promptPreview}
                   </pre>
-                </details>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
+                )}
+              </div>
+
+              {/* Response/Error section */}
+              {entry.response && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(entry.id, 'response')}
+                    className="text-xs text-green-600 cursor-pointer hover:text-green-700"
+                  >
+                    {expandedIds.has(`${entry.id}-response`) ? '▼' : '▶'} Response (JSON)
+                  </button>
+                  {expandedIds.has(`${entry.id}-response`) && (
+                    <pre className="text-xs text-green-700 mt-2 bg-green-50 p-3 rounded font-mono whitespace-pre-wrap max-h-64 overflow-y-auto border border-green-200">
+                      {entry.response}
+                    </pre>
+                  )}
+                </div>
+              )}
+              {entry.error && (
+                <div className="mt-2">
+                  <p className="text-xs text-red-600 font-medium">Error:</p>
+                  <pre className="text-xs text-red-600 mt-1 bg-red-50 p-2 rounded font-mono whitespace-pre-wrap border border-red-200">
+                    {entry.error}
+                  </pre>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

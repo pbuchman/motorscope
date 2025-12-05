@@ -1,7 +1,7 @@
 import React from 'react';
 import { CarListing, ListingStatus } from '../types';
 import PriceChart from './PriceChart';
-import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2 } from 'lucide-react';
+import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import { formatEuropeanDateTime } from '../utils/formatters';
 
 interface CarCardProps {
@@ -22,6 +22,9 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
   const isLowerPrice = hasPriceHistory && listing.priceHistory.length > 1 && listing.currentPrice < previousPrice;
   const isHigherPrice = hasPriceHistory && listing.priceHistory.length > 1 && listing.currentPrice > previousPrice;
 
+  // Check if last refresh failed
+  const lastRefreshFailed = listing.lastRefreshStatus === 'error';
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 relative">
       {/* Loading Overlay */}
@@ -29,6 +32,16 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
           <p className="text-sm font-medium text-slate-600">Refreshing...</p>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {lastRefreshFailed && !isRefreshing && (
+        <div className="bg-red-50 border-b border-red-100 px-4 py-2 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+          <p className="text-xs text-red-600">
+            Failed to refresh. Check Gemini logs and try again later.
+          </p>
         </div>
       )}
 
