@@ -13,7 +13,7 @@ MotoTracker is a browser extension that uses Google Gemini AI to scrape, parse, 
 
 1.  **Node.js**: Ensure you have Node.js installed.
 2.  **Google Gemini API Key**: You must have a valid API Key.
-    *   *Note for development*: In this build, you must ensure `process.env.API_KEY` is replaced during the build process, or manually hardcoded in `services/geminiService.ts` if running locally without a bundler that supports env vars.
+    *   *Note for development*: In this build, you must ensure `process.env.GEMINI_API_KEY` is replaced during the build process, or manually hardcoded in `services/geminiService.ts` if running locally without a bundler that supports env vars.
 
 ## Build Instructions
 
