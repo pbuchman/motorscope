@@ -14,6 +14,12 @@ const copyExtensionFiles = () => {
                     fs.copyFileSync(file, resolve(__dirname, 'dist', file));
                 }
             });
+
+            // Ensure content-scripts directory exists in dist
+            const contentScriptsDir = resolve(__dirname, 'dist', 'content-scripts');
+            if (!fs.existsSync(contentScriptsDir)) {
+                fs.mkdirSync(contentScriptsDir, { recursive: true });
+            }
         }
     };
 };
@@ -28,12 +34,17 @@ export default defineConfig({
             input: {
                 main: resolve(__dirname, 'index.html'),
                 background: resolve(__dirname, 'background.ts'),
+                'content-scripts/otomoto': resolve(__dirname, 'content-scripts/otomoto.ts'),
             },
             output: {
                 entryFileNames: (chunkInfo) => {
                     // Keep background.js as a flat file name for the service worker
                     if (chunkInfo.name === 'background') {
                         return 'background.js';
+                    }
+                    // Content scripts go in content-scripts folder
+                    if (chunkInfo.name.startsWith('content-scripts/')) {
+                        return `${chunkInfo.name}.js`;
                     }
                     return 'assets/[name]-[hash].js';
                 },
