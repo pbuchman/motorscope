@@ -326,7 +326,7 @@ const ExtensionPopup: React.FC = () => {
                    )}
 
                    {/* Tracking Info */}
-                   <div className="flex flex-col gap-0.5 text-[10px] text-slate-400 mb-2">
+                   <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
                      <span className="inline-flex items-center gap-1">
                        <Eye className="w-3 h-3" />
                        Tracked since {formatEuropeanDateTime(savedItem.dateAdded)}
@@ -337,13 +337,11 @@ const ExtensionPopup: React.FC = () => {
                      </span>
                    </div>
 
-                   {/* Price History Chart */}
-                   {savedItem.priceHistory && savedItem.priceHistory.length > 0 && (
+                   {/* Price History Chart - only show when there's actual history (2+ points) */}
+                   {savedItem.priceHistory && savedItem.priceHistory.length >= 2 && (
                      <div className="mt-2">
                        <p className="text-[10px] font-semibold text-slate-400 mb-1 uppercase tracking-wider">Price History</p>
-                       <div className="h-32">
-                         <PriceChart history={savedItem.priceHistory} currency={savedItem.currency} />
-                       </div>
+                       <PriceChart history={savedItem.priceHistory} currency={savedItem.currency} />
                      </div>
                    )}
                  </div>
