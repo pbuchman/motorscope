@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Post beginner-friendly PR explanation
-        uses: github/copilot-summarizer@v0
+        uses: github/copilot-summarizer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           instructions: |
