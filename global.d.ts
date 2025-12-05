@@ -38,7 +38,7 @@ declare namespace chrome {
   export namespace storage {
     export namespace local {
       export function get(
-        keys: string[],
+        keys: string | string[] | null,
         callback: (result: { [key: string]: any }) => void
       ): void;
       export function set(
