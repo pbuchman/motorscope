@@ -1,56 +1,11 @@
 import { CarListing, PricePoint } from "../types";
+import { extensionStorage } from "./extensionStorage";
 
 const STORAGE_KEY = "moto_tracker_listings";
 
-// Chrome storage wrapper with fallback to localStorage for development
-const storage = {
-  get: async (key: string): Promise<unknown> => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve, reject) => {
-        chrome.storage.local.get([key], (result) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          resolve(result[key]);
-        });
-      });
-    } else {
-      // Fallback to localStorage for development
-      try {
-        const data = localStorage.getItem(key);
-        return Promise.resolve(data ? JSON.parse(data) : undefined);
-      } catch (error) {
-        return Promise.reject(error);
-      }
-    }
-  },
-  set: async (key: string, value: any): Promise<void> => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve, reject) => {
-        chrome.storage.local.set({ [key]: value }, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          resolve();
-        });
-      });
-    } else {
-      // Fallback to localStorage for development
-      try {
-        localStorage.setItem(key, JSON.stringify(value));
-        return Promise.resolve();
-      } catch (error) {
-        return Promise.reject(error);
-      }
-    }
-  }
-};
-
 export const getListings = async (): Promise<CarListing[]> => {
-  const data = await storage.get(STORAGE_KEY);
-  return (data as CarListing[]) || [];
+  const data = await extensionStorage.get<CarListing[]>(STORAGE_KEY);
+  return data || [];
 };
 
 export const saveListing = async (listing: CarListing): Promise<void> => {
@@ -73,19 +28,20 @@ export const saveListing = async (listing: CarListing): Promise<void> => {
     listings[existingIndex] = { 
       ...listing, 
       priceHistory: existing.priceHistory,
-      dateAdded: existing.dateAdded 
+      dateAdded: existing.dateAdded,
+      postedDate: existing.postedDate ?? listing.postedDate
     };
   } else {
     // Add new
-    listings.push(listing);
+    listings.push({ ...listing, postedDate: listing.postedDate });
   }
-  await storage.set(STORAGE_KEY, listings);
+  await extensionStorage.set(STORAGE_KEY, listings);
 };
 
 export const removeListing = async (id: string): Promise<void> => {
   const listings = await getListings();
   const filtered = listings.filter((l) => l.id !== id);
-  await storage.set(STORAGE_KEY, filtered);
+  await extensionStorage.set(STORAGE_KEY, filtered);
 };
 
 export const updatePrice = async (id: string, newPrice: number): Promise<void> => {
@@ -105,7 +61,7 @@ export const updatePrice = async (id: string, newPrice: number): Promise<void> =
       item.currentPrice = newPrice;
       item.lastChecked = new Date().toISOString();
       
-      await storage.set(STORAGE_KEY, listings);
+      await extensionStorage.set(STORAGE_KEY, listings);
     }
   }
 };
