@@ -1,5 +1,6 @@
 // Background service worker for MotoTracker (ES Module)
-import { ListingStatus, CarListing, RefreshStatus, GeminiStats, RefreshedListingInfo, RefreshPendingItem, GeminiCallHistoryEntry } from './types';
+import { ListingStatus, CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
+import { refreshListingWithGemini, RateLimitError } from './services/geminiService';
 
 const CHECK_ALARM_NAME = 'moto_tracker_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
@@ -79,28 +80,6 @@ const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void
   await setInStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
 };
 
-// ============ Gemini Stats ============
-
-const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<void> => {
-  const stats = await getFromStorage<GeminiStats>(STORAGE_KEYS.geminiStats) || { totalCalls: 0, successCount: 0, errorCount: 0, history: [] };
-  const history = [entry, ...stats.history].slice(0, 200);
-  await setInStorage(STORAGE_KEYS.geminiStats, {
-    totalCalls: stats.totalCalls + 1,
-    successCount: entry.status === 'success' ? (stats.successCount || 0) + 1 : (stats.successCount || 0),
-    errorCount: entry.status === 'error' ? (stats.errorCount || 0) + 1 : (stats.errorCount || 0),
-    history,
-  });
-};
-
-// Helper to format JSON response for display
-const formatJsonResponse = (data: unknown): string => {
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return String(data);
-  }
-};
-
 // ============ Alarm Scheduling ============
 
 // Format time text for notifications
@@ -134,138 +113,9 @@ const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promi
   console.log(`Alarm scheduled for ${minutes} minutes (${Math.round(minutes * 60)} seconds)`);
 };
 
-// ============ Gemini API via library ============
-
 // Helper to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-interface GeminiRefreshResult {
-  price: number;
-  currency: string;
-  status: ListingStatus;
-}
-
-// Error class for rate limiting
-class RateLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RateLimitError';
-  }
-}
-
-const refreshListingWithGeminiAPI = async (
-  apiKey: string,
-  url: string,
-  pageText: string,
-  pageTitle: string
-): Promise<GeminiRefreshResult> => {
-  const prompt = `
-    Analyze the following car listing page and extract the current price and availability status.
-
-    Page Title: ${pageTitle}
-    Page URL: ${url}
-    Page Content: ${pageText.substring(0, 10000)}
-
-    Instructions:
-    - Extract the current listing price as a number (no formatting, just the number)
-    - Extract the currency (PLN, EUR, USD, etc.)
-    - Set isAvailable to false if the page shows the listing is no longer available, removed, expired, or redirects to a "not found" type page
-    - Set isSold to true if the page explicitly indicates the vehicle was sold
-    - If the page looks like a normal active listing, set isAvailable to true and isSold to false
-  `;
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              price: { type: 'number' },
-              currency: { type: 'string' },
-              isAvailable: { type: 'boolean' },
-              isSold: { type: 'boolean' },
-            },
-            required: ['price', 'currency', 'isAvailable'],
-          },
-        },
-      }),
-    }
-  );
-
-  // Handle rate limiting (429) - throw special error to skip item
-  if (response.status === 429) {
-    const errorMsg = 'Rate limited (429) - API quota exceeded';
-    await recordGeminiCall({
-      id: crypto.randomUUID(),
-      url,
-      promptPreview: prompt,
-      error: errorMsg,
-      status: 'error',
-      timestamp: new Date().toISOString(),
-    });
-    throw new RateLimitError(errorMsg);
-  }
-
-  if (!response.ok) {
-    const errorMsg = `Gemini API error: ${response.status}`;
-    await recordGeminiCall({
-      id: crypto.randomUUID(),
-      url,
-      promptPreview: prompt,
-      error: errorMsg,
-      status: 'error',
-      timestamp: new Date().toISOString(),
-    });
-    throw new Error(errorMsg);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    const errorMsg = 'No response from Gemini';
-    await recordGeminiCall({
-      id: crypto.randomUUID(),
-      url,
-      promptPreview: prompt,
-      error: errorMsg,
-      status: 'error',
-      timestamp: new Date().toISOString(),
-    });
-    throw new Error(errorMsg);
-  }
-
-  const parsed = JSON.parse(text);
-
-  // Record success with response
-  await recordGeminiCall({
-    id: crypto.randomUUID(),
-    url,
-    promptPreview: prompt,
-    response: formatJsonResponse(parsed),
-    status: 'success',
-    timestamp: new Date().toISOString(),
-  });
-
-  let status: ListingStatus = ListingStatus.ACTIVE;
-  if (parsed.isSold === true) {
-    status = ListingStatus.SOLD;
-  } else if (parsed.isAvailable === false) {
-    status = ListingStatus.EXPIRED;
-  }
-
-  return {
-    price: typeof parsed.price === 'number' && parsed.price > 0 ? parsed.price : 0,
-    currency: parsed.currency || 'PLN',
-    status,
-  };
-};
 
 // ============ Refresh Single Listing ============
 
@@ -276,7 +126,7 @@ interface RefreshListingResult {
   rateLimited?: boolean;
 }
 
-const refreshListing = async (listing: CarListing, apiKey: string): Promise<RefreshListingResult> => {
+const refreshListing = async (listing: CarListing): Promise<RefreshListingResult> => {
   try {
     const response = await fetch(listing.url, {
       method: 'GET',
@@ -319,7 +169,8 @@ const refreshListing = async (listing: CarListing, apiKey: string): Promise<Refr
       .trim()
       .substring(0, 20000);
 
-    const result = await refreshListingWithGeminiAPI(apiKey, listing.url, textContent, pageTitle);
+    // Use geminiService to refresh listing (handles API key internally)
+    const result = await refreshListingWithGemini(listing.url, textContent, pageTitle);
 
     const updatedListing = { ...listing };
 
@@ -465,7 +316,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
       pendingItems: [...pendingItems],
     });
 
-    const result = await refreshListing(listing, settings.geminiApiKey);
+    const result = await refreshListing(listing);
 
     // Update the listing in the map
     listingsMap.set(listing.id, result.listing);
