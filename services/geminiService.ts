@@ -1,9 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CarListing, ListingStatus } from "../types";
 
-const parseCarDataWithGemini = async (url: string, rawTextOrHtml: string): Promise<Partial<CarListing>> => {
+const parseCarDataWithGemini = async (
+  url: string, 
+  pageText: string,
+  pageTitle: string,
+  scrapedImageUrl?: string | null
+): Promise<Partial<CarListing>> => {
+  
   if (!process.env.API_KEY) {
-    throw new Error("API Key is missing");
+    throw new Error("API Key is missing. Please configure your API key.");
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -29,18 +35,23 @@ const parseCarDataWithGemini = async (url: string, rawTextOrHtml: string): Promi
           location: { type: Type.STRING },
         },
       },
-      listingId: { type: Type.STRING, description: "Extract ID from URL or content" },
     },
     required: ["title", "price", "currency", "details"],
   };
 
   const prompt = `
-    Analyze the following simulated car listing data (URL and potentially raw text).
+    Analyze the following car listing text scraped from a webpage.
     Extract the vehicle details into the specified JSON structure.
-    If exact data is missing, reasonably infer it based on the URL structure (e.g., 'ford-edge' in URL implies Ford Edge).
     
-    URL: ${url}
-    Content Context: ${rawTextOrHtml}
+    Page Title: ${pageTitle}
+    Page URL: ${url}
+    Page Content: ${pageText.substring(0, 15000)}... (truncated)
+    
+    Notes: 
+    - If mileage is in km, convert to number.
+    - If price contains currency symbol, split it.
+    - Look specifically for VIN number patterns.
+    - Infer Model/Make from URL if not clear in text.
   `;
 
   try {
@@ -57,11 +68,14 @@ const parseCarDataWithGemini = async (url: string, rawTextOrHtml: string): Promi
 
     const data = JSON.parse(response.text);
 
+    // Generate a consistent ID from the URL (simple hash replacement)
+    const id = btoa(url).substring(0, 12);
+
     return {
-      id: data.listingId || Math.random().toString(36).substring(7),
+      id: id,
       url: url,
-      title: data.title,
-      thumbnailUrl: `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`, // Simulate image extraction
+      title: data.title || pageTitle,
+      thumbnailUrl: scrapedImageUrl || "https://placehold.co/600x400?text=No+Image",
       currentPrice: data.price,
       currency: data.currency,
       details: data.details,

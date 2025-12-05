@@ -12,8 +12,23 @@ export const saveListing = (listing: CarListing): void => {
   const existingIndex = listings.findIndex((l) => l.url === listing.url);
 
   if (existingIndex >= 0) {
-    // Update existing
-    listings[existingIndex] = { ...listings[existingIndex], ...listing };
+    // Update existing, preserving history
+    const existing = listings[existingIndex];
+    
+    // Check if price changed during this manual re-save
+    if (existing.currentPrice !== listing.currentPrice) {
+      existing.priceHistory.push({
+        date: new Date().toISOString(),
+        price: listing.currentPrice,
+        currency: listing.currency
+      });
+    }
+
+    listings[existingIndex] = { 
+      ...listing, 
+      priceHistory: existing.priceHistory,
+      dateAdded: existing.dateAdded 
+    };
   } else {
     // Add new
     listings.push(listing);
@@ -46,33 +61,4 @@ export const updatePrice = (id: string, newPrice: number): void => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
     }
   }
-};
-
-// Simulation helper: randomly fluctuate prices for demo purposes
-export const simulateMarketChanges = (): CarListing[] => {
-  const listings = getListings();
-  const updatedListings = listings.map(listing => {
-    // 30% chance to change price
-    if (Math.random() > 0.7) {
-      const changePercent = (Math.random() * 0.1) - 0.05; // -5% to +5%
-      const newPrice = Math.floor(listing.currentPrice * (1 + changePercent));
-      
-      const newPoint: PricePoint = {
-        date: new Date().toISOString(),
-        price: newPrice,
-        currency: listing.currency,
-      };
-      
-      return {
-        ...listing,
-        currentPrice: newPrice,
-        priceHistory: [...listing.priceHistory, newPoint],
-        lastChecked: new Date().toISOString()
-      };
-    }
-    return listing;
-  });
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedListings));
-  return updatedListings;
 };
