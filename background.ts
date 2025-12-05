@@ -287,8 +287,8 @@ const runBackgroundRefresh = async (): Promise<void> => {
     recentlyRefreshed: [],
   });
 
-  // Show notification when refresh starts
-  chrome.notifications.create('refresh-start', {
+  // Show notification when refresh starts (use unique ID to ensure visibility)
+  chrome.notifications.create(`refresh-start-${Date.now()}`, {
     type: 'basic',
     iconUrl: 'icon.png',
     title: 'MotoTracker Refreshing',
@@ -397,7 +397,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     message += `. Next refresh in ${timeText}.`;
   }
 
-  chrome.notifications.create('refresh-complete', {
+  chrome.notifications.create(`refresh-complete-${Date.now()}`, {
     type: 'basic',
     iconUrl: 'icon.png',
     title: rateLimitHit ? 'MotoTracker Rate Limited' : 'MotoTracker Refresh Complete',
@@ -446,8 +446,8 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
         console.log(`Settings changed, rescheduling alarm for ${newFrequency} minutes`);
         await scheduleAlarm(newFrequency);
 
-        // Show notification about schedule change
-        chrome.notifications.create('settings-changed', {
+        // Show notification about schedule change (use unique ID to ensure visibility)
+        chrome.notifications.create(`settings-changed-${Date.now()}`, {
           type: 'basic',
           iconUrl: 'icon.png',
           title: 'MotoTracker Schedule Updated',
