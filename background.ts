@@ -414,16 +414,43 @@ const runBackgroundRefresh = async (): Promise<void> => {
 
 // ============ Event Listeners ============
 
+// Helper to schedule alarm based on stored nextRefreshTime or default interval
+const initializeAlarm = async (): Promise<void> => {
+  const settings = await getSettings();
+  const refreshStatus = await getRefreshStatus();
+
+  // Check if there's a stored nextRefreshTime that's still in the future
+  if (refreshStatus.nextRefreshTime) {
+    const nextRefreshDate = new Date(refreshStatus.nextRefreshTime);
+    const now = new Date();
+
+    if (nextRefreshDate > now) {
+      // Calculate remaining minutes until the scheduled refresh
+      const remainingMs = nextRefreshDate.getTime() - now.getTime();
+      const remainingMinutes = remainingMs / (1000 * 60);
+
+      console.log(`Restoring scheduled refresh in ${Math.round(remainingMinutes)} minutes`);
+
+      // Schedule alarm for the remaining time (don't update nextRefreshTime since it's already correct)
+      await chrome.alarms.clear(CHECK_ALARM_NAME);
+      chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: Math.max(0.1, remainingMinutes) });
+      return;
+    }
+  }
+
+  // No valid stored time or it's in the past - schedule new alarm with default interval
+  console.log(`No valid stored refresh time, scheduling for ${settings.checkFrequencyMinutes} minutes`);
+  await scheduleAlarm(settings.checkFrequencyMinutes);
+};
+
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
-  const settings = await getSettings();
-  await scheduleAlarm(settings.checkFrequencyMinutes);
+  await initializeAlarm();
 });
 
 // Initialize on startup
 chrome.runtime.onStartup.addListener(async () => {
-  const settings = await getSettings();
-  await scheduleAlarm(settings.checkFrequencyMinutes);
+  await initializeAlarm();
 });
 
 // Handle alarms
