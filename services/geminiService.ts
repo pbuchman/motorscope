@@ -81,9 +81,18 @@ const parseCarDataWithGemini = async (
 
     const data = JSON.parse(response.text);
     
-    // Validate the parsed data
-    if (!data.title || !data.price || !data.currency || !data.details) {
-      throw new Error("AI response is missing required fields");
+    // Validate the parsed data with specific type checks
+    if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
+      throw new Error("AI response is missing or has invalid title");
+    }
+    if (typeof data.price !== 'number' || data.price <= 0) {
+      throw new Error("AI response is missing or has invalid price");
+    }
+    if (!data.currency || typeof data.currency !== 'string') {
+      throw new Error("AI response is missing or has invalid currency");
+    }
+    if (!data.details || typeof data.details !== 'object') {
+      throw new Error("AI response is missing or has invalid details");
     }
 
     // Generate a consistent ID from the URL (simple hash replacement)
