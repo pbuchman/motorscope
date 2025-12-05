@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats } from '../types';
 import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings } from '../services/settingsService';
 import { RefreshCw } from 'lucide-react';
+import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 5 mins to 1 month (in minutes)
 const FREQUENCY_STEPS = [
@@ -20,16 +21,6 @@ const formatFrequency = (minutes: number): string => {
   return '1 month';
 };
 
-const formatEuropeanDateTime = (timestamp: string | number): string => {
-  const date = new Date(timestamp);
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-};
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -150,7 +141,7 @@ const SettingsPage: React.FC = () => {
           <div className="space-y-4 max-h-[600px] overflow-y-auto">
             {stats.history.map((entry) => (
               <article key={entry.id} className="border border-gray-100 rounded-lg p-4">
-                <p className="text-xs text-slate-400">{formatEuropeanDateTime(entry.timestamp)}</p>
+                <p className="text-xs text-slate-400">{formatEuropeanDateTimeWithSeconds(entry.timestamp)}</p>
                 <p className="text-sm font-medium text-slate-800 truncate">{entry.url}</p>
                 <details className="mt-2">
                   <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700">

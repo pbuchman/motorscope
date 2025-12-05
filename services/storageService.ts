@@ -1,38 +1,14 @@
 import { CarListing, ListingStatus, PricePoint } from "../types";
 import { extensionStorage } from "./extensionStorage";
+import { normalizeUrl } from "../utils/formatters";
 
 const STORAGE_KEY = "moto_tracker_listings";
-
-// Normalize URL by removing query parameters
-const normalizeUrl = (url: string): string => {
-  try {
-    const urlObj = new URL(url);
-    return `${urlObj.origin}${urlObj.pathname}`;
-  } catch {
-    return url;
-  }
-};
 
 export const getListings = async (): Promise<CarListing[]> => {
   const data = await extensionStorage.get<CarListing[]>(STORAGE_KEY);
   return data || [];
 };
 
-// Find listing by ID, VIN, or normalized URL
-export const findExistingListing = async (url: string, vin?: string): Promise<CarListing | null> => {
-  const listings = await getListings();
-  const normalizedUrl = normalizeUrl(url);
-
-  // First try to find by VIN if available
-  if (vin && vin.trim().length > 0) {
-    const byVin = listings.find(l => l.details.vin?.toUpperCase() === vin.toUpperCase());
-    if (byVin) return byVin;
-  }
-
-  // Then try by normalized URL
-  const byUrl = listings.find(l => normalizeUrl(l.url) === normalizedUrl);
-  return byUrl || null;
-};
 
 export const saveListing = async (listing: CarListing): Promise<void> => {
   const listings = await getListings();
