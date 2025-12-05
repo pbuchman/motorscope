@@ -60,14 +60,14 @@ const Dashboard: React.FC = () => {
 
       // Only mark as expired if we get a clear 404 or 410
       if (response.status === 404 || response.status === 410) {
-        await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED);
+        await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED, 'success');
         await loadData();
         return;
       }
 
-      // If we can't fetch (CORS, etc), just update lastChecked without changing status
+      // If we can't fetch (CORS, etc), mark as error
       if (!response.ok) {
-        await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status);
+        await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status, 'error', `HTTP ${response.status}`);
         await loadData();
         return;
       }
@@ -94,13 +94,14 @@ const Dashboard: React.FC = () => {
       const newPrice = result.price > 0 ? result.price : listing.currentPrice;
       const newCurrency = result.currency || listing.currency;
 
-      await refreshListing(listing.id, newPrice, newCurrency, result.status);
+      await refreshListing(listing.id, newPrice, newCurrency, result.status, 'success');
       await loadData();
 
     } catch (error) {
-      // Network error or CORS - just update lastChecked, don't change status
+      // Network error, CORS, or Gemini error - mark as failed
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Refresh failed:', error);
-      await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status);
+      await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status, 'error', errorMessage);
       await loadData();
     } finally {
       // Remove from refreshing set

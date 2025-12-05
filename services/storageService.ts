@@ -51,12 +51,14 @@ export const saveListing = async (listing: CarListing): Promise<void> => {
   await extensionStorage.set(STORAGE_KEY, listings);
 };
 
-// Refresh listing: update price history and status only
+// Refresh listing: update price history, status, and refresh status
 export const refreshListing = async (
   id: string,
   newPrice: number,
   currency: string,
-  status: ListingStatus
+  status: ListingStatus,
+  refreshStatus: 'success' | 'error' = 'success',
+  refreshError?: string
 ): Promise<void> => {
   const listings = await getListings();
   const index = listings.findIndex((l) => l.id === id);
@@ -76,8 +78,17 @@ export const refreshListing = async (
     }
 
     item.status = status;
-    item.lastChecked = new Date().toISOString();
     item.currency = currency;
+
+    // Update refresh status
+    item.lastRefreshStatus = refreshStatus;
+    if (refreshStatus === 'success') {
+      item.lastChecked = new Date().toISOString();
+      item.lastRefreshError = undefined;
+    } else {
+      // On error, don't update lastChecked, but store the error
+      item.lastRefreshError = refreshError;
+    }
 
     await extensionStorage.set(STORAGE_KEY, listings);
   }

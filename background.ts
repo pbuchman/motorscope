@@ -4,7 +4,7 @@ import { refreshListingWithGemini, RateLimitError } from './services/geminiServi
 
 const CHECK_ALARM_NAME = 'moto_tracker_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
-const RATE_LIMIT_RETRY_MINUTES = 1; // Schedule retry in 1 minute if rate limited
+const RATE_LIMIT_RETRY_MINUTES = 5; // Schedule retry in 5 minutes if rate limited
 
 const STORAGE_KEYS = {
   listings: 'moto_tracker_listings',
