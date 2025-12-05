@@ -1,7 +1,9 @@
-// Background service worker for MotoTracker
+// Background service worker for MotoTracker (ES Module)
+import { ListingStatus, CarListing, RefreshStatus, GeminiStats } from './types';
 
 const CHECK_ALARM_NAME = 'moto_tracker_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
+
 const STORAGE_KEYS = {
   listings: 'moto_tracker_listings',
   settings: 'moto_tracker_settings',
@@ -10,8 +12,86 @@ const STORAGE_KEYS = {
   geminiStats: 'moto_tracker_gemini_stats',
 };
 
-// Schedule the next alarm
-const scheduleAlarm = async (minutes = DEFAULT_FREQUENCY_MINUTES) => {
+// ============ Storage Helpers ============
+
+const getFromStorage = <T>(key: string): Promise<T | null> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([key], (result) => {
+      resolve(result[key] ?? null);
+    });
+  });
+};
+
+const setInStorage = <T>(key: string, value: T): Promise<void> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [key]: value }, resolve);
+  });
+};
+
+// ============ Settings ============
+
+interface Settings {
+  checkFrequencyMinutes: number;
+  geminiApiKey: string;
+}
+
+const getSettings = async (): Promise<Settings> => {
+  const settings = await getFromStorage<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings);
+  const apiKey = await getFromStorage<string>(STORAGE_KEYS.geminiKey);
+  return {
+    checkFrequencyMinutes: settings?.checkFrequencyMinutes || DEFAULT_FREQUENCY_MINUTES,
+    geminiApiKey: apiKey || '',
+  };
+};
+
+// ============ Listings ============
+
+const getListings = async (): Promise<CarListing[]> => {
+  const listings = await getFromStorage<CarListing[]>(STORAGE_KEYS.listings);
+  return listings || [];
+};
+
+const saveListings = async (listings: CarListing[]): Promise<void> => {
+  await setInStorage(STORAGE_KEYS.listings, listings);
+};
+
+// ============ Refresh Status ============
+
+const getRefreshStatus = async (): Promise<RefreshStatus> => {
+  const status = await getFromStorage<RefreshStatus>(STORAGE_KEYS.refreshStatus);
+  return status || {
+    lastRefreshTime: null,
+    nextRefreshTime: null,
+    lastRefreshCount: 0,
+    isRefreshing: false,
+  };
+};
+
+const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void> => {
+  const current = await getRefreshStatus();
+  await setInStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
+};
+
+// ============ Gemini Stats ============
+
+const recordGeminiCall = async (url: string, prompt: string): Promise<void> => {
+  const stats = await getFromStorage<GeminiStats>(STORAGE_KEYS.geminiStats) || { totalCalls: 0, history: [] };
+  const entry = {
+    id: crypto.randomUUID(),
+    url,
+    promptPreview: prompt,
+    timestamp: new Date().toISOString(),
+  };
+  const history = [entry, ...stats.history].slice(0, 200);
+  await setInStorage(STORAGE_KEYS.geminiStats, {
+    totalCalls: stats.totalCalls + 1,
+    history,
+  });
+};
+
+// ============ Alarm Scheduling ============
+
+const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promise<void> => {
   await chrome.alarms.clear(CHECK_ALARM_NAME);
   chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: minutes });
 
@@ -19,77 +99,20 @@ const scheduleAlarm = async (minutes = DEFAULT_FREQUENCY_MINUTES) => {
   await updateRefreshStatus({ nextRefreshTime });
 };
 
-// Get settings from storage
-const getSettings = async () => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([STORAGE_KEYS.settings, STORAGE_KEYS.geminiKey], (result) => {
-      const settings = result[STORAGE_KEYS.settings] || {};
-      const apiKey = result[STORAGE_KEYS.geminiKey] || '';
-      resolve({
-        checkFrequencyMinutes: settings.checkFrequencyMinutes || DEFAULT_FREQUENCY_MINUTES,
-        geminiApiKey: apiKey,
-      });
-    });
-  });
-};
+// ============ Gemini API ============
 
-// Get listings from storage
-const getListings = async () => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([STORAGE_KEYS.listings], (result) => {
-      resolve(result[STORAGE_KEYS.listings] || []);
-    });
-  });
-};
+interface GeminiRefreshResult {
+  price: number;
+  currency: string;
+  status: ListingStatus;
+}
 
-// Save listings to storage
-const saveListings = async (listings) => {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [STORAGE_KEYS.listings]: listings }, resolve);
-  });
-};
-
-// Update refresh status
-const updateRefreshStatus = async (update) => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([STORAGE_KEYS.refreshStatus], (result) => {
-      const current = result[STORAGE_KEYS.refreshStatus] || {
-        lastRefreshTime: null,
-        nextRefreshTime: null,
-        lastRefreshCount: 0,
-        isRefreshing: false,
-      };
-      chrome.storage.local.set({
-        [STORAGE_KEYS.refreshStatus]: { ...current, ...update }
-      }, resolve);
-    });
-  });
-};
-
-// Record Gemini call for stats
-const recordGeminiCall = async (url, prompt) => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([STORAGE_KEYS.geminiStats], (result) => {
-      const stats = result[STORAGE_KEYS.geminiStats] || { totalCalls: 0, history: [] };
-      const entry = {
-        id: crypto.randomUUID(),
-        url,
-        promptPreview: prompt,
-        timestamp: new Date().toISOString(),
-      };
-      const history = [entry, ...stats.history].slice(0, 200);
-      chrome.storage.local.set({
-        [STORAGE_KEYS.geminiStats]: {
-          totalCalls: stats.totalCalls + 1,
-          history,
-        }
-      }, resolve);
-    });
-  });
-};
-
-// Call Gemini API to refresh a listing
-const refreshListingWithGemini = async (apiKey, url, pageText, pageTitle) => {
+const refreshListingWithGemini = async (
+  apiKey: string,
+  url: string,
+  pageText: string,
+  pageTitle: string
+): Promise<GeminiRefreshResult> => {
   const prompt = `
     Analyze the following car listing page and extract the current price and availability status.
 
@@ -144,11 +167,11 @@ const refreshListingWithGemini = async (apiKey, url, pageText, pageTitle) => {
 
   const parsed = JSON.parse(text);
 
-  let status = 'ACTIVE';
+  let status: ListingStatus = ListingStatus.ACTIVE;
   if (parsed.isSold === true) {
-    status = 'SOLD';
+    status = ListingStatus.SOLD;
   } else if (parsed.isAvailable === false) {
-    status = 'EXPIRED';
+    status = ListingStatus.EXPIRED;
   }
 
   return {
@@ -158,8 +181,9 @@ const refreshListingWithGemini = async (apiKey, url, pageText, pageTitle) => {
   };
 };
 
-// Refresh a single listing
-const refreshListing = async (listing, apiKey) => {
+// ============ Refresh Single Listing ============
+
+const refreshListing = async (listing: CarListing, apiKey: string): Promise<CarListing> => {
   try {
     const response = await fetch(listing.url, {
       method: 'GET',
@@ -168,7 +192,7 @@ const refreshListing = async (listing, apiKey) => {
     });
 
     if (response.status === 404 || response.status === 410) {
-      return { ...listing, status: 'EXPIRED', lastChecked: new Date().toISOString() };
+      return { ...listing, status: ListingStatus.EXPIRED, lastChecked: new Date().toISOString() };
     }
 
     if (!response.ok) {
@@ -218,8 +242,9 @@ const refreshListing = async (listing, apiKey) => {
   }
 };
 
-// Run the background refresh for all listings
-const runBackgroundRefresh = async () => {
+// ============ Background Refresh All ============
+
+const runBackgroundRefresh = async (): Promise<void> => {
   const settings = await getSettings();
 
   if (!settings.geminiApiKey) {
@@ -239,7 +264,7 @@ const runBackgroundRefresh = async () => {
   await updateRefreshStatus({ isRefreshing: true });
 
   let refreshedCount = 0;
-  const updatedListings = [];
+  const updatedListings: CarListing[] = [];
 
   for (const listing of listings) {
     try {
@@ -268,7 +293,7 @@ const runBackgroundRefresh = async () => {
 
   // Show notification
   const nextRefreshMinutes = settings.checkFrequencyMinutes;
-  let timeText;
+  let timeText: string;
   if (nextRefreshMinutes < 60) {
     timeText = `${nextRefreshMinutes} minutes`;
   } else if (nextRefreshMinutes < 1440) {
@@ -291,6 +316,8 @@ const runBackgroundRefresh = async () => {
   // Schedule next alarm
   await scheduleAlarm(settings.checkFrequencyMinutes);
 };
+
+// ============ Event Listeners ============
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
@@ -324,9 +351,13 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 });
 
 // Handle manual refresh trigger from UI
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'TRIGGER_MANUAL_REFRESH') {
     runBackgroundRefresh().then(() => sendResponse({ success: true }));
     return true; // Keep channel open for async response
   }
 });
+
+// Log that the service worker has started
+console.log('MotoTracker background service worker started');
+
