@@ -35,19 +35,19 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
         </div>
       )}
 
-      {/* Error Banner */}
-      {lastRefreshFailed && !isRefreshing && (
-        <div className="bg-red-50 border-b border-red-100 px-4 py-2 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-          <p className="text-xs text-red-600">
-            Failed to refresh. Check Gemini logs and try again later.
-          </p>
-        </div>
-      )}
 
       {/* Header Image & Status */}
       <div className="relative h-48 bg-gray-100">
-        <img 
+        {/* Error Banner - positioned absolutely to not affect card alignment */}
+        {lastRefreshFailed && !isRefreshing && (
+          <div className="absolute top-0 left-0 right-0 z-10 bg-red-50/95 backdrop-blur-sm border-b border-red-100 px-4 py-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+            <p className="text-xs text-red-600">
+              Failed to refresh. Check Gemini logs and try again later.
+            </p>
+          </div>
+        )}
+        <img
           src={listing.thumbnailUrl} 
           alt={listing.title} 
           className="w-full h-full object-cover"
