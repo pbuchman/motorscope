@@ -12,10 +12,27 @@ const normalizeUrl = (url: string): string => {
   }
 };
 
+// Validate VIN number - must be exactly 17 alphanumeric characters (excluding I, O, Q)
+const isValidVin = (vin: string | undefined | null): boolean => {
+  if (!vin || typeof vin !== 'string') return false;
+  const cleaned = vin.trim().toUpperCase();
+  // VIN must be exactly 17 characters, alphanumeric, no I, O, Q
+  const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
+  return vinRegex.test(cleaned);
+};
+
+// Clean and validate VIN - returns valid VIN or undefined
+const cleanVin = (vin: string | undefined | null): string | undefined => {
+  if (!vin || typeof vin !== 'string') return undefined;
+  const cleaned = vin.trim().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+  return isValidVin(cleaned) ? cleaned : undefined;
+};
+
 // Generate ID: prefer VIN if available, otherwise use normalized URL hash
 const generateListingId = (vin: string | undefined, normalizedUrl: string): string => {
-  if (vin && vin.trim().length > 0) {
-    return `vin_${vin.trim().toUpperCase()}`;
+  const validVin = cleanVin(vin);
+  if (validVin) {
+    return `vin_${validVin}`;
   }
   return `url_${btoa(normalizedUrl).substring(0, 16)}`;
 };
@@ -83,7 +100,7 @@ const parseCarDataWithGemini = async (
     Notes:
     - If mileage is in km, convert to number.
     - If price contains currency symbol, split it.
-    - Look specifically for VIN number patterns.
+    - VIN (Vehicle Identification Number) must be EXACTLY 17 alphanumeric characters. It cannot contain letters I, O, or Q. If you cannot find a valid 17-character VIN, leave the vin field empty or null - do NOT guess or provide partial VINs.
     - Infer Model/Make from URL if not clear in text.
     - Capture the date when the seller posted the listing as ISO 8601 if available (postedDate field).
   `;
@@ -126,8 +143,11 @@ const parseCarDataWithGemini = async (
     // Normalize the URL (remove query params)
     const normalizedUrl = normalizeUrl(url);
 
+    // Clean and validate VIN
+    const validatedVin = cleanVin(data.details?.vin);
+
     // Generate ID: prefer VIN if available
-    const id = generateListingId(data.details?.vin, normalizedUrl);
+    const id = generateListingId(validatedVin, normalizedUrl);
 
     return {
       id,
@@ -136,7 +156,10 @@ const parseCarDataWithGemini = async (
       thumbnailUrl: scrapedImageUrl || "https://placehold.co/600x400?text=No+Image",
       currentPrice: data.price,
       currency: data.currency,
-      details: data.details,
+      details: {
+        ...data.details,
+        vin: validatedVin, // Only set VIN if it's valid
+      },
       status: ListingStatus.ACTIVE,
       priceHistory: [
         {

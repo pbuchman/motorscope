@@ -2,7 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { getListings, saveListing, removeListing } from '../services/storageService';
 import { parseCarDataWithGemini } from '../services/geminiService';
 import { CarListing, PageContentResult } from '../types';
-import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel } from 'lucide-react';
+import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel, Clock, Eye, RefreshCw } from 'lucide-react';
+import PriceChart from './PriceChart';
+
+// Format date in European format
+const formatEuropeanDateTime = (date: string | number): string => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
 
 // Normalize URL by removing query parameters
 const normalizeUrl = (url: string): string => {
@@ -282,17 +294,78 @@ const ExtensionPopup: React.FC = () => {
                </div>
              ) : savedItem ? (
                <div className="w-full">
-                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                     <Check className="w-6 h-6 text-green-600" />
+                 <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+                   <div className="flex items-center gap-2">
+                     <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                       <Check className="w-4 h-4 text-green-600" />
+                     </div>
+                     <div className="text-left">
+                       <h3 className="text-green-800 font-bold text-sm">Tracked!</h3>
+                       <p className="text-green-700 text-xs">Monitoring this listing</p>
+                     </div>
                    </div>
-                   <h3 className="text-green-800 font-bold text-lg mb-1">Tracked!</h3>
-                   <p className="text-green-700 text-sm">We are monitoring this listing.</p>
                  </div>
                  
-                 <div className="bg-slate-50 p-4 rounded-lg text-left mb-6 border border-slate-100">
-                   <p className="font-bold text-slate-800 truncate mb-1">{savedItem.title}</p>
-                   <p className="text-blue-600 font-mono font-bold">{savedItem.currentPrice.toLocaleString()} {savedItem.currency}</p>
+                 {/* Full Details Card */}
+                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left mb-4">
+                   {savedItem.thumbnailUrl && (
+                     <img
+                       src={savedItem.thumbnailUrl}
+                       alt={savedItem.title}
+                       className="w-full h-28 object-cover rounded mb-2"
+                     />
+                   )}
+                   <p className="font-bold text-slate-900 text-sm mb-1 truncate">{savedItem.title}</p>
+                   <p className="text-blue-600 font-mono font-bold mb-2">
+                     {savedItem.currentPrice?.toLocaleString()} {savedItem.currency}
+                   </p>
+
+                   <div className="grid grid-cols-2 gap-1 text-xs mb-2">
+                     <div className="flex items-center gap-1 text-slate-600">
+                       <Car className="w-3 h-3" />
+                       <span className="truncate">{savedItem.details?.make} {savedItem.details?.model}</span>
+                     </div>
+                     <div className="flex items-center gap-1 text-slate-600">
+                       <Calendar className="w-3 h-3" />
+                       <span>{savedItem.details?.year}</span>
+                     </div>
+                     <div className="flex items-center gap-1 text-slate-600">
+                       <Gauge className="w-3 h-3" />
+                       <span>{savedItem.details?.mileage?.toLocaleString()} km</span>
+                     </div>
+                     <div className="flex items-center gap-1 text-slate-600">
+                       <Fuel className="w-3 h-3" />
+                       <span className="truncate">{savedItem.details?.fuelType}</span>
+                     </div>
+                   </div>
+
+                   {savedItem.details?.vin && (
+                     <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
+                       <span className="text-[10px] text-green-700 font-mono">VIN: {savedItem.details.vin}</span>
+                     </div>
+                   )}
+
+                   {/* Tracking Info */}
+                   <div className="flex flex-col gap-0.5 text-[10px] text-slate-400 mb-2">
+                     <span className="inline-flex items-center gap-1">
+                       <Eye className="w-3 h-3" />
+                       Tracked since {formatEuropeanDateTime(savedItem.dateAdded)}
+                     </span>
+                     <span className="inline-flex items-center gap-1">
+                       <RefreshCw className="w-3 h-3" />
+                       Last checked {formatEuropeanDateTime(savedItem.lastChecked)}
+                     </span>
+                   </div>
+
+                   {/* Price History Chart */}
+                   {savedItem.priceHistory && savedItem.priceHistory.length > 0 && (
+                     <div className="mt-2">
+                       <p className="text-[10px] font-semibold text-slate-400 mb-1 uppercase tracking-wider">Price History</p>
+                       <div className="h-32">
+                         <PriceChart history={savedItem.priceHistory} currency={savedItem.currency} />
+                       </div>
+                     </div>
+                   )}
                  </div>
 
                  <button 
