@@ -1,7 +1,7 @@
 // Global type declarations for Chrome Extension APIs
 declare namespace chrome {
   export namespace runtime {
-    export function sendMessage(message: any): void;
+    export function sendMessage(message: any): Promise<any>;
     export function openOptionsPage(): void;
     export function getURL(path: string): string;
     export const onMessage: {
@@ -52,6 +52,12 @@ declare namespace chrome {
     }
     export const onChanged: {
       addListener(
+        callback: (
+          changes: { [key: string]: any },
+          namespace: string
+        ) => void
+      ): void;
+      removeListener(
         callback: (
           changes: { [key: string]: any },
           namespace: string

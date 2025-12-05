@@ -1,10 +1,11 @@
-import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats } from '../types';
+import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats, RefreshStatus } from '../types';
 import { extensionStorage } from './extensionStorage';
 
 export const STORAGE_KEYS = {
   settings: 'moto_tracker_settings',
   geminiKey: 'moto_tracker_gemini_key',
   geminiStats: 'moto_tracker_gemini_stats',
+  refreshStatus: 'moto_tracker_refresh_status',
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -61,3 +62,21 @@ export const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<v
 export const resetGeminiStats = async (): Promise<void> => {
   await extensionStorage.set(STORAGE_KEYS.geminiStats, { totalCalls: 0, history: [] });
 };
+
+export const DEFAULT_REFRESH_STATUS: RefreshStatus = {
+  lastRefreshTime: null,
+  nextRefreshTime: null,
+  lastRefreshCount: 0,
+  isRefreshing: false,
+};
+
+export const getRefreshStatus = async (): Promise<RefreshStatus> => {
+  const status = await extensionStorage.get<RefreshStatus>(STORAGE_KEYS.refreshStatus);
+  return status || DEFAULT_REFRESH_STATUS;
+};
+
+export const saveRefreshStatus = async (status: Partial<RefreshStatus>): Promise<void> => {
+  const current = await getRefreshStatus();
+  await extensionStorage.set(STORAGE_KEYS.refreshStatus, { ...current, ...status });
+};
+
