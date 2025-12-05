@@ -1,7 +1,7 @@
 import React from 'react';
 import { CarListing, ListingStatus } from '../types';
 import PriceChart from './PriceChart';
-import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Info } from 'lucide-react';
+import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock } from 'lucide-react';
 
 interface CarCardProps {
   listing: CarListing;
@@ -65,6 +65,12 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
 
         {/* VIN & Tech specs (mini) */}
         <div className="flex flex-wrap gap-2 mb-4">
+          {listing.postedDate && (
+            <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              <Clock className="w-3 h-3 mr-1" />
+              Posted {new Date(listing.postedDate).toLocaleDateString()}
+            </span>
+          )}
           {listing.details.vin && (
              <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-mono">
                VIN: {listing.details.vin}

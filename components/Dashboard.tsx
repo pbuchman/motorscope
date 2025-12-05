@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CarListing } from '../types';
 import { getListings, removeListing } from '../services/storageService';
 import CarCard from './CarCard';
-import { Search, Car } from 'lucide-react';
+import { Search, Car, CalendarDays } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [listings, setListings] = useState<CarListing[]>([]);

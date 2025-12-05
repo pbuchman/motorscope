@@ -35,9 +35,29 @@ export interface CarListing {
   status: ListingStatus;
   dateAdded: string;
   lastChecked: string;
+  postedDate?: string;
 }
 
 export type ViewMode = 'DASHBOARD' | 'POPUP';
+
+export type AppView = 'dashboard' | 'popup' | 'settings';
+
+export interface GeminiCallHistoryEntry {
+  id: string;
+  url: string;
+  promptPreview: string;
+  timestamp: string;
+}
+
+export interface GeminiStats {
+  totalCalls: number;
+  history: GeminiCallHistoryEntry[];
+}
+
+export interface ExtensionSettings {
+  geminiApiKey: string;
+  checkFrequencyMinutes: number;
+}
 
 // Chrome API type definitions for better type safety
 export interface PageContentResult {
