@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "rebuild:dist": "rm -rf dist && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
