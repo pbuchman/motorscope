@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build-and-pack:
@@ -24,14 +24,12 @@ jobs:
 
       - name: Build
         run: |
-          # adjust if your build script name differs
           npm run build
 
       - name: Package extension (zip + try to create .crx)
         id: package
         run: |
           set -euo pipefail
-          # find the build output directory (adjust list if needed)
           OUT_DIR=""
           for d in dist build extension public; do
             if [ -d "$d" ]; then
@@ -47,18 +45,12 @@ jobs:
           ART_DIR="$(pwd)/build_artifacts"
           rm -rf "$ART_DIR"
           mkdir -p "$ART_DIR"
-
-          # create a zip of the extension
           (cd "$OUT_DIR" && zip -r -X "$ART_DIR/extension.zip" .) || { echo "zip failed"; exit 1; }
-
-          # attempt to create a .crx using npx crx (if available). This may generate a key.pem next to the .crx
-          # If crx packing fails, continue — zip is always produced.
           if npx --yes crx@latest pack "$OUT_DIR" -o "$ART_DIR/extension.crx"; then
             echo "CRX created at $ART_DIR/extension.crx"
           else
             echo "CRX creation failed (npx crx pack). Continuing with zip artifact only."
           fi
-
           echo "ARTIFACT_DIR=$ART_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Upload extension artifacts
@@ -67,4 +59,3 @@ jobs:
           name: chrome-extension-${{ github.sha }}
           path: ${{ steps.package.outputs.ARTIFACT_DIR }}/*
           retention-days: 30
-
