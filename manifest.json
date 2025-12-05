@@ -22,7 +22,7 @@
       "128": "icon.png"
     }
   },
-  "options_page": "index.html?view=dashboard",
+  "options_page": "index.html?view=settings",
   "background": {
     "service_worker": "background.js"
   },
