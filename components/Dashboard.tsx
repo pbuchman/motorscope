@@ -51,11 +51,22 @@ const Dashboard: React.FC = () => {
 
     try {
       // Fetch the page content
-      const response = await fetch(listing.url);
+      const response = await fetch(listing.url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+      });
 
-      if (!response.ok) {
-        // Page is gone - mark as expired
+      // Only mark as expired if we get a clear 404 or 410
+      if (response.status === 404 || response.status === 410) {
         await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED);
+        await loadData();
+        return;
+      }
+
+      // If we can't fetch (CORS, etc), just update lastChecked without changing status
+      if (!response.ok) {
+        await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status);
         await loadData();
         return;
       }
@@ -63,16 +74,28 @@ const Dashboard: React.FC = () => {
       const html = await response.text();
 
       // Extract price from HTML using simple regex patterns
-      // This is a simplified approach - in production you'd want more robust parsing
       let newPrice = listing.currentPrice;
-      let newStatus = ListingStatus.ACTIVE;
+      let newStatus = listing.status; // Keep current status by default
 
-      // Check if page indicates sold/expired
+      // Only mark as SOLD if we find VERY specific sold indicators
+      // These should be specific enough to avoid false positives
       const lowerHtml = html.toLowerCase();
-      if (lowerHtml.includes('sprzedane') || lowerHtml.includes('sold') ||
-          lowerHtml.includes('niedostępne') || lowerHtml.includes('unavailable') ||
-          lowerHtml.includes('usunięte') || lowerHtml.includes('removed')) {
+      const soldIndicators = [
+        'ogłoszenie nieaktualne',
+        'oferta została zakończona',
+        'to ogłoszenie zostało usunięte',
+        'this listing has been sold',
+        'vehicle has been sold',
+        'listing no longer available',
+      ];
+
+      const isSold = soldIndicators.some(indicator => lowerHtml.includes(indicator));
+
+      if (isSold) {
         newStatus = ListingStatus.SOLD;
+      } else if (listing.status !== ListingStatus.ACTIVE) {
+        // If the listing was marked as sold/expired but we can now access it, mark as active
+        newStatus = ListingStatus.ACTIVE;
       }
 
       // Try to extract price - common patterns
@@ -97,9 +120,9 @@ const Dashboard: React.FC = () => {
       await loadData();
 
     } catch (error) {
-      // Network error or CORS - mark as potentially expired
+      // Network error or CORS - just update lastChecked, don't change status
       console.error('Refresh failed:', error);
-      await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED);
+      await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status);
       await loadData();
     } finally {
       // Remove from refreshing set
