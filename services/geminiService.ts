@@ -8,11 +8,11 @@ const parseCarDataWithGemini = async (
   scrapedImageUrl?: string | null
 ): Promise<Partial<CarListing>> => {
   
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please configure your API key.");
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   // Schema for structured output
   const responseSchema = {
