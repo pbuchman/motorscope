@@ -91,12 +91,20 @@ const recordGeminiCall = async (url: string, prompt: string): Promise<void> => {
 
 // ============ Alarm Scheduling ============
 
+// Chrome alarms have a minimum delay of ~1 minute in production
+// For shorter intervals, we still use alarms but with minimum delay
 const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promise<void> => {
   await chrome.alarms.clear(CHECK_ALARM_NAME);
-  chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: minutes });
+
+  // Chrome MV3 alarms have a minimum of about 0.5 minutes (30 seconds) in dev mode
+  // Use the actual value but it will be clamped by Chrome if too low
+  const delayMinutes = Math.max(0.1, minutes); // Minimum ~6 seconds for testing
+  chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: delayMinutes });
 
   const nextRefreshTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
   await updateRefreshStatus({ nextRefreshTime });
+
+  console.log(`Alarm scheduled for ${minutes} minutes (${Math.round(minutes * 60)} seconds)`);
 };
 
 // ============ Gemini API ============
