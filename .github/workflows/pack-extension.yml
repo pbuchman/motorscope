@@ -1,0 +1,70 @@
+name: Build & Pack Chrome Extension
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Build
+        run: |
+          # adjust if your build script name differs
+          npm run build
+
+      - name: Package extension (zip + try to create .crx)
+        id: package
+        run: |
+          set -euo pipefail
+          # find the build output directory (adjust list if needed)
+          OUT_DIR=""
+          for d in dist build extension public; do
+            if [ -d "$d" ]; then
+              OUT_DIR="$d"
+              break
+            fi
+          done
+          if [ -z "$OUT_DIR" ]; then
+            echo "No build output directory found (tried: dist, build, extension, public)."
+            exit 1
+          fi
+          echo "Using output directory: $OUT_DIR"
+          ART_DIR="$(pwd)/build_artifacts"
+          rm -rf "$ART_DIR"
+          mkdir -p "$ART_DIR"
+
+          # create a zip of the extension
+          (cd "$OUT_DIR" && zip -r -X "$ART_DIR/extension.zip" .) || { echo "zip failed"; exit 1; }
+
+          # attempt to create a .crx using npx crx (if available). This may generate a key.pem next to the .crx
+          # If crx packing fails, continue — zip is always produced.
+          if npx --yes crx@latest pack "$OUT_DIR" -o "$ART_DIR/extension.crx"; then
+            echo "CRX created at $ART_DIR/extension.crx"
+          else
+            echo "CRX creation failed (npx crx pack). Continuing with zip artifact only."
+          fi
+
+          echo "ARTIFACT_DIR=$ART_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-${{ github.sha }}
+          path: ${{ steps.package.outputs.ARTIFACT_DIR }}/*
+          retention-days: 30
+
