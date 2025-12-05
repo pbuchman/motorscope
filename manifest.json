@@ -8,9 +8,19 @@
     "activeTab",
     "scripting"
   ],
+  "icons": {
+    "16": "icon.svg",
+    "48": "icon.svg",
+    "128": "icon.svg"
+  },
   "action": {
     "default_popup": "index.html?view=popup",
-    "default_title": "MotoTracker"
+    "default_title": "MotoTracker",
+    "default_icon": {
+      "16": "icon.svg",
+      "48": "icon.svg",
+      "128": "icon.svg"
+    }
   },
   "options_page": "index.html?view=dashboard",
   "background": {
