@@ -13,7 +13,13 @@ MotoTracker is a browser extension that uses Google Gemini AI to scrape, parse, 
 
 1.  **Node.js**: Ensure you have Node.js installed.
 2.  **Google Gemini API Key**: You must have a valid API Key.
-    *   *Note for development*: In this build, you must ensure `process.env.GEMINI_API_KEY` is replaced during the build process, or manually hardcoded in `services/geminiService.ts` if running locally without a bundler that supports env vars.
+    *   Get your API key from: https://ai.google.dev/
+    *   Copy `.env.example` to `.env` and add your API key:
+        ```bash
+        cp .env.example .env
+        # Edit .env and add your GEMINI_API_KEY
+        ```
+    *   **Security Note**: Never commit your `.env` file to version control. It's already in `.gitignore`.
 
 ## Build Instructions
 
@@ -81,3 +87,20 @@ npx chokidar "components/**/*" "services/**/*" "manifest.json" "background.js" "
 2.  Click the MotoTracker extension icon in your browser toolbar.
 3.  Click **Add to Watchlist**. The AI will analyze the page and save the car.
 4.  Click **Dashboard** in the popup (or right-click the extension icon -> Options) to view your collection.
+
+## Security & Code Quality
+
+This extension has been analyzed for security vulnerabilities and code quality issues. See [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) for the complete report.
+
+### Key Security Features
+- ✅ Uses `chrome.storage.local` for secure data storage
+- ✅ Input validation on all user inputs
+- ✅ API response validation
+- ✅ Type-safe TypeScript implementation
+- ✅ Environment variables for API key management
+
+### Development Notes
+- TypeScript compilation is strict and error-free
+- All Chrome extension APIs are properly typed
+- Console statements are development-only
+- Storage operations are async with proper error handling

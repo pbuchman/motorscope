@@ -4,15 +4,13 @@ import { getListings, removeListing } from '../services/storageService';
 import CarCard from './CarCard';
 import { Search, Car } from 'lucide-react';
 
-// Declare chrome
-declare const chrome: any;
-
 const Dashboard: React.FC = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const loadData = () => {
-    setListings(getListings());
+  const loadData = async () => {
+    const data = await getListings();
+    setListings(data);
   };
 
   useEffect(() => {
@@ -39,10 +37,10 @@ const Dashboard: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
     if (confirm('Are you sure you want to stop tracking this car?')) {
-      removeListing(id);
-      loadData();
+      await removeListing(id);
+      await loadData();
     }
   };
 

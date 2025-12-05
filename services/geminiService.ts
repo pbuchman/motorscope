@@ -8,6 +8,19 @@ const parseCarDataWithGemini = async (
   scrapedImageUrl?: string | null
 ): Promise<Partial<CarListing>> => {
   
+  // Input validation
+  if (!url || typeof url !== 'string') {
+    throw new Error("Invalid URL provided");
+  }
+  
+  if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
+    throw new Error("Page content is empty or invalid");
+  }
+  
+  if (!pageTitle || typeof pageTitle !== 'string') {
+    throw new Error("Page title is missing or invalid");
+  }
+  
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("API Key is missing. Please configure your GEMINI_API_KEY.");
   }
@@ -67,6 +80,20 @@ const parseCarDataWithGemini = async (
     if (!response.text) throw new Error("No response from AI");
 
     const data = JSON.parse(response.text);
+    
+    // Validate the parsed data with specific type checks
+    if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
+      throw new Error("AI response is missing or has invalid title");
+    }
+    if (typeof data.price !== 'number' || data.price <= 0) {
+      throw new Error("AI response is missing or has invalid price");
+    }
+    if (!data.currency || typeof data.currency !== 'string') {
+      throw new Error("AI response is missing or has invalid currency");
+    }
+    if (!data.details || typeof data.details !== 'object') {
+      throw new Error("AI response is missing or has invalid details");
+    }
 
     // Generate a consistent ID from the URL (simple hash replacement)
     const id = btoa(url).substring(0, 12);
@@ -92,7 +119,10 @@ const parseCarDataWithGemini = async (
     };
 
   } catch (error) {
-    console.error("Gemini Extraction Error:", error);
+    // Log error for debugging in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Gemini Extraction Error:", error);
+    }
     throw error;
   }
 };
