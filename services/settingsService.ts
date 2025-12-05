@@ -18,6 +18,7 @@ const clampFrequency = (value?: number): number => {
   return Math.min(43200, Math.max(0.167, numeric)); // 10 seconds (0.167 min) to 1 month
 };
 
+// Gemini API key is stored separately for security (not mixed with other settings)
 export const getGeminiApiKey = async (): Promise<string> => {
   const key = await extensionStorage.get<string>(STORAGE_KEYS.geminiKey);
   return key || '';
@@ -27,8 +28,9 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
   await extensionStorage.set(STORAGE_KEYS.geminiKey, key.trim());
 };
 
+// Settings combines the API key from dedicated storage with other settings
 export const getSettings = async (): Promise<ExtensionSettings> => {
-  const stored = await extensionStorage.get<ExtensionSettings>(STORAGE_KEYS.settings);
+  const stored = await extensionStorage.get<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings);
   const geminiApiKey = await getGeminiApiKey();
   return {
     geminiApiKey,
@@ -36,13 +38,15 @@ export const getSettings = async (): Promise<ExtensionSettings> => {
   };
 };
 
+// Save settings - API key goes to dedicated storage, other settings to settings storage
 export const saveSettings = async (settings: ExtensionSettings): Promise<void> => {
-  const merged: ExtensionSettings = {
-    geminiApiKey: settings.geminiApiKey.trim(),
+  // Save API key to dedicated storage
+  await saveGeminiApiKey(settings.geminiApiKey);
+
+  // Save other settings (without API key) to settings storage
+  await extensionStorage.set(STORAGE_KEYS.settings, {
     checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
-  };
-  await extensionStorage.set(STORAGE_KEYS.settings, merged);
-  await saveGeminiApiKey(merged.geminiApiKey);
+  });
 };
 
 export const getGeminiStats = async (): Promise<GeminiStats> => {
