@@ -4,37 +4,53 @@ const STORAGE_KEY = "moto_tracker_listings";
 
 // Chrome storage wrapper with fallback to localStorage for development
 const storage = {
-  get: async (key: string): Promise<any> => {
+  get: async (key: string): Promise<unknown> => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         chrome.storage.local.get([key], (result) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
           resolve(result[key]);
         });
       });
     } else {
       // Fallback to localStorage for development
-      const data = localStorage.getItem(key);
-      return Promise.resolve(data ? JSON.parse(data) : undefined);
+      try {
+        const data = localStorage.getItem(key);
+        return Promise.resolve(data ? JSON.parse(data) : undefined);
+      } catch (error) {
+        return Promise.reject(error);
+      }
     }
   },
   set: async (key: string, value: any): Promise<void> => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         chrome.storage.local.set({ [key]: value }, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
           resolve();
         });
       });
     } else {
       // Fallback to localStorage for development
-      localStorage.setItem(key, JSON.stringify(value));
-      return Promise.resolve();
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
     }
   }
 };
 
 export const getListings = async (): Promise<CarListing[]> => {
   const data = await storage.get(STORAGE_KEY);
-  return data || [];
+  return (data as CarListing[]) || [];
 };
 
 export const saveListing = async (listing: CarListing): Promise<void> => {

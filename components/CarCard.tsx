@@ -10,11 +10,13 @@ interface CarCardProps {
 
 const CarCard: React.FC<CarCardProps> = ({ listing, onRemove }) => {
   // Compare current price with the previous price (if exists)
-  const previousPrice = listing.priceHistory.length > 1 
+  // Ensure priceHistory has at least one entry before accessing
+  const hasPriceHistory = listing.priceHistory && listing.priceHistory.length > 0;
+  const previousPrice = hasPriceHistory && listing.priceHistory.length > 1 
     ? listing.priceHistory[listing.priceHistory.length - 2].price 
-    : listing.priceHistory[0].price;
-  const isLowerPrice = listing.priceHistory.length > 1 && listing.currentPrice < previousPrice;
-  const isHigherPrice = listing.priceHistory.length > 1 && listing.currentPrice > previousPrice;
+    : hasPriceHistory ? listing.priceHistory[0].price : listing.currentPrice;
+  const isLowerPrice = hasPriceHistory && listing.priceHistory.length > 1 && listing.currentPrice < previousPrice;
+  const isHigherPrice = hasPriceHistory && listing.priceHistory.length > 1 && listing.currentPrice > previousPrice;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
