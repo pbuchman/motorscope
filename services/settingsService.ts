@@ -68,6 +68,12 @@ export const DEFAULT_REFRESH_STATUS: RefreshStatus = {
   nextRefreshTime: null,
   lastRefreshCount: 0,
   isRefreshing: false,
+  currentIndex: 0,
+  totalCount: 0,
+  currentListingTitle: null,
+  pendingItems: [],
+  recentlyRefreshed: [],
+  refreshErrors: [],
 };
 
 export const getRefreshStatus = async (): Promise<RefreshStatus> => {

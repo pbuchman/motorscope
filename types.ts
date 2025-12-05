@@ -63,6 +63,40 @@ export interface RefreshStatus {
   nextRefreshTime: string | null;  // ISO string
   lastRefreshCount: number;
   isRefreshing: boolean;
+  // Progress tracking
+  currentIndex: number;
+  totalCount: number;
+  currentListingTitle: string | null;
+  // Items pending refresh (full list during refresh)
+  pendingItems: RefreshPendingItem[];
+  // Recently refreshed listings
+  recentlyRefreshed: RefreshedListingInfo[];
+  // Refresh errors history
+  refreshErrors: RefreshErrorInfo[];
+}
+
+export interface RefreshPendingItem {
+  id: string;
+  title: string;
+  url: string;
+  status: 'pending' | 'refreshing' | 'success' | 'error';
+}
+
+export interface RefreshedListingInfo {
+  id: string;
+  title: string;
+  url: string;
+  status: 'success' | 'error' | 'skipped';
+  timestamp: string;
+  error?: string;
+}
+
+export interface RefreshErrorInfo {
+  id: string;
+  title: string;
+  url: string;
+  error: string;
+  timestamp: string;
 }
 
 // Chrome API type definitions for better type safety

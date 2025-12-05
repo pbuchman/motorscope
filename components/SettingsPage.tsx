@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats, RefreshStatus } from '../types';
 import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS } from '../services/settingsService';
-import { RefreshCw, Clock, Play } from 'lucide-react';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Trash2, Loader2, Circle } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
@@ -159,9 +159,18 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">MotoTracker Settings</h1>
-        <p className="text-slate-500">Configure your Gemini API key and background verification cadence.</p>
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">MotoTracker Settings</h1>
+          <p className="text-slate-500">Configure your Gemini API key and background verification cadence.</p>
+        </div>
+        <a
+          href="index.html?view=dashboard"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          Dashboard
+        </a>
       </header>
 
       <form onSubmit={handleSave} className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
@@ -214,22 +223,31 @@ const SettingsPage: React.FC = () => {
         {statusMessage && <p className="text-sm text-slate-500">{statusMessage}</p>}
       </form>
 
-      {/* Background Refresh Status */}
+      {/* Listing Refresh Status */}
       <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Background Refresh</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Listing Refresh</h2>
           <button
             type="button"
             onClick={triggerManualRefresh}
             disabled={triggeringRefresh || refreshStatus.isRefreshing}
             className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
-            <Play className={`w-4 h-4 ${triggeringRefresh || refreshStatus.isRefreshing ? 'animate-pulse' : ''}`} />
-            {refreshStatus.isRefreshing ? 'Refreshing...' : 'Refresh Now'}
+            {refreshStatus.isRefreshing ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Refreshing {refreshStatus.currentIndex}/{refreshStatus.totalCount}
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Refresh Now
+              </>
+            )}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Last Refresh */}
           <div className="bg-slate-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
@@ -269,14 +287,125 @@ const SettingsPage: React.FC = () => {
             </div>
             <p className="text-lg font-bold text-blue-700 font-mono">
               {refreshStatus.isRefreshing ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 text-sm">
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  Refreshing...
+                  {refreshStatus.currentIndex}/{refreshStatus.totalCount}
                 </span>
               ) : countdown}
             </p>
           </div>
         </div>
+
+        {/* Refresh Progress / Recently Refreshed Listings */}
+        <div className="border-t border-gray-100 pt-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            {refreshStatus.isRefreshing ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin inline mr-2" />
+                Refreshing ({refreshStatus.currentIndex}/{refreshStatus.totalCount})
+              </>
+            ) : (
+              'Recently Refreshed'
+            )}
+          </h3>
+
+          {/* Show pending items during refresh, otherwise show recently refreshed */}
+          {refreshStatus.isRefreshing && refreshStatus.pendingItems && refreshStatus.pendingItems.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {refreshStatus.pendingItems.map((item, index) => (
+                <div
+                  key={`${item.id}-${index}`}
+                  className={`flex items-center gap-2 p-2 rounded text-sm ${
+                    item.status === 'refreshing' ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50'
+                  }`}
+                >
+                  {item.status === 'pending' ? (
+                    <Circle className="w-4 h-4 text-slate-300 shrink-0" />
+                  ) : item.status === 'refreshing' ? (
+                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+                  ) : item.status === 'success' ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  )}
+                  <span className="truncate flex-1 text-slate-700" title={item.url}>
+                    {item.url} <span className="text-slate-400">({item.title})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : refreshStatus.recentlyRefreshed && refreshStatus.recentlyRefreshed.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {refreshStatus.recentlyRefreshed.slice(0, 20).map((item, index) => (
+                <div
+                  key={`${item.id}-${index}`}
+                  className="flex items-center gap-2 p-2 bg-slate-50 rounded text-sm"
+                >
+                  {item.status === 'success' ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                  ) : item.status === 'error' ? (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
+                  )}
+                  <span className="truncate flex-1 text-slate-700" title={item.url}>
+                    {item.url} <span className="text-slate-400">({item.title})</span>
+                  </span>
+                  <span className="text-xs text-slate-400 shrink-0">
+                    {formatEuropeanDateTimeWithSeconds(item.timestamp).split(' ')[1]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">No recent refresh activity.</p>
+          )}
+        </div>
+
+        {/* Refresh Errors Section */}
+        {refreshStatus.refreshErrors && refreshStatus.refreshErrors.length > 0 && (
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
+                <XCircle className="w-4 h-4" />
+                Refresh Errors ({refreshStatus.refreshErrors.length})
+              </h3>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    await chrome.runtime.sendMessage({ type: 'CLEAR_REFRESH_ERRORS' });
+                  }
+                }}
+                className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-3 h-3" />
+                Clear All
+              </button>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {refreshStatus.refreshErrors.slice(0, 20).map((error, index) => (
+                <div
+                  key={`error-${error.id}-${index}`}
+                  className="p-2 bg-red-50 border border-red-100 rounded text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="truncate flex-1 text-slate-700" title={error.url}>
+                      {error.url} <span className="text-slate-400">({error.title})</span>
+                    </span>
+                    <span className="text-xs text-slate-400 shrink-0">
+                      {formatEuropeanDateTimeWithSeconds(error.timestamp).split(' ')[1]}
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-600 mt-1 ml-6 truncate" title={error.error}>
+                    {error.error}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
