@@ -128,7 +128,7 @@ interface RefreshListingResult {
 
 const refreshListing = async (listing: CarListing): Promise<RefreshListingResult> => {
   try {
-    const response = await fetch(listing.url, {
+    const response = await fetch(listing.source.url, {
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
@@ -139,7 +139,7 @@ const refreshListing = async (listing: CarListing): Promise<RefreshListingResult
         listing: {
           ...listing,
           status: ListingStatus.EXPIRED,
-          lastChecked: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
           lastRefreshStatus: 'success',
         },
         success: true,
@@ -170,7 +170,7 @@ const refreshListing = async (listing: CarListing): Promise<RefreshListingResult
       .substring(0, 20000);
 
     // Use geminiService to refresh listing (handles API key internally)
-    const result = await refreshListingWithGemini(listing.url, textContent, pageTitle);
+    const result = await refreshListingWithGemini(listing.source.url, textContent, pageTitle);
 
     const updatedListing = { ...listing };
 
@@ -189,7 +189,7 @@ const refreshListing = async (listing: CarListing): Promise<RefreshListingResult
 
     updatedListing.currency = result.currency || listing.currency;
     updatedListing.status = result.status;
-    updatedListing.lastChecked = new Date().toISOString();
+    updatedListing.lastSeenAt = new Date().toISOString();
     updatedListing.lastRefreshStatus = 'success';
     updatedListing.lastRefreshError = undefined;
 
@@ -198,7 +198,7 @@ const refreshListing = async (listing: CarListing): Promise<RefreshListingResult
     const errorMsg = error instanceof Error ? error.message : String(error);
     const isRateLimited = error instanceof RateLimitError;
 
-    console.error(`Failed to refresh listing ${listing.url}:`, error);
+    console.error(`Failed to refresh listing ${listing.source.url}:`, error);
 
     // Don't update lastChecked or mark as refreshed on error
     return {
@@ -218,9 +218,9 @@ const refreshListing = async (listing: CarListing): Promise<RefreshListingResult
 
 const sortListingsByRefreshPriority = (listings: CarListing[]): CarListing[] => {
   return [...listings].sort((a, b) => {
-    // Priority 1: Items never refreshed (no lastChecked or no lastRefreshStatus)
-    const aHasNeverRefreshed = !a.lastChecked || !a.lastRefreshStatus;
-    const bHasNeverRefreshed = !b.lastChecked || !b.lastRefreshStatus;
+    // Priority 1: Items never refreshed (no lastSeenAt or no lastRefreshStatus)
+    const aHasNeverRefreshed = !a.lastSeenAt || !a.lastRefreshStatus;
+    const bHasNeverRefreshed = !b.lastSeenAt || !b.lastRefreshStatus;
 
     if (aHasNeverRefreshed && !bHasNeverRefreshed) return -1;
     if (!aHasNeverRefreshed && bHasNeverRefreshed) return 1;
@@ -232,9 +232,9 @@ const sortListingsByRefreshPriority = (listings: CarListing[]): CarListing[] => 
     if (aIsSuccess && !bIsSuccess) return -1;
     if (!aIsSuccess && bIsSuccess) return 1;
 
-    // Priority 3: Within same status, sort by lastChecked (oldest first)
-    const aTime = a.lastChecked ? new Date(a.lastChecked).getTime() : 0;
-    const bTime = b.lastChecked ? new Date(b.lastChecked).getTime() : 0;
+    // Priority 3: Within same status, sort by lastSeenAt (oldest first)
+    const aTime = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+    const bTime = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
 
     return aTime - bTime;
   });
@@ -273,7 +273,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
   const pendingItems: RefreshPendingItem[] = sortedListings.map(l => ({
     id: l.id,
     title: l.title,
-    url: l.url,
+    url: l.source.url,
     status: 'pending' as const,
   }));
 
@@ -328,7 +328,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
       recentlyRefreshed.push({
         id: listing.id,
         title: listing.title,
-        url: listing.url,
+        url: listing.source.url,
         status: 'success',
         timestamp: new Date().toISOString(),
       });
@@ -339,7 +339,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
       recentlyRefreshed.push({
         id: listing.id,
         title: listing.title,
-        url: listing.url,
+        url: listing.source.url,
         status: 'error',
         timestamp: new Date().toISOString(),
       });
