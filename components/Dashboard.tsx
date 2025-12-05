@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CarListing } from '../types';
-import { getListings, removeListing, simulateMarketChanges } from '../services/storageService';
+import { getListings, removeListing } from '../services/storageService';
 import CarCard from './CarCard';
-import { RefreshCw, Plus, Search, Car, LayoutGrid, List as ListIcon } from 'lucide-react';
+import { Search, Car } from 'lucide-react';
 
-interface DashboardProps {
-  onAddClick: () => void;
-}
+// Declare chrome
+declare const chrome: any;
 
-const Dashboard: React.FC<DashboardProps> = ({ onAddClick }) => {
+const Dashboard: React.FC = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const loadData = () => {
     setListings(getListings());
@@ -20,9 +18,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddClick }) => {
   useEffect(() => {
     loadData();
     
-    // Listen for storage events (if changed from popup)
+    // Listen for storage events (cross-tab sync)
     const handleStorageChange = () => loadData();
     window.addEventListener('storage', handleStorageChange);
+
+    // Listen for Extension Runtime messages (if Popup adds item)
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+        const messageListener = (request: any) => {
+            if (request.type === 'LISTING_UPDATED') {
+                loadData();
+            }
+        };
+        chrome.runtime.onMessage.addListener(messageListener);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            chrome.runtime.onMessage.removeListener(messageListener);
+        };
+    }
+
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
@@ -31,15 +44,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddClick }) => {
       removeListing(id);
       loadData();
     }
-  };
-
-  const handleSimulateChanges = () => {
-    setIsUpdating(true);
-    setTimeout(() => {
-      const updated = simulateMarketChanges();
-      setListings(updated);
-      setIsUpdating(false);
-    }, 800);
   };
 
   const filteredListings = listings.filter(l => 
@@ -69,23 +73,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddClick }) => {
               className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          <button 
-            onClick={handleSimulateChanges}
-            disabled={isUpdating}
-            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 rounded-lg hover:bg-gray-50 font-medium text-sm transition-all ${isUpdating ? 'opacity-70' : ''}`}
-          >
-            <RefreshCw className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} />
-            {isUpdating ? 'Checking...' : 'Check Changes'}
-          </button>
-
-          <button 
-            onClick={onAddClick}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-sm hover:shadow transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Add Manually
-          </button>
         </div>
       </header>
 
@@ -94,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddClick }) => {
           <Car className="w-12 h-12 text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900">No cars tracked yet</h3>
           <p className="text-gray-500 text-sm mt-1 max-w-md text-center">
-            Open the Extension Popup on a car listing page, or use the "Add Manually" button to simulate adding a URL.
+            Navigate to a car marketplace like Otomoto or Mobile.de and open the extension popup to start tracking.
           </p>
         </div>
       ) : (
