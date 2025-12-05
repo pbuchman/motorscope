@@ -38,3 +38,10 @@ export interface CarListing {
 }
 
 export type ViewMode = 'DASHBOARD' | 'POPUP';
+
+// Chrome API type definitions for better type safety
+export interface PageContentResult {
+  title: string;
+  content: string;
+  image: string | null;
+}

@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { getListings, saveListing, removeListing } from '../services/storageService';
 import { parseCarDataWithGemini } from '../services/geminiService';
-import { CarListing } from '../types';
+import { CarListing, PageContentResult } from '../types';
 import { Bookmark, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
-
-// Declare chrome API
-declare const chrome: any;
 
 const ExtensionPopup: React.FC = () => {
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedItem, setSavedItem] = useState<CarListing | null>(null);
-  const [pageData, setPageData] = useState<{title: string, content: string} | null>(null);
+  const [pageData, setPageData] = useState<PageContentResult | null>(null);
 
   useEffect(() => {
     // 1. Get Active Tab
     if (typeof chrome !== 'undefined' && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
         const activeTab = tabs[0];
         if (activeTab?.url) {
           setCurrentUrl(activeTab.url);
@@ -27,7 +24,7 @@ const ExtensionPopup: React.FC = () => {
           if (activeTab.id && !activeTab.url.startsWith('chrome://')) {
             chrome.scripting.executeScript({
               target: { tabId: activeTab.id },
-              func: () => {
+              func: (): PageContentResult => {
                 // Content Script Logic
                 return {
                   title: document.title,
@@ -36,9 +33,9 @@ const ExtensionPopup: React.FC = () => {
                   image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
                 };
               }
-            }, (results: any[]) => {
+            }, (results: chrome.scripting.InjectionResult[]) => {
               if (results && results[0] && results[0].result) {
-                setPageData(results[0].result);
+                setPageData(results[0].result as PageContentResult);
               }
             });
           }
@@ -51,8 +48,8 @@ const ExtensionPopup: React.FC = () => {
     }
   }, []);
 
-  const checkIfSaved = (url: string) => {
-    const listings = getListings();
+  const checkIfSaved = async (url: string) => {
+    const listings = await getListings();
     const existing = listings.find(l => l.url === url);
     setSavedItem(existing || null);
   };
@@ -72,12 +69,11 @@ const ExtensionPopup: React.FC = () => {
         currentUrl, 
         pageData.content,
         pageData.title,
-        // @ts-ignore - dynamic property from scrape
         pageData.image
       );
       
       const newListing = listingData as CarListing;
-      saveListing(newListing);
+      await saveListing(newListing);
       setSavedItem(newListing);
       
       // Notify other views
@@ -86,16 +82,18 @@ const ExtensionPopup: React.FC = () => {
       }
       
     } catch (e: any) {
-      console.error(e);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(e);
+      }
       setError(e.message || "Failed to extract car data.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUnbookmark = () => {
+  const handleUnbookmark = async () => {
     if (savedItem) {
-      removeListing(savedItem.id);
+      await removeListing(savedItem.id);
       setSavedItem(null);
       if (typeof chrome !== 'undefined' && chrome.runtime) {
         chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' });

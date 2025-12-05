@@ -2,13 +2,43 @@ import { CarListing, PricePoint } from "../types";
 
 const STORAGE_KEY = "moto_tracker_listings";
 
-export const getListings = (): CarListing[] => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+// Chrome storage wrapper with fallback to localStorage for development
+const storage = {
+  get: async (key: string): Promise<any> => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+          resolve(result[key]);
+        });
+      });
+    } else {
+      // Fallback to localStorage for development
+      const data = localStorage.getItem(key);
+      return Promise.resolve(data ? JSON.parse(data) : undefined);
+    }
+  },
+  set: async (key: string, value: any): Promise<void> => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [key]: value }, () => {
+          resolve();
+        });
+      });
+    } else {
+      // Fallback to localStorage for development
+      localStorage.setItem(key, JSON.stringify(value));
+      return Promise.resolve();
+    }
+  }
 };
 
-export const saveListing = (listing: CarListing): void => {
-  const listings = getListings();
+export const getListings = async (): Promise<CarListing[]> => {
+  const data = await storage.get(STORAGE_KEY);
+  return data || [];
+};
+
+export const saveListing = async (listing: CarListing): Promise<void> => {
+  const listings = await getListings();
   const existingIndex = listings.findIndex((l) => l.url === listing.url);
 
   if (existingIndex >= 0) {
@@ -33,16 +63,17 @@ export const saveListing = (listing: CarListing): void => {
     // Add new
     listings.push(listing);
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
+  await storage.set(STORAGE_KEY, listings);
 };
 
-export const removeListing = (id: string): void => {
-  const listings = getListings().filter((l) => l.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
+export const removeListing = async (id: string): Promise<void> => {
+  const listings = await getListings();
+  const filtered = listings.filter((l) => l.id !== id);
+  await storage.set(STORAGE_KEY, filtered);
 };
 
-export const updatePrice = (id: string, newPrice: number): void => {
-  const listings = getListings();
+export const updatePrice = async (id: string, newPrice: number): Promise<void> => {
+  const listings = await getListings();
   const index = listings.findIndex((l) => l.id === id);
 
   if (index >= 0) {
@@ -58,7 +89,7 @@ export const updatePrice = (id: string, newPrice: number): void => {
       item.currentPrice = newPrice;
       item.lastChecked = new Date().toISOString();
       
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
+      await storage.set(STORAGE_KEY, listings);
     }
   }
 };
