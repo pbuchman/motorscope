@@ -1,13 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CarListing, ListingStatus } from "../types";
+import { getGeminiApiKey, recordGeminiCall } from "./settingsService";
 
 const parseCarDataWithGemini = async (
-  url: string, 
+  url: string,
   pageText: string,
   pageTitle: string,
   scrapedImageUrl?: string | null
 ): Promise<Partial<CarListing>> => {
-  
   // Input validation
   if (!url || typeof url !== 'string') {
     throw new Error("Invalid URL provided");
@@ -21,11 +21,12 @@ const parseCarDataWithGemini = async (
     throw new Error("Page title is missing or invalid");
   }
   
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY.");
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   // Schema for structured output
   const responseSchema = {
@@ -34,6 +35,7 @@ const parseCarDataWithGemini = async (
       title: { type: Type.STRING },
       price: { type: Type.NUMBER },
       currency: { type: Type.STRING },
+      postedDate: { type: Type.STRING },
       details: {
         type: Type.OBJECT,
         properties: {
@@ -55,16 +57,17 @@ const parseCarDataWithGemini = async (
   const prompt = `
     Analyze the following car listing text scraped from a webpage.
     Extract the vehicle details into the specified JSON structure.
-    
+
     Page Title: ${pageTitle}
     Page URL: ${url}
     Page Content: ${pageText.substring(0, 15000)}... (truncated)
-    
-    Notes: 
+
+    Notes:
     - If mileage is in km, convert to number.
     - If price contains currency symbol, split it.
     - Look specifically for VIN number patterns.
     - Infer Model/Make from URL if not clear in text.
+    - Capture the date when the seller posted the listing as ISO 8601 if available (postedDate field).
   `;
 
   try {
@@ -73,11 +76,18 @@ const parseCarDataWithGemini = async (
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: responseSchema,
+        responseSchema,
       },
     });
 
     if (!response.text) throw new Error("No response from AI");
+
+    await recordGeminiCall({
+      id: crypto.randomUUID(),
+      url,
+      promptPreview: prompt.substring(0, 2000),
+      timestamp: new Date().toISOString(),
+    });
 
     const data = JSON.parse(response.text);
     
@@ -99,8 +109,8 @@ const parseCarDataWithGemini = async (
     const id = btoa(url).substring(0, 12);
 
     return {
-      id: id,
-      url: url,
+      id,
+      url,
       title: data.title || pageTitle,
       thumbnailUrl: scrapedImageUrl || "https://placehold.co/600x400?text=No+Image",
       currentPrice: data.price,
@@ -111,9 +121,10 @@ const parseCarDataWithGemini = async (
         {
           date: new Date().toISOString(),
           price: data.price,
-          currency: data.currency
-        }
+          currency: data.currency,
+        },
       ],
+      postedDate: data.postedDate || new Date().toISOString(),
       dateAdded: new Date().toISOString(),
       lastChecked: new Date().toISOString(),
     };

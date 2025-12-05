@@ -88,10 +88,6 @@ npx chokidar "components/**/*" "services/**/*" "manifest.json" "background.js" "
 3.  Click **Add to Watchlist**. The AI will analyze the page and save the car.
 4.  Click **Dashboard** in the popup (or right-click the extension icon -> Options) to view your collection.
 
-## Security & Code Quality
-
-This extension has been analyzed for security vulnerabilities and code quality issues. See [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) for the complete report.
-
 ### Key Security Features
 - ✅ Uses `chrome.storage.local` for secure data storage
 - ✅ Input validation on all user inputs
