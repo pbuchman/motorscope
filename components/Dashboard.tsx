@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CarListing, ListingStatus } from '../types';
 import { getListings, removeListing, refreshListing } from '../services/storageService';
+import { refreshListingWithGemini } from '../services/geminiService';
 import CarCard from './CarCard';
 import { Search, Car } from 'lucide-react';
 
@@ -73,50 +74,27 @@ const Dashboard: React.FC = () => {
 
       const html = await response.text();
 
-      // Extract price from HTML using simple regex patterns
-      let newPrice = listing.currentPrice;
-      let newStatus = listing.status; // Keep current status by default
+      // Extract page title from HTML
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const pageTitle = titleMatch ? titleMatch[1] : listing.title;
 
-      // Only mark as SOLD if we find VERY specific sold indicators
-      // These should be specific enough to avoid false positives
-      const lowerHtml = html.toLowerCase();
-      const soldIndicators = [
-        'ogłoszenie nieaktualne',
-        'oferta została zakończona',
-        'to ogłoszenie zostało usunięte',
-        'this listing has been sold',
-        'vehicle has been sold',
-        'listing no longer available',
-      ];
+      // Extract text content (strip HTML tags for Gemini)
+      const textContent = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 20000);
 
-      const isSold = soldIndicators.some(indicator => lowerHtml.includes(indicator));
+      // Use Gemini to analyze the page and extract price/status
+      const result = await refreshListingWithGemini(listing.url, textContent, pageTitle);
 
-      if (isSold) {
-        newStatus = ListingStatus.SOLD;
-      } else if (listing.status !== ListingStatus.ACTIVE) {
-        // If the listing was marked as sold/expired but we can now access it, mark as active
-        newStatus = ListingStatus.ACTIVE;
-      }
+      // If Gemini returned a valid price, use it; otherwise keep existing
+      const newPrice = result.price > 0 ? result.price : listing.currentPrice;
+      const newCurrency = result.currency || listing.currency;
 
-      // Try to extract price - common patterns
-      const pricePatterns = [
-        /(\d{1,3}(?:[\s,]\d{3})*)\s*(?:PLN|zł|EUR|€)/gi,
-        /(?:price|cena)[^\d]*(\d{1,3}(?:[\s,]\d{3})*)/gi,
-      ];
-
-      for (const pattern of pricePatterns) {
-        const match = pattern.exec(html);
-        if (match) {
-          const priceStr = match[1].replace(/[\s,]/g, '');
-          const parsed = parseInt(priceStr, 10);
-          if (parsed > 0 && parsed < 100000000) { // Sanity check
-            newPrice = parsed;
-            break;
-          }
-        }
-      }
-
-      await refreshListing(listing.id, newPrice, listing.currency, newStatus);
+      await refreshListing(listing.id, newPrice, newCurrency, result.status);
       await loadData();
 
     } catch (error) {

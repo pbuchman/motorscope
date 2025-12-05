@@ -182,4 +182,98 @@ const parseCarDataWithGemini = async (
   }
 };
 
-export { parseCarDataWithGemini };
+// Refresh listing data - only extracts price and status, doesn't update VIN
+interface RefreshResult {
+  price: number;
+  currency: string;
+  status: ListingStatus;
+}
+
+const refreshListingWithGemini = async (
+  url: string,
+  pageText: string,
+  pageTitle: string
+): Promise<RefreshResult> => {
+  // Input validation
+  if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
+    throw new Error("Page content is empty or invalid");
+  }
+
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  // Schema for refresh - only need price and status
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      price: { type: Type.NUMBER },
+      currency: { type: Type.STRING },
+      isAvailable: { type: Type.BOOLEAN },
+      isSold: { type: Type.BOOLEAN },
+    },
+    required: ["price", "currency", "isAvailable"],
+  };
+
+  const prompt = `
+    Analyze the following car listing page and extract the current price and availability status.
+
+    Page Title: ${pageTitle}
+    Page URL: ${url}
+    Page Content: ${pageText.substring(0, 10000)}... (truncated)
+
+    Instructions:
+    - Extract the current listing price as a number (no formatting, just the number)
+    - Extract the currency (PLN, EUR, USD, etc.)
+    - Set isAvailable to false if the page shows the listing is no longer available, removed, expired, or redirects to a "not found" type page
+    - Set isSold to true if the page explicitly indicates the vehicle was sold
+    - If the page looks like a normal active listing, set isAvailable to true and isSold to false
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema,
+      },
+    });
+
+    if (!response.text) throw new Error("No response from AI");
+
+    await recordGeminiCall({
+      id: crypto.randomUUID(),
+      url,
+      promptPreview: prompt,
+      timestamp: new Date().toISOString(),
+    });
+
+    const data = JSON.parse(response.text);
+
+    // Determine status
+    let status = ListingStatus.ACTIVE;
+    if (data.isSold === true) {
+      status = ListingStatus.SOLD;
+    } else if (data.isAvailable === false) {
+      status = ListingStatus.EXPIRED;
+    }
+
+    return {
+      price: typeof data.price === 'number' && data.price > 0 ? data.price : 0,
+      currency: data.currency || 'PLN',
+      status,
+    };
+
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Gemini Refresh Error:", error);
+    }
+    throw error;
+  }
+};
+
+export { parseCarDataWithGemini, refreshListingWithGemini };
