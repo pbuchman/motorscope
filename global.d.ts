@@ -3,6 +3,7 @@ declare namespace chrome {
   export namespace runtime {
     export function sendMessage(message: any): void;
     export function openOptionsPage(): void;
+    export function getURL(path: string): string;
     export const onMessage: {
       addListener(callback: (request: any) => void): void;
       removeListener(callback: (request: any) => void): void;
@@ -19,6 +20,9 @@ declare namespace chrome {
     export function query(
       queryInfo: { active?: boolean; currentWindow?: boolean },
       callback: (tabs: Tab[]) => void
+    ): void;
+    export function create(
+      createProperties: { url?: string; active?: boolean }
     ): void;
   }
 

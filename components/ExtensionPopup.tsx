@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getListings, saveListing, removeListing } from '../services/storageService';
 import { parseCarDataWithGemini } from '../services/geminiService';
 import { CarListing, PageContentResult } from '../types';
-import { Bookmark, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings } from 'lucide-react';
 
 const ExtensionPopup: React.FC = () => {
   const [currentUrl, setCurrentUrl] = useState<string>('');
@@ -102,8 +102,14 @@ const ExtensionPopup: React.FC = () => {
   };
 
   const openDashboard = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.openOptionsPage();
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=dashboard') });
+    }
+  };
+
+  const openSettings = () => {
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=settings') });
     }
   };
 
@@ -115,12 +121,21 @@ const ExtensionPopup: React.FC = () => {
       {/* Navbar */}
       <div className="bg-slate-900 text-white p-4 flex items-center justify-between shadow-md">
         <h2 className="font-bold text-lg">MotoTracker</h2>
-        <button 
-          onClick={openDashboard}
-          className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors"
-        >
-          Dashboard
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openDashboard}
+            className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors"
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={openSettings}
+            className="bg-slate-700 hover:bg-slate-600 p-1.5 rounded transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
