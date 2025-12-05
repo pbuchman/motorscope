@@ -22,7 +22,7 @@ jobs:
           # uses GITHUB_TOKEN by default, but let's be explicit
           token: ${{ secrets.GITHUB_TOKEN }}
           # optional: customize the model if/when the action supports more choices
-          # model: codellama
+          model: llama3.1:8b
           prompt: |
             You are an assistant writing a PR explanation for someone new to React but experienced in software engineering.
 
