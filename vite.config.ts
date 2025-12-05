@@ -8,7 +8,7 @@ const copyExtensionFiles = () => {
   return {
     name: 'copy-extension-files',
     closeBundle: () => {
-      const filesToCopy = ['manifest.json', 'background.js', 'metadata.json'];
+      const filesToCopy = ['manifest.json', 'background.js', 'metadata.json', 'icon.svg'];
       filesToCopy.forEach(file => {
         if (fs.existsSync(file)) {
           fs.copyFileSync(file, resolve(__dirname, 'dist', file));
