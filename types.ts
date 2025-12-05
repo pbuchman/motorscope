@@ -58,6 +58,13 @@ export interface ExtensionSettings {
   checkFrequencyMinutes: number;
 }
 
+export interface RefreshStatus {
+  lastRefreshTime: string | null;  // ISO string
+  nextRefreshTime: string | null;  // ISO string
+  lastRefreshCount: number;
+  isRefreshing: boolean;
+}
+
 // Chrome API type definitions for better type safety
 export interface PageContentResult {
   title: string;

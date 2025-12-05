@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ExtensionSettings, GeminiStats } from '../types';
-import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings } from '../services/settingsService';
-import { RefreshCw } from 'lucide-react';
+import { ExtensionSettings, GeminiStats, RefreshStatus } from '../types';
+import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS } from '../services/settingsService';
+import { RefreshCw, Clock, Play } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 5 mins to 1 month (in minutes)
@@ -25,19 +25,84 @@ const formatFrequency = (minutes: number): string => {
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, history: [] });
+  const [refreshStatus, setRefreshStatus] = useState<RefreshStatus>(DEFAULT_REFRESH_STATUS);
+  const [countdown, setCountdown] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [triggeringRefresh, setTriggeringRefresh] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Load initial data
   useEffect(() => {
     const load = async () => {
       const loadedSettings = await getSettings();
       const loadedStats = await getGeminiStats();
+      const loadedRefreshStatus = await getRefreshStatus();
       setSettings(loadedSettings);
       setStats(loadedStats);
+      setRefreshStatus(loadedRefreshStatus);
     };
     load();
+
+    // Listen for storage changes to update refresh status
+    const handleStorageChange = () => {
+      getRefreshStatus().then(setRefreshStatus);
+      getGeminiStats().then(setStats);
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.onChanged.addListener(handleStorageChange);
+      return () => chrome.storage.onChanged.removeListener(handleStorageChange);
+    }
   }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    const updateCountdown = () => {
+      if (!refreshStatus.nextRefreshTime) {
+        setCountdown('Not scheduled');
+        return;
+      }
+
+      const next = new Date(refreshStatus.nextRefreshTime).getTime();
+      const now = Date.now();
+      const diff = next - now;
+
+      if (diff <= 0) {
+        setCountdown('Refreshing soon...');
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (hours > 0) {
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+      } else if (minutes > 0) {
+        setCountdown(`${minutes}m ${seconds}s`);
+      } else {
+        setCountdown(`${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [refreshStatus.nextRefreshTime]);
+
+  const triggerManualRefresh = async () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      setTriggeringRefresh(true);
+      try {
+        await chrome.runtime.sendMessage({ type: 'TRIGGER_MANUAL_REFRESH' });
+      } catch (e) {
+        console.error('Failed to trigger refresh:', e);
+      }
+      // Status will update via storage listener
+      setTimeout(() => setTriggeringRefresh(false), 1000);
+    }
+  };
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -118,6 +183,71 @@ const SettingsPage: React.FC = () => {
         </button>
         {statusMessage && <p className="text-sm text-slate-500">{statusMessage}</p>}
       </form>
+
+      {/* Background Refresh Status */}
+      <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Background Refresh</h2>
+          <button
+            type="button"
+            onClick={triggerManualRefresh}
+            disabled={triggeringRefresh || refreshStatus.isRefreshing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Play className={`w-4 h-4 ${triggeringRefresh || refreshStatus.isRefreshing ? 'animate-pulse' : ''}`} />
+            {refreshStatus.isRefreshing ? 'Refreshing...' : 'Refresh Now'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Last Refresh */}
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <Clock className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase">Last Refresh</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-800">
+              {refreshStatus.lastRefreshTime
+                ? formatEuropeanDateTimeWithSeconds(refreshStatus.lastRefreshTime)
+                : 'Never'}
+            </p>
+            {refreshStatus.lastRefreshCount > 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                {refreshStatus.lastRefreshCount} listing{refreshStatus.lastRefreshCount !== 1 ? 's' : ''} refreshed
+              </p>
+            )}
+          </div>
+
+          {/* Next Refresh */}
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase">Next Refresh</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-800">
+              {refreshStatus.nextRefreshTime
+                ? formatEuropeanDateTimeWithSeconds(refreshStatus.nextRefreshTime)
+                : 'Not scheduled'}
+            </p>
+          </div>
+
+          {/* Countdown */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-blue-600 mb-1">
+              <Clock className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase">Countdown</span>
+            </div>
+            <p className="text-lg font-bold text-blue-700 font-mono">
+              {refreshStatus.isRefreshing ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Refreshing...
+                </span>
+              ) : countdown}
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
