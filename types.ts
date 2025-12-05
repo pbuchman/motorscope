@@ -48,16 +48,17 @@ export interface GeminiCallHistoryEntry {
   id: string;
   url: string;
   promptPreview: string;
-  response?: string; // JSON response (formatted)
-  error?: string; // Error message if failed
+  rawResponse?: string; // Full raw API response JSON (formatted)
+  error?: string; // Error message/response if failed
   status: 'success' | 'error';
   timestamp: string;
 }
 
 export interface GeminiStats {
-  totalCalls: number;
-  successCount: number;
-  errorCount: number;
+  allTimeTotalCalls: number; // Never resets
+  totalCalls: number; // Resets with clear
+  successCount: number; // Resets with clear
+  errorCount: number; // Resets with clear
   history: GeminiCallHistoryEntry[];
 }
 
