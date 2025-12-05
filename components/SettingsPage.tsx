@@ -2,6 +2,34 @@ import React, { useEffect, useState } from 'react';
 import { ExtensionSettings, GeminiStats } from '../types';
 import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings } from '../services/settingsService';
 
+// Frequency steps from 5 mins to 1 month (in minutes)
+const FREQUENCY_STEPS = [
+  5, 10, 15, 30, 45,           // minutes
+  60, 120, 180, 240, 360, 480, 720,  // hours (1h to 12h)
+  1440, 2880, 4320,            // days (1d, 2d, 3d)
+  10080, 20160,                // weeks (1w, 2w)
+  43200                        // ~1 month (30 days)
+];
+
+const formatFrequency = (minutes: number): string => {
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 1440) return `${minutes / 60} hour${minutes / 60 > 1 ? 's' : ''}`;
+  if (minutes < 10080) return `${minutes / 1440} day${minutes / 1440 > 1 ? 's' : ''}`;
+  if (minutes < 43200) return `${minutes / 10080} week${minutes / 10080 > 1 ? 's' : ''}`;
+  return '1 month';
+};
+
+const formatEuropeanDateTime = (timestamp: string | number): string => {
+  const date = new Date(timestamp);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+};
+
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<GeminiStats>({ totalCalls: 0, history: [] });
@@ -59,17 +87,29 @@ const SettingsPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Check Frequency (minutes)</label>
-          <input
-            type="number"
-            min={15}
-            max={1440}
-            value={settings.checkFrequencyMinutes}
-            onChange={(e) =>
-              setSettings((prev) => ({ ...prev, checkFrequencyMinutes: parseInt(e.target.value, 10) || DEFAULT_SETTINGS.checkFrequencyMinutes }))
-            }
-            className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-          />
+          <label className="block text-sm font-medium text-slate-700 mb-1">Check Frequency</label>
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              min={0}
+              max={FREQUENCY_STEPS.length - 1}
+              value={FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes) !== -1
+                ? FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes)
+                : FREQUENCY_STEPS.findIndex(s => s >= settings.checkFrequencyMinutes) || 0}
+              onChange={(e) => {
+                const stepIndex = parseInt(e.target.value, 10);
+                setSettings((prev) => ({ ...prev, checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex] }));
+              }}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <span className="w-24 text-sm font-medium text-slate-700 text-right">
+              {formatFrequency(settings.checkFrequencyMinutes)}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs text-slate-400 mt-1">
+            <span>5 min</span>
+            <span>1 month</span>
+          </div>
           <p className="text-xs text-slate-400 mt-1">How often the background worker re-checks tracked listings.</p>
         </div>
 
@@ -103,7 +143,7 @@ const SettingsPage: React.FC = () => {
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {stats.history.map((entry) => (
               <article key={entry.id} className="border border-gray-100 rounded-lg p-4">
-                <p className="text-xs text-slate-400">{new Date(entry.timestamp).toLocaleString()}</p>
+                <p className="text-xs text-slate-400">{formatEuropeanDateTime(entry.timestamp)}</p>
                 <p className="text-sm font-medium text-slate-800 truncate">{entry.url}</p>
                 <pre className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
                   {entry.promptPreview}
