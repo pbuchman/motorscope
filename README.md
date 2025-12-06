@@ -1,43 +1,57 @@
 # MotorScope - Car Listing Tracker
 
-MotorScope is a browser extension that uses Google Gemini AI to track car listings, monitor price changes, and extract vehicle data from online marketplaces.
+[![Build Status](https://github.com/pbuchman/motorscope/actions/workflows/pack-extension.yml/badge.svg)](https://github.com/pbuchman/motorscope/actions/workflows/pack-extension.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://reactjs.org/)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-green.svg)](https://developer.chrome.com/docs/extensions/mv3/)
+[![Gemini AI](https://img.shields.io/badge/Gemini-2.5%20Flash-purple.svg)](https://ai.google.dev/)
 
-## Features
+MotorScope is a Chrome extension that helps you collect and track data from car listing platforms. It uses Google Gemini AI to extract vehicle information and monitor price changes over time.
 
-- **One-click Tracking**: Open the extension popup on any car listing to extract data
-- **AI-Powered Extraction**: Uses Gemini 2.5 Flash to parse unstructured web content into structured data (VIN, mileage, engine specs, seller info)
-- **Price History**: Visualizes price changes over time with interactive charts
-- **Auto Phone/VIN Reveal**: Automatically extracts hidden phone numbers and VINs from React-based marketplaces
-- **Dashboard**: Centralized view of all tracked vehicles with search and filtering
-- **Background Refresh**: Periodically checks for price updates on tracked listings
+> 📝 **Note**: This extension was tested with **Otomoto.pl**. Some features require you to be logged in to the platform.
 
-## Supported Marketplaces
+## 🎯 Why MotorScope?
 
-- **Otomoto.pl** (primary support with auto-reveal features)
-- Other marketplaces with basic support (mobile.de, autoscout24, olx)
+Tracking car prices manually is tedious. MotorScope automates the process:
+- **Collect historical price data** automatically - no more manual spreadsheets
+- **Track multiple listings** from a single dashboard
+- **Get notified** when prices change
 
-## Data Schema
+## ✨ Features
+
+- **🖱️ One-click Tracking**: Open the extension popup on any car listing to start tracking
+- **🤖 AI-Powered Extraction**: Uses Gemini 2.5 Flash to parse page content into structured data (VIN, mileage, engine specs, seller info)
+- **📈 Automated Price History**: Builds historical price data over time with interactive charts - track price drops and increases
+- **📊 Dashboard**: Centralized view of all tracked vehicles with search and filtering
+- **🔄 Background Refresh**: Periodically checks for price updates on tracked listings
+- **💾 Local Storage**: All data stored locally in browser - no external servers
+
+## 🗃️ Data Schema
 
 Car listings are stored using a normalized JSON structure. See the full schema documentation:
 
 📄 **[Car Listing JSON Schema](./docs/car-listing-schema.json)**
 
 ### Key data fields extracted:
-- **Vehicle**: VIN, make, model, year, mileage, engine specs, drivetrain, condition
-- **Pricing**: Current price, original price, price history with dates, currency
-- **Origin**: Import country, registration country, seller location
-- **Condition**: Accident-free declaration, service history, new/used status
-- **Seller**: Type (private/dealer), name, phone number, company status
-- **Dates**: Posted date, first seen, last checked
 
-## Prerequisites
+| Category | Fields |
+|----------|--------|
+| **Vehicle** | VIN, make, model, generation, trim, body type, year, mileage, engine specs, drivetrain |
+| **Pricing** | Current price, original price, price history with dates, currency, negotiable flag |
+| **Origin** | Import country, registration country, seller location (city, region, postal code) |
+| **Condition** | New/used status, accident-free declaration, service history |
+| **Seller** | Type (private/dealer), name, phone number, company status |
+| **Tracking** | Posted date, first seen, last checked, status (active/sold/expired) |
 
-1. **Node.js**: Ensure you have Node.js (v18+) installed
+## 📋 Prerequisites
+
+1. **Node.js**: v18 or higher
 2. **Google Gemini API Key**: Required for AI-powered data extraction
-   - Get your API key from: https://ai.google.dev/
+   - Get your free API key from: [https://ai.google.dev/](https://ai.google.dev/)
    - Add it in the extension settings after installation
 
-## Installation
+## 🚀 Installation
 
 ### From Source
 
@@ -63,7 +77,7 @@ Car listings are stored using a normalized JSON structure. See the full schema d
    - Click "Load unpacked"
    - Select the `dist` folder
 
-## Development
+## 🛠️ Development
 
 ```bash
 # Install dependencies
@@ -75,26 +89,78 @@ npm run dev
 # Build for production
 npm run build
 
+# Clean and rebuild
+npm run rebuild:dist
+
 # Type check
 npx tsc --noEmit
 ```
 
-## Configuration
+## 🏗️ Tech Stack
+
+- **Frontend**: React 19, TypeScript 5.2, Tailwind CSS 4
+- **Build Tool**: Vite 5
+- **AI**: Google Gemini API (@google/genai)
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Extension**: Chrome Manifest V3
+
+## ⚙️ Configuration
 
 After installing the extension:
 
 1. Click the MotorScope icon in Chrome toolbar
-2. Go to Settings
-3. Enter your Gemini API key
-4. Set the refresh frequency (how often to check for price updates)
+2. Go to **Settings**
+3. Enter your **Gemini API key**
+4. Set the **refresh frequency** (how often to check for price updates)
 
-## Privacy
+## 📁 Project Structure
 
-- All data is stored locally in your browser
-- API calls are made directly to Google Gemini (no proxy server)
-- No tracking or analytics
+```
+motorscope/
+├── components/          # React UI components
+│   ├── CarCard.tsx      # Individual car listing card
+│   ├── Dashboard.tsx    # Main dashboard view
+│   ├── ExtensionPopup.tsx # Browser action popup
+│   ├── PriceChart.tsx   # Price history visualization
+│   └── SettingsPage.tsx # Extension settings
+├── content-scripts/     # Page injection scripts
+│   └── otomoto-main.ts  # Otomoto.pl specific features
+├── services/            # Business logic
+│   ├── geminiService.ts # AI data extraction
+│   ├── settingsService.ts # User preferences
+│   └── storageService.ts # Local data persistence
+├── utils/               # Helper functions
+│   └── formatters.ts    # Data formatting utilities
+├── docs/                # Documentation
+│   └── car-listing-schema.json # Data schema
+├── background.ts        # Service worker
+├── App.tsx              # Main React app
+└── manifest.json        # Chrome extension manifest
+```
 
-## License
+## 🔒 Privacy
 
-MIT
+- ✅ All data is stored locally in your browser
+- ✅ API calls are made directly to Google Gemini (no proxy server)
+- ✅ No tracking or analytics
+- ✅ No user data collection
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">Made with ❤️ for car enthusiasts</p>
 
