@@ -5,8 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "rebuild:dist": "rm -rf dist && npm run build"
+    "build": "npm run build:extension && npm run build:api",
+    "build:extension": "vite build",
+    "build:api": "cd api && npm run build",
+    "start:api": "cd api && npm start",
+    "dev:api": "cd api && npm run dev",
+    "install:all": "npm install && cd api && npm install",
+    "rebuild:dist": "rm -rf dist && npm run build:extension"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
