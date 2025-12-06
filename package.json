@@ -1,7 +1,7 @@
 {
-  "name": "mototracker-extension",
+  "name": "motorscope",
   "version": "1.0.0",
-  "description": "MotoTracker Chrome Extension",
+  "description": "Browser extension to track car listings, monitor price changes, and extract vehicle data from online marketplaces",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -155,7 +155,7 @@ const ExtensionPopup: React.FC = () => {
     <div className="w-full h-full bg-white flex flex-col font-sans min-h-[500px]">
       {/* Navbar */}
       <div className="bg-slate-900 text-white p-4 flex items-center justify-between shadow-md">
-        <h2 className="font-bold text-lg">MotoTracker</h2>
+        <h2 className="font-bold text-lg">MotorScope</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={openDashboard}

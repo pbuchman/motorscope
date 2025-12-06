@@ -1,5 +1,5 @@
 {
-  "name": "MotoTracker - Market Extension",
-  "description": "A comprehensive car marketplace tracker (Otomoto, etc.) simulating a browser extension. Tracks price history, VIN, and specifications with AI-powered data extraction.",
+  "name": "MotorScope - Car Listing Tracker",
+  "description": "Browser extension to track car listings, monitor price changes, and extract vehicle data from online marketplaces with AI-powered data extraction.",
   "requestFramePermissions": []
 }
