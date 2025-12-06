@@ -106,10 +106,11 @@ const MergeDialog: React.FC<{
 
 const ExtensionPopup: React.FC = () => {
   const { listings, add, remove, error: listingsError, clearError } = useListings();
-  const { settings } = useSettings();
+  const { settings, isLoading: settingsLoading } = useSettings();
   const auth = useAuth();
 
-  const hasApiKey = !!settings.geminiApiKey;
+  // API key is available if settings are loaded and key exists
+  const hasApiKey = !settingsLoading && !!settings.geminiApiKey;
 
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -588,14 +589,31 @@ const ExtensionPopup: React.FC = () => {
                        <div>
                          <p className="text-amber-800 font-medium text-sm">API Key Required</p>
                          <p className="text-amber-600 text-xs mt-1">
-                           Configure your Gemini API key to analyze listings.
+                           {isLoggedIn
+                             ? 'Configure your Gemini API key in settings to analyze listings.'
+                             : 'Sign in and configure your Gemini API key to analyze listings.'}
                          </p>
-                         <button
-                           onClick={openSettings}
-                           className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium transition-colors"
-                         >
-                           Go to Settings
-                         </button>
+                         {isLoggedIn ? (
+                           <button
+                             onClick={openSettings}
+                             className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium transition-colors"
+                           >
+                             Go to Settings
+                           </button>
+                         ) : (
+                           <button
+                             onClick={handleLogin}
+                             disabled={isAuthLoading}
+                             className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                           >
+                             {isAuthLoading ? (
+                               <Loader2 className="w-3 h-3 animate-spin" />
+                             ) : (
+                               <GoogleLogo className="w-3 h-3" />
+                             )}
+                             Sign in to Continue
+                           </button>
+                         )}
                        </div>
                      </div>
                    </div>
