@@ -584,36 +584,31 @@ const ExtensionPopup: React.FC = () => {
                  {/* API Key Missing Warning */}
                  {!hasApiKey ? (
                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                     <div className="flex items-start gap-3">
-                       <Key className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                       <div>
-                         <p className="text-amber-800 font-medium text-sm">API Key Required</p>
-                         <p className="text-amber-600 text-xs mt-1">
-                           {isLoggedIn
-                             ? 'Configure your Gemini API key in settings to analyze listings.'
-                             : 'Sign in and configure your Gemini API key to analyze listings.'}
-                         </p>
-                         {isLoggedIn ? (
-                           <button
-                             onClick={openSettings}
-                             className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium transition-colors"
-                           >
-                             Go to Settings
-                           </button>
-                         ) : (
+                     <div className="flex flex-col items-center text-center">
+                       <Key className="w-6 h-6 text-amber-500 mb-2" />
+                       <p className="text-amber-800 font-medium text-sm mb-3">API Key Required</p>
+                       <div className="flex gap-2 w-full">
+                         {!isLoggedIn && (
                            <button
                              onClick={handleLogin}
                              disabled={isAuthLoading}
-                             className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                             className="flex-1 text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                            >
                              {isAuthLoading ? (
                                <Loader2 className="w-3 h-3 animate-spin" />
                              ) : (
                                <GoogleLogo className="w-3 h-3" />
                              )}
-                             Sign in to Continue
+                             Sign in
                            </button>
                          )}
+                         <button
+                           onClick={openSettings}
+                           className={`${isLoggedIn ? 'w-full' : 'flex-1'} text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5`}
+                         >
+                           <Settings className="w-3 h-3" />
+                           Settings
+                         </button>
                        </div>
                      </div>
                    </div>
