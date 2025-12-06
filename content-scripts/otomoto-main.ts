@@ -7,6 +7,18 @@ const log = (...args: unknown[]) => {
 
 // ==================== HELPERS ====================
 
+/**
+ * Clean phone number - remove spaces, dashes, parentheses, and +48 prefix
+ */
+const cleanPhoneNumber = (phone: string): string => {
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    // Remove +48 prefix (Poland country code)
+    if (cleaned.startsWith('+48')) {
+        cleaned = cleaned.substring(3);
+    }
+    return cleaned;
+};
+
 const isUserLoggedIn = (): boolean => {
     const loginButton = document.querySelector('[data-testid="usermenu-link-login"]');
     if (!loginButton) {
@@ -78,6 +90,10 @@ const revealVin = (): void => {
 
 // ==================== PHONE EXTRACTION ====================
 
+/**
+ * Search React fiber tree for phone number
+ * Phone can be in props as: number, phoneNumber, phone, or phones (array)
+ */
 const findPhoneInFiber = (element: HTMLElement): string | null => {
     const fiber = getReactFiber(element);
     if (!fiber) return null;
@@ -87,9 +103,38 @@ const findPhoneInFiber = (element: HTMLElement): string | null => {
 
         const props = fiber.memoizedProps || fiber.pendingProps || {};
 
-        // Phone number is stored as 'number' prop with 6+ digits
-        if (props.number && typeof props.number === 'string' && /^\d{6,}$/.test(props.number)) {
-            return props.number;
+        // Check for phone number in various prop names
+        // Can be: number, phoneNumber, phone
+        // Format can be: "123456789", "+48123456789", etc.
+        const phoneProps = ['number', 'phoneNumber', 'phone'];
+        for (const propName of phoneProps) {
+            const value = props[propName];
+            if (value && typeof value === 'string') {
+                // Match phone numbers: optional + prefix, then 6+ digits (may have spaces/dashes)
+                const cleaned = value.replace(/[\s\-\(\)]/g, '');
+                if (/^\+?\d{6,}$/.test(cleaned)) {
+                    return value;
+                }
+            }
+        }
+
+        // Check for phones array prop (e.g., phones: ["123 456 789"])
+        if (props.phones && Array.isArray(props.phones) && props.phones.length > 0) {
+            const firstPhone = props.phones[0];
+            if (typeof firstPhone === 'string') {
+                const cleaned = firstPhone.replace(/[\s\-\(\)]/g, '');
+                if (/^\+?\d{6,}$/.test(cleaned)) {
+                    return firstPhone;
+                }
+            }
+        }
+
+        // Check children for phone numbers (some components pass it as children)
+        if (props.children && typeof props.children === 'string') {
+            const cleaned = props.children.replace(/[\s\-\(\)]/g, '');
+            if (/^\+?\d{6,}$/.test(cleaned)) {
+                return props.children;
+            }
         }
 
         if (fiber.child && direction === 'down') {
@@ -118,6 +163,33 @@ const findPhoneInFiber = (element: HTMLElement): string | null => {
     return phone;
 };
 
+/**
+ * Find all phone-related buttons on the page
+ * Looks for: .e1it56680 container, data-testid="dynamic-numbers-button", buttons with "Wyświetl numer/numery"
+ */
+const findAllPhoneButtons = (): HTMLButtonElement[] => {
+    const buttons: HTMLButtonElement[] = [];
+
+    // Find by data-testid
+    const dynamicBtn = document.querySelector('[data-testid="dynamic-numbers-button"]');
+    if (dynamicBtn) {
+        buttons.push(dynamicBtn as HTMLButtonElement);
+    }
+
+    // Find all buttons containing "Wyświetl numer" or "Wyświetl numery"
+    const allButtons = document.querySelectorAll('button');
+    allButtons.forEach(btn => {
+        const text = btn.textContent?.trim() || '';
+        if (text.includes('Wyświetl numer')) { // Catches both "numer" and "numery"
+            if (!buttons.includes(btn as HTMLButtonElement)) {
+                buttons.push(btn as HTMLButtonElement);
+            }
+        }
+    });
+
+    return buttons;
+};
+
 const extractAndDisplayPhone = (): string | null => {
     // Check if already processed
     const existing = document.body.getAttribute('data-mototracker-phone');
@@ -134,32 +206,40 @@ const extractAndDisplayPhone = (): string | null => {
             if (phone) {
                 document.body.setAttribute('data-mototracker-phone', phone);
                 log('Phone: Already visible in DOM:', phone);
+                updateAllPhoneButtons(phone);
                 return phone;
             }
         }
     }
 
-    // Find phone container and extract from React
-    const phoneContainer = document.querySelector('.e1it56680');
-    if (!phoneContainer) {
-        log('Phone: Container .e1it56680 not found');
-        return null;
+    // Find all phone buttons and try to extract from React fiber
+    const phoneButtons = findAllPhoneButtons();
+    log('Phone: Found', phoneButtons.length, 'phone button(s)');
+
+    for (const btn of phoneButtons) {
+        const phone = findPhoneInFiber(btn);
+        if (phone) {
+            const cleanPhone = cleanPhoneNumber(phone);
+            log('Phone: Extracted from React:', cleanPhone);
+            document.body.setAttribute('data-mototracker-phone', cleanPhone);
+            updateAllPhoneButtons(cleanPhone);
+            return cleanPhone;
+        }
     }
 
-    // Search buttons for phone number in React fiber
-    const buttons = phoneContainer.querySelectorAll('button');
-    for (const btn of buttons) {
-        const phone = findPhoneInFiber(btn as HTMLElement);
-        if (phone) {
-            log('Phone: Extracted from React:', phone);
-
-            // Store on body
-            document.body.setAttribute('data-mototracker-phone', phone);
-
-            // Update ALL buttons on page that show "Wyświetl numer"
-            updateAllPhoneButtons(phone);
-
-            return phone;
+    // Also try the phone container if exists
+    const phoneContainer = document.querySelector('.e1it56680');
+    if (phoneContainer) {
+        const containerButtons = phoneContainer.querySelectorAll('button');
+        for (const btn of containerButtons) {
+            const phone = findPhoneInFiber(btn as HTMLElement);
+            if (phone) {
+                const cleanPhone = cleanPhoneNumber(phone);
+                log('Phone: Extracted from container:', cleanPhone);
+                document.body.setAttribute('data-mototracker-phone', cleanPhone);
+                updateAllPhoneButtons(cleanPhone);
+                return cleanPhone;
+            }
         }
     }
 
@@ -168,36 +248,40 @@ const extractAndDisplayPhone = (): string | null => {
 };
 
 /**
- * Update ALL buttons on the page that show "Wyświetl numer"
- * This is safe because we're only changing text content, not structure
+ * Update ALL buttons on the page that show "Wyświetl numer" or "Wyświetl numery"
  */
 const updateAllPhoneButtons = (phone: string): void => {
-    // Find ALL buttons on the page with "Wyświetl numer" text
+    // Clean phone number using the helper function
+    const cleanPhone = cleanPhoneNumber(phone);
+
     const allButtons = document.querySelectorAll('button');
     let updatedCount = 0;
 
     allButtons.forEach(btn => {
-        const wrapper = btn.querySelector('.n-button-text-wrapper');
-        if (wrapper && wrapper.textContent?.includes('Wyświetl numer')) {
-            wrapper.textContent = `Numer sprzedawcy: ${phone}`;
-            updatedCount++;
-        }
+        const text = btn.textContent?.trim() || '';
 
-        // Also check direct text content
-        if (btn.textContent?.includes('Wyświetl numer') && !btn.querySelector('.n-button-text-wrapper')) {
-            // Find the text node and update it
-            const spanElements = btn.querySelectorAll('span');
-            spanElements.forEach(span => {
-                if (span.textContent?.includes('Wyświetl numer')) {
-                    span.textContent = `Numer sprzedawcy: ${phone}`;
-                    updatedCount++;
-                }
-            });
+        // Check for both singular and plural forms
+        if (text.includes('Wyświetl numer')) { // Matches "Wyświetl numer" and "Wyświetl numery"
+            // Find the text wrapper span
+            const wrapper = btn.querySelector('.n-button-text-wrapper');
+            if (wrapper) {
+                wrapper.textContent = `📞 ${cleanPhone}`;
+                updatedCount++;
+            } else {
+                // Try to find any span with the text
+                const spans = btn.querySelectorAll('span');
+                spans.forEach(span => {
+                    if (span.textContent?.includes('Wyświetl numer')) {
+                        span.textContent = `📞 ${cleanPhone}`;
+                        updatedCount++;
+                    }
+                });
+            }
         }
     });
 
     if (updatedCount > 0) {
-        log(`Phone: Updated ${updatedCount} button(s) with phone number`);
+        log(`Phone: Updated ${updatedCount} button(s)`);
     }
 };
 
