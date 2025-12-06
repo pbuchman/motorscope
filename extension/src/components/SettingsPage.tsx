@@ -73,16 +73,26 @@ const validateGeminiApiKey = async (apiKey: string): Promise<{ valid: boolean; e
   }
 };
 
-// Success message component that auto-dismisses
-const SuccessMessage: React.FC<{ message: string; onDismiss: () => void }> = ({ message, onDismiss }) => {
+// Success/Warning message component that auto-dismisses
+const StatusMessage: React.FC<{ message: string; type?: 'success' | 'warning'; onDismiss: () => void }> = ({ message, type = 'success', onDismiss }) => {
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 3000);
+    const timer = setTimeout(onDismiss, 4000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
+  const isWarning = type === 'warning' || message.toLowerCase().includes('add an api key');
+
   return (
-    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm animate-fade-in">
-      <CheckCircle className="w-4 h-4 shrink-0" />
+    <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+      isWarning 
+        ? 'bg-amber-50 border border-amber-200 text-amber-700' 
+        : 'bg-green-50 border border-green-200 text-green-700'
+    }`}>
+      {isWarning ? (
+        <AlertCircle className="w-4 h-4 shrink-0" />
+      ) : (
+        <CheckCircle className="w-4 h-4 shrink-0" />
+      )}
       {message}
     </div>
   );
@@ -191,17 +201,21 @@ const SettingsPage: React.FC = () => {
   const handleSave = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     setApiKeyError('');
+    setSuccessMessage('');
 
-    // Validate API key if it was modified
-    const keyChanged = formSettings.geminiApiKey !== settings.geminiApiKey;
-    if (keyChanged && formSettings.geminiApiKey) {
-      setValidatingKey(true);
-      const validation = await validateGeminiApiKey(formSettings.geminiApiKey);
-      setValidatingKey(false);
+    // Validate API key if provided (not empty)
+    if (formSettings.geminiApiKey.trim()) {
+      // Only validate if key changed (avoid unnecessary API calls)
+      const keyChanged = formSettings.geminiApiKey !== settings.geminiApiKey;
+      if (keyChanged) {
+        setValidatingKey(true);
+        const validation = await validateGeminiApiKey(formSettings.geminiApiKey);
+        setValidatingKey(false);
 
-      if (!validation.valid) {
-        setApiKeyError(validation.error || 'Invalid API key');
-        return;
+        if (!validation.valid) {
+          setApiKeyError(validation.error || 'Invalid API key');
+          return;
+        }
       }
     }
 
@@ -214,9 +228,9 @@ const SettingsPage: React.FC = () => {
         await reloadListings();
       }
 
-      setSuccessMessage('Settings saved successfully');
+      setSuccessMessage(formSettings.geminiApiKey ? 'Settings saved successfully' : 'Settings saved. Add an API key to enable listing analysis.');
     } catch (error) {
-      setApiKeyError('Failed to save settings');
+      setApiKeyError('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -279,9 +293,9 @@ const SettingsPage: React.FC = () => {
 
       {/* Content - Centered */}
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Success Message */}
+        {/* Status Message */}
         {successMessage && (
-          <SuccessMessage message={successMessage} onDismiss={() => setSuccessMessage('')} />
+          <StatusMessage message={successMessage} onDismiss={() => setSuccessMessage('')} />
         )}
 
         {/* Settings Form */}
@@ -309,7 +323,6 @@ const SettingsPage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Gemini API Key
-              {!hasApiKey && <span className="text-red-500 ml-1">*</span>}
             </label>
             <div className="relative">
               <Key className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -321,22 +334,27 @@ const SettingsPage: React.FC = () => {
                   setApiKeyError('');
                 }}
                 className={`w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  apiKeyError || !hasApiKey ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  apiKeyError ? 'border-red-300 bg-red-50' : hasApiKey ? 'border-gray-300' : 'border-amber-300 bg-amber-50'
                 }`}
                 placeholder="Enter your Gemini API key"
               />
             </div>
             {apiKeyError ? (
-              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {apiKeyError}
               </p>
             ) : !hasApiKey ? (
-              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                API key is required for listing analysis
+                API key is required to analyze and track car listings
               </p>
-            ) : null}
+            ) : (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                API key configured
+              </p>
+            )}
             <p className="text-xs text-slate-400 mt-1">
               Get your API key from{' '}
               <a
