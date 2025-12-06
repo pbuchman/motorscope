@@ -1,12 +1,16 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { CarListing } from '../types';
 import { useListings } from '../context/AppContext';
+import { useAuth } from '../auth/AuthContext';
 import CarCard from './CarCard';
-import { Search, Car, Settings, Loader2 } from 'lucide-react';
+import { Search, Car, Settings, Loader2, Cloud, CloudOff } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const { listings, isLoading, refreshingIds, remove, refresh } = useListings();
+  const auth = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const isLoggedIn = auth.status === 'logged_in';
 
   // Memoize the removal handler
   const handleRemove = useCallback(async (id: string) => {
@@ -60,16 +64,27 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative hidden md:block">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
               type="text" 
-              placeholder="Search make, model, VIN, phone, date..."
+              placeholder="Search make, model, VIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-48 md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
             />
           </div>
+          {isLoggedIn ? (
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+              <Cloud className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700 max-w-32 truncate">{auth.user?.email}</span>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg">
+              <CloudOff className="w-4 h-4 text-slate-500" />
+              <span className="text-sm text-slate-600">Not signed in</span>
+            </div>
+          )}
           <a
             href="index.html?view=settings"
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"

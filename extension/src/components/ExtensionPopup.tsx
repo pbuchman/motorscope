@@ -265,7 +265,10 @@ const ExtensionPopup: React.FC = () => {
       {/* Navbar */}
       <div className="bg-slate-900 text-white p-4 flex flex-col gap-2 shadow-md">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg">MotorScope</h2>
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            <Car className="w-5 h-5 text-blue-400" />
+            MotorScope
+          </h2>
           <div className="flex items-center gap-2">
             <button
               onClick={openDashboard}

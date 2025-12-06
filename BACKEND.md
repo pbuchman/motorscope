@@ -417,6 +417,91 @@ Update the extension's backend URL configuration if needed.
 
 ---
 
+## Setting Environment Variables in GCP
+
+### Method 1: Via gcloud CLI (Deploy from Source)
+
+When deploying from source, pass environment variables directly:
+
+```bash
+gcloud run deploy motorscope-api \
+  --source . \
+  --region europe-west1 \
+  --set-env-vars "NODE_ENV=production" \
+  --set-env-vars "GCP_PROJECT_ID=motorscope" \
+  --set-env-vars "OAUTH_CLIENT_ID=663051224718-xxx.apps.googleusercontent.com" \
+  --set-env-vars "ALLOWED_ORIGIN_EXTENSION=chrome-extension://your-extension-id" \
+  --set-secrets "JWT_SECRET=jwt-secret:latest"
+```
+
+### Method 2: Via Cloud Run Console UI
+
+1. Go to [Cloud Run Console](https://console.cloud.google.com/run)
+2. Click on your service (`motorscope-api`)
+3. Click **Edit & Deploy New Revision**
+4. Expand **Container, Variables & Secrets, Connections, Security**
+5. Go to **Variables & Secrets** tab
+6. Under **Environment variables**, click **Add Variable**:
+   - `NODE_ENV` = `production`
+   - `GCP_PROJECT_ID` = `motorscope`
+   - `OAUTH_CLIENT_ID` = `663051224718-nj03sld1761g1oicnngk1umj0ob717qe.apps.googleusercontent.com`
+   - `ALLOWED_ORIGIN_EXTENSION` = `chrome-extension://your-extension-id`
+7. For secrets (like JWT_SECRET):
+   - Click **Reference a Secret**
+   - Select or create a secret in Secret Manager
+8. Click **Deploy**
+
+### Method 3: Continuous Deployment (Cloud Build)
+
+When using "Continuously deploy from a repository":
+
+1. **During Initial Setup:**
+   - After connecting your repository, you'll see configuration options
+   - Scroll to **Environment variables** section
+   - Add your variables there
+
+2. **After Deployment (Edit Trigger):**
+   - Go to [Cloud Build Triggers](https://console.cloud.google.com/cloud-build/triggers)
+   - Click on your trigger
+   - Scroll to **Configuration** → **Cloud Run Settings**
+   - Add environment variables under **Environment Variables**
+
+3. **Via Cloud Run Service Configuration:**
+   - Even with continuous deployment, you can edit environment variables
+   - Go to Cloud Run Console → Your Service → Edit & Deploy
+   - Changes persist across future deployments from Cloud Build
+
+### Using Secret Manager for Sensitive Values
+
+**Create a secret:**
+```bash
+# Create JWT secret
+echo -n "$(openssl rand -base64 32)" | \
+  gcloud secrets create jwt-secret --data-file=-
+
+# Grant Cloud Run access to the secret
+gcloud secrets add-iam-policy-binding jwt-secret \
+  --member="serviceAccount:663051224718-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+**Reference in Cloud Run:**
+- In Console: Use "Reference a Secret" instead of plain text
+- In gcloud: Use `--set-secrets "JWT_SECRET=jwt-secret:latest"`
+
+### Environment Variables Summary
+
+| Variable | Value | Storage |
+|----------|-------|---------|
+| `NODE_ENV` | `production` | Plain text |
+| `GCP_PROJECT_ID` | `motorscope` | Plain text |
+| `PORT` | (auto-set by Cloud Run) | Auto |
+| `OAUTH_CLIENT_ID` | `663051224718-xxx...` | Plain text |
+| `ALLOWED_ORIGIN_EXTENSION` | `chrome-extension://...` | Plain text |
+| `JWT_SECRET` | (secret value) | **Secret Manager** |
+
+---
+
 ## Troubleshooting
 
 ### "Firestore health check failed"

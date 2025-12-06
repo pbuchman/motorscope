@@ -7,7 +7,7 @@
 
 import { CarListing, GeminiStats } from '../types';
 import { getToken } from '../auth/oauthClient';
-import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL } from '../auth/config';
+import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL, API_PREFIX } from '../auth/config';
 import { getBackendUrl } from '../services/settingsService';
 
 /**
@@ -25,7 +25,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Get the configured backend URL
+ * Get the configured backend base URL
  */
 const getBaseUrl = async (): Promise<string> => {
   try {
@@ -36,9 +36,16 @@ const getBaseUrl = async (): Promise<string> => {
 };
 
 /**
+ * Build full API URL from base URL and endpoint
+ */
+const buildApiUrl = (baseUrl: string, endpoint: string): string => {
+  return `${baseUrl}${API_PREFIX}${endpoint}`;
+};
+
+/**
  * Make an authenticated API request
  *
- * @param endpoint - API endpoint path
+ * @param endpoint - API endpoint path (e.g., /listings)
  * @param options - Fetch options
  * @returns Response data
  */
@@ -53,7 +60,7 @@ const apiRequest = async <T>(
   }
 
   const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}${endpoint}`;
+  const url = buildApiUrl(baseUrl, endpoint);
 
   const response = await fetch(url, {
     ...options,
@@ -135,7 +142,7 @@ export const deleteRemoteListing = async (
  */
 export const checkBackendHealth = async (): Promise<{ status: string; firestore: string }> => {
   const baseUrl = await getBaseUrl();
-  const response = await fetch(`${baseUrl}/healthz`);
+  const response = await fetch(buildApiUrl(baseUrl, '/healthz'));
   if (!response.ok) {
     throw new Error('Backend health check failed');
   }

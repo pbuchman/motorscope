@@ -14,6 +14,7 @@ import {
   STORAGE_KEY_BACKEND_TOKEN,
   STORAGE_KEY_USER_PROFILE,
   DEFAULT_BACKEND_URL,
+  API_PREFIX,
 } from './config';
 import { getBackendUrl } from '../services/settingsService';
 
@@ -129,7 +130,7 @@ export const loginWithProvider = async (): Promise<{ user: UserProfile; token: s
 
   // Send access token to backend for verification and JWT generation
   // Backend will verify the token with Google and create our JWT
-  const response = await fetch(`${backendUrl}${AUTH_ENDPOINT_PATH}`, {
+  const response = await fetch(`${backendUrl}${API_PREFIX}${AUTH_ENDPOINT_PATH}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

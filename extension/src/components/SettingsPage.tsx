@@ -3,9 +3,9 @@ import { GeminiStats } from '../types';
 import { useSettings, useRefreshStatus } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 import { getGeminiStats, clearGeminiLogs } from '../services/settingsService';
-import { BACKEND_URL_OPTIONS } from '../auth/config';
+import { BACKEND_SERVER_OPTIONS } from '../auth/config';
 import { useChromeMessaging } from '../hooks/useChromeMessaging';
-import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Cloud, CloudOff } from 'lucide-react';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Cloud, CloudOff, Car, Sparkles } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
@@ -146,43 +146,38 @@ const SettingsPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4">
-      <header className="mb-8 flex items-center justify-between">
+    <div className="flex-1 bg-gray-50 min-h-screen p-6 overflow-y-auto">
+      <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">MotorScope Settings</h1>
-          <p className="text-slate-500">Configure your Gemini API key and background verification cadence.</p>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Car className="w-8 h-8 text-blue-600" />
+            MotorScope Settings
+          </h1>
+          <p className="text-slate-500 mt-1">Configure your Gemini API key and background verification cadence.</p>
         </div>
-        <a
-          href="index.html?view=dashboard"
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          Dashboard
-        </a>
+        <div className="flex items-center gap-3">
+          {isLoggedIn ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+              <Cloud className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700">{auth.user?.email}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg">
+              <CloudOff className="w-4 h-4 text-slate-500" />
+              <span className="text-sm text-slate-600">Not signed in</span>
+            </div>
+          )}
+          <a
+            href="index.html?view=dashboard"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Dashboard
+          </a>
+        </div>
       </header>
 
-      <form onSubmit={handleSave} className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
-        {/* Cloud Sync Status */}
-        <div className={`flex items-center gap-3 p-3 rounded-lg ${isLoggedIn ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'}`}>
-          {isLoggedIn ? (
-            <>
-              <Cloud className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-800">Cloud Sync Enabled</p>
-                <p className="text-xs text-green-600">Settings synced to {auth.user?.email}</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <CloudOff className="w-5 h-5 text-slate-500" />
-              <div>
-                <p className="text-sm font-medium text-slate-700">Local Storage Mode</p>
-                <p className="text-xs text-slate-500">Sign in to sync settings across devices</p>
-              </div>
-            </>
-          )}
-        </div>
-
+      <form onSubmit={handleSave} className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6 max-w-4xl">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Backend Server</label>
           <select
@@ -190,7 +185,7 @@ const SettingsPage: React.FC = () => {
             onChange={(e) => setFormSettings((prev) => ({ ...prev, backendUrl: e.target.value }))}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
           >
-            {BACKEND_URL_OPTIONS.map((option) => (
+            {BACKEND_SERVER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -253,9 +248,12 @@ const SettingsPage: React.FC = () => {
       </form>
 
       {/* Listing Refresh Status */}
-      <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+      <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6 max-w-4xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Listing Refresh</h2>
+          <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-blue-500" />
+            Listing Refresh
+          </h2>
           <div className="flex items-center gap-2">
             {!formSettings.geminiApiKey && (
               <span className="text-xs text-amber-600">API key required</span>
@@ -439,9 +437,12 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
   };
 
   return (
-    <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+    <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Gemini Usage</h2>
+        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-purple-500" />
+          AI Analysis Stats
+        </h2>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-slate-400" title="All-time total (never resets)">
             All-time: {stats.allTimeTotalCalls || 0}

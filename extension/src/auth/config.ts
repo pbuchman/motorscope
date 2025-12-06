@@ -8,22 +8,25 @@
 // Backend URL Configuration
 // =============================================================================
 
-/** Predefined backend URL options */
-export const BACKEND_URL_OPTIONS = [
+/** Predefined backend server options (base URLs without /api) */
+export const BACKEND_SERVER_OPTIONS = [
   {
-    label: 'Cloud (Production)',
-    value: 'https://motorscope-api-663051224718.europe-west1.run.app/api',
+    label: 'Development (Cloud)',
+    value: 'https://motorscope-dev-663051224718.europe-west1.run.app',
   },
   {
-    label: 'Local Development',
-    value: 'http://localhost:8080/api',
+    label: 'Local',
+    value: 'http://localhost:8080',
   },
 ] as const;
 
-/** Default backend URL (remote production) */
-export const DEFAULT_BACKEND_URL = BACKEND_URL_OPTIONS[0].value;
+/** Default backend server (Development Cloud) */
+export const DEFAULT_BACKEND_URL = BACKEND_SERVER_OPTIONS[0].value;
 
-/** API endpoint paths (relative to backend base URL) */
+/** API path prefix - appended to base URL */
+export const API_PREFIX = '/api';
+
+/** API endpoint paths (relative to API_PREFIX) */
 export const AUTH_ENDPOINT_PATH = '/auth/google';
 export const LISTINGS_ENDPOINT_PATH = '/listings';
 export const SETTINGS_ENDPOINT_PATH = '/settings';

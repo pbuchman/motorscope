@@ -281,10 +281,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [clearError, completeLogin]);
 
-  // Logout
+  // Logout - clears auth state and local listings
   const logout = useCallback(async () => {
     try {
       await logoutFromProvider();
+
+      // Clear local listings so user starts fresh
+      await clearAllLocalListings();
+
       setState({
         status: 'logged_out',
         user: null,
