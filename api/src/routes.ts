@@ -13,8 +13,10 @@ import {
   saveListing,
   deleteListing,
   checkFirestoreHealth,
+  getUserSettings,
+  saveUserSettings,
 } from './db.js';
-import type { User, CarListing, AuthResponse, HealthResponse } from './types.js';
+import type { User, CarListing, AuthResponse, HealthResponse, UserSettings } from './types.js';
 
 const router = Router();
 
@@ -272,6 +274,77 @@ router.delete('/listings/:id', authMiddleware, async (req: Request, res: Respons
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to delete listing',
+      statusCode: 500,
+    });
+  }
+});
+
+// =============================================================================
+// Settings API (Protected Routes)
+// =============================================================================
+
+/**
+ * GET /api/settings
+ *
+ * Get settings for the authenticated user.
+ * Requires JWT authentication.
+ *
+ * Response: { geminiApiKey, checkFrequencyMinutes, geminiStats }
+ */
+router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const settings = await getUserSettings(userId);
+
+    // Return settings without internal fields
+    res.status(200).json({
+      geminiApiKey: settings.geminiApiKey,
+      checkFrequencyMinutes: settings.checkFrequencyMinutes,
+      geminiStats: settings.geminiStats,
+    });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch settings',
+      statusCode: 500,
+    });
+  }
+});
+
+/**
+ * PUT /api/settings
+ *
+ * Update settings for the authenticated user.
+ * Requires JWT authentication.
+ *
+ * Request body: { geminiApiKey?, checkFrequencyMinutes?, geminiStats? }
+ * Response: { geminiApiKey, checkFrequencyMinutes, geminiStats }
+ */
+router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { geminiApiKey, checkFrequencyMinutes, geminiStats } = req.body;
+
+    // Build update object with only provided fields
+    const updateData: Partial<UserSettings> = {};
+    if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey;
+    if (checkFrequencyMinutes !== undefined) updateData.checkFrequencyMinutes = checkFrequencyMinutes;
+    if (geminiStats !== undefined) updateData.geminiStats = geminiStats;
+
+    const savedSettings = await saveUserSettings(userId, updateData);
+
+    // Return settings without internal fields
+    res.status(200).json({
+      geminiApiKey: savedSettings.geminiApiKey,
+      checkFrequencyMinutes: savedSettings.checkFrequencyMinutes,
+      geminiStats: savedSettings.geminiStats,
+    });
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to save settings',
       statusCode: 500,
     });
   }

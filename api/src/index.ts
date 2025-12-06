@@ -9,6 +9,9 @@
  * - Service account credentials via ADC
  */
 
+// Load environment variables from .env file (for local development)
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import {

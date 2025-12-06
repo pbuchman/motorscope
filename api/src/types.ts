@@ -163,6 +163,51 @@ export interface User {
 }
 
 /**
+ * Gemini call history entry for statistics tracking
+ */
+export interface GeminiCallHistoryEntry {
+  id: string;
+  url: string;
+  promptPreview: string;
+  rawResponse?: string;
+  error?: string;
+  status: 'success' | 'error';
+  timestamp: string;
+}
+
+/**
+ * Gemini API usage statistics
+ */
+export interface GeminiStats {
+  allTimeTotalCalls: number;
+  totalCalls: number;
+  successCount: number;
+  errorCount: number;
+  history: GeminiCallHistoryEntry[];
+}
+
+/**
+ * User settings stored in Firestore
+ * Stored in a subcollection or separate collection per user
+ */
+export interface UserSettings {
+  /** User ID that owns these settings */
+  userId: string;
+
+  /** Gemini API key (encrypted or stored securely) */
+  geminiApiKey: string;
+
+  /** Check frequency in minutes */
+  checkFrequencyMinutes: number;
+
+  /** Gemini API usage statistics */
+  geminiStats: GeminiStats;
+
+  /** Last updated timestamp */
+  updatedAt: string;
+}
+
+/**
  * Listing document as stored in Firestore
  * Extends CarListing with userId for ownership
  */

@@ -9,9 +9,9 @@ This document describes the backend API for the MotorScope Chrome extension. The
 - [Data Model](#data-model)
 - [API Endpoints](#api-endpoints)
 - [Environment Variables](#environment-variables)
-- [GCP Configuration Checklist](#gcp-configuration-checklist)
 - [Local Development](#local-development)
-- [Deployment to Cloud Run](#deployment-to-cloud-run)
+- [Docker](#docker)
+- [GCP Cloud Run Deployment](#gcp-cloud-run-deployment)
 
 ---
 
@@ -30,22 +30,12 @@ motorscope/
 │   │   ├── routes.ts            # API route handlers
 │   │   └── types.ts             # TypeScript type definitions
 │   ├── dist/                    # Compiled JavaScript output
+│   ├── Dockerfile               # Docker configuration for Cloud Run
+│   ├── .dockerignore           
 │   ├── package.json
 │   └── tsconfig.json
 ├── extension/                    # Chrome Extension (React + TypeScript)
-│   ├── src/
-│   │   ├── components/          # React components
-│   │   ├── services/            # Extension services
-│   │   ├── hooks/               # Custom React hooks
-│   │   ├── context/             # React context providers
-│   │   ├── utils/               # Utility functions
-│   │   ├── content-scripts/     # Browser content scripts
-│   │   └── styles/              # CSS styles
-│   ├── dist/                    # Built extension
-│   ├── manifest.json            # Extension manifest
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tsconfig.json
+│   └── ...
 ├── package.json                  # Root package.json with workspace scripts
 ├── BACKEND.md                    # This file
 └── README.md                     # Project overview
@@ -56,13 +46,9 @@ motorscope/
 | Script | Command | Description |
 |--------|---------|-------------|
 | `build` | `npm run build:extension && npm run build:api` | Build everything |
-| `build:extension` | `cd extension && npm run build` | Build Chrome extension |
 | `build:api` | `cd api && npm run build` | Build API (TypeScript) |
-| `dev:extension` | `cd extension && npm run dev` | Extension dev server |
 | `dev:api` | `cd api && npm run dev` | API dev server with hot reload |
 | `start:api` | `cd api && npm start` | Start compiled API |
-| `install:all` | Installs all dependencies | Install deps for root, extension, and API |
-| `clean` | `rm -rf extension/dist api/dist` | Clean build outputs |
 
 ---
 
@@ -84,9 +70,9 @@ motorscope/
 
 ### Key Components
 
-1. **Chrome Extension** (`./extension`): Frontend that collects car listings and syncs with the backend
-2. **Cloud Run API** (`./api`): Stateless Node.js server handling authentication and data operations
-3. **Firestore**: NoSQL document database storing users and listings
+1. **Chrome Extension**: Frontend that collects car listings and syncs with the backend
+2. **Cloud Run API**: Stateless Node.js server handling authentication and data operations
+3. **Firestore**: NoSQL document database storing users, listings, and settings
 4. **Google OAuth**: Authentication via Chrome Identity API
 5. **IAM**: Backend accesses Firestore using service account credentials (ADC)
 
@@ -98,8 +84,6 @@ motorscope/
 
 #### `users` Collection
 
-Stores user accounts created during authentication.
-
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Internal user ID (format: `google_<sub>`) |
@@ -108,46 +92,29 @@ Stores user accounts created during authentication.
 | `createdAt` | string | ISO timestamp of account creation |
 | `lastLoginAt` | string | ISO timestamp of last login |
 
-**Document ID**: Same as `id` field
-
 #### `listings` Collection
-
-Stores car listings tracked by users.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Listing ID (VIN-based or URL-based) |
-| `userId` | string | Owner's user ID (links to `users` collection) |
-| `schemaVersion` | string | Data schema version |
-| `source` | object | Platform, URL, listing ID, country code |
+| `userId` | string | Owner's user ID |
 | `title` | string | Listing title |
-| `thumbnailUrl` | string | Main image URL |
 | `currentPrice` | number | Current asking price |
 | `currency` | string | Currency code (PLN, EUR, USD) |
 | `priceHistory` | array | Historical price data points |
 | `vehicle` | object | Vehicle details (VIN, make, model, etc.) |
-| `location` | object | Seller location |
-| `seller` | object | Seller information |
 | `status` | enum | ACTIVE, SOLD, or EXPIRED |
-| `postedDate` | string? | When listing was posted |
-| `firstSeenAt` | string | When we first tracked it |
-| `lastSeenAt` | string | When we last checked it |
+| ... | | See `types.ts` for full schema |
 
-**Document ID**: Same as `id` field
+#### `settings` Collection
 
-### Indexing
-
-The API uses a simple query pattern:
-```typescript
-collection('listings').where('userId', '==', userId)
-```
-
-This requires a **single-field index** on `userId` in the `listings` collection. Firestore typically auto-creates this index, but you can verify in the Firebase Console:
-
-1. Go to Firestore > Indexes
-2. Check for: `listings` → `userId` → Ascending
-
-No composite indexes are required for basic operations.
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Owner's user ID |
+| `geminiApiKey` | string | User's Gemini API key |
+| `checkFrequencyMinutes` | number | Auto-refresh interval |
+| `geminiStats` | object | API usage statistics |
+| `updatedAt` | string | ISO timestamp of last update |
 
 ---
 
@@ -160,8 +127,6 @@ All endpoints are prefixed with `/api`.
 ```
 GET /api/healthz
 ```
-
-Returns server and Firestore health status.
 
 **Response:**
 ```json
@@ -177,8 +142,6 @@ Returns server and Firestore health status.
 ```
 POST /api/auth/google
 ```
-
-Authenticate using a Google ID token from the Chrome extension.
 
 **Request Body:**
 ```json
@@ -199,53 +162,38 @@ Authenticate using a Google ID token from the Chrome extension.
 }
 ```
 
-### Listings (Protected - Requires JWT)
+### Listings (Protected)
 
-All listing endpoints require the `Authorization: Bearer <jwt-token>` header.
+All listing endpoints require `Authorization: Bearer <jwt-token>` header.
 
-#### Get All Listings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/listings` | Get all listings for user |
+| PUT | `/api/listings` | Replace all listings (sync) |
+| POST | `/api/listings` | Add/update single listing |
+| DELETE | `/api/listings/:id` | Delete a listing |
 
-```
-GET /api/listings
-```
+### Settings (Protected)
 
-Returns all listings for the authenticated user.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/settings` | Get user settings |
+| PUT | `/api/settings` | Update user settings |
 
-#### Sync All Listings (Replace)
-
-```
-PUT /api/listings
-```
-
-Replaces all listings for the user. Listings not in the payload are deleted.
-
-**Request Body:** `CarListing[]`
-
-**Response:**
+**GET /api/settings Response:**
 ```json
 {
-  "success": true,
-  "count": 5
+  "geminiApiKey": "AIza...",
+  "checkFrequencyMinutes": 60,
+  "geminiStats": {
+    "allTimeTotalCalls": 150,
+    "totalCalls": 25,
+    "successCount": 24,
+    "errorCount": 1,
+    "history": [...]
+  }
 }
 ```
-
-#### Add/Update Single Listing
-
-```
-POST /api/listings
-```
-
-Add or update a single listing.
-
-**Request Body:** `CarListing`
-
-#### Delete Listing
-
-```
-DELETE /api/listings/:id
-```
-
-Delete a specific listing.
 
 ---
 
@@ -260,50 +208,155 @@ Delete a specific listing.
 | `JWT_SECRET` | Secret for signing JWTs | `<random-32-byte-base64>` |
 | `OAUTH_CLIENT_ID` | Google OAuth client ID | `663051224718-xxx.apps.googleusercontent.com` |
 | `ALLOWED_ORIGIN_EXTENSION` | Chrome extension origin | `chrome-extension://abcdef123456` |
-| `BACKEND_BASE_URL` | Public API URL | `https://motorscope-api-xxx-ew.a.run.app` |
 
 ### Optional
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Server port | `8080` (provided by Cloud Run) |
+| `PORT` | Server port | `8080` |
+| `BACKEND_BASE_URL` | Public API URL | (for self-reference) |
 
 ---
 
-## GCP Configuration Checklist
+## Local Development
 
-### 1. Create GCP Project
+### Prerequisites
 
-- [ ] Create project `motorscope` in GCP Console
-- [ ] Enable billing
+- **Node.js 20+** (24 recommended for parity with Cloud Run)
+- **GCP CLI** (`gcloud`) installed and configured
+- **Docker** (optional, for local container testing)
 
-### 2. Enable Required APIs
+### 1. Install Dependencies
 
 ```bash
-gcloud services enable \
-  firestore.googleapis.com \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  iap.googleapis.com
+# From repo root
+cd api
+npm install
 ```
 
-### 3. Create Firestore Database
+### 2. Configure Environment
 
-- [ ] Go to Firestore in GCP Console
-- [ ] Create database in **Native mode**
-- [ ] Database ID: `motorscopedb`
-- [ ] Location: `europe-west1` (or your preferred region)
+```bash
+# Create .env file from example
+cp .env.example .env
 
-### 4. Configure OAuth
+# Edit .env and set required values:
+# - JWT_SECRET: generate with `openssl rand -base64 32`
+# - OAUTH_CLIENT_ID: from GCP Console
+```
 
-- [ ] Go to APIs & Services > Credentials
-- [ ] Create OAuth 2.0 Client ID (Web application)
-- [ ] Add authorized origins for the extension
-- [ ] Note the Client ID for `OAUTH_CLIENT_ID`
+**.env file contents:**
+```env
+NODE_ENV=development
+GCP_PROJECT_ID=motorscope
+JWT_SECRET=your-secret-here
+OAUTH_CLIENT_ID=663051224718-xxx.apps.googleusercontent.com
+ALLOWED_ORIGIN_EXTENSION=chrome-extension://your-extension-id
+```
 
-### 5. IAM Configuration
+### 3. Authenticate with GCP (for Firestore access)
 
-The Cloud Run service account needs Firestore access:
+```bash
+# Login to GCP
+gcloud auth login
+
+# Set up Application Default Credentials
+gcloud auth application-default login
+
+# Set the project
+gcloud config set project motorscope
+```
+
+### 4. Run the API
+
+```bash
+# Development mode with hot reload
+npm run dev
+
+# OR build and run production
+npm run build
+npm start
+```
+
+The API will be available at `http://localhost:8080`.
+
+### 5. Test Endpoints
+
+```bash
+# Health check
+curl http://localhost:8080/api/healthz
+
+# Should return:
+# {"status":"ok","firestore":"ok","timestamp":"..."}
+```
+
+---
+
+## Docker
+
+The API includes a Dockerfile for containerized deployment.
+
+### Build Docker Image Locally
+
+```bash
+cd api
+
+# Build the image
+docker build -t motorscope-api .
+
+# Run the container
+docker run -p 8080:8080 \
+  -e NODE_ENV=development \
+  -e GCP_PROJECT_ID=motorscope \
+  -e JWT_SECRET=your-secret \
+  -e OAUTH_CLIENT_ID=your-client-id \
+  -v ~/.config/gcloud:/root/.config/gcloud:ro \
+  motorscope-api
+```
+
+> **Note:** The volume mount (`-v`) shares your local GCP credentials with the container for Firestore access during local development.
+
+### Dockerfile Features
+
+- **Multi-stage build** for smaller image size
+- **Node.js 24 Alpine** base image
+- **Non-root user** for security
+- **Health check** endpoint configured
+- **Production dependencies only** in final image
+
+---
+
+## GCP Cloud Run Deployment
+
+### Prerequisites
+
+1. **GCP Project** with billing enabled
+2. **APIs enabled**:
+   ```bash
+   gcloud services enable \
+     firestore.googleapis.com \
+     run.googleapis.com \
+     cloudbuild.googleapis.com \
+     artifactregistry.googleapis.com
+   ```
+
+### Step 1: Create Firestore Database
+
+1. Go to [Firestore Console](https://console.cloud.google.com/firestore)
+2. Click **Create Database**
+3. Select **Native mode**
+4. Database ID: `motorscopedb`
+5. Location: `europe-west1` (or your preferred region)
+
+### Step 2: Configure OAuth
+
+1. Go to [APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create **OAuth 2.0 Client ID** (Web application type)
+3. Note the Client ID for `OAUTH_CLIENT_ID`
+
+### Step 3: Set Up IAM
+
+Grant the Cloud Run service account access to Firestore:
 
 ```bash
 # Using default compute service account
@@ -312,139 +365,11 @@ gcloud projects add-iam-policy-binding motorscope \
   --role="roles/datastore.user"
 ```
 
-Or create a dedicated service account:
+### Step 4: Deploy to Cloud Run
+
+#### Option A: Deploy from Source (Recommended)
 
 ```bash
-# Create service account
-gcloud iam service-accounts create motorscope-api \
-  --display-name="MotorScope API Service Account"
-
-# Grant Firestore access
-gcloud projects add-iam-policy-binding motorscope \
-  --member="serviceAccount:motorscope-api@motorscope.iam.gserviceaccount.com" \
-  --role="roles/datastore.user"
-```
-
-### 6. Deploy to Cloud Run
-
-See [Deployment to Cloud Run](#deployment-to-cloud-run) section.
-
----
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+ (24 recommended for parity with Cloud Run)
-- GCP CLI (`gcloud`) configured
-- Application Default Credentials set up
-
-### Setup
-
-```bash
-# From repo root, install all dependencies
-npm run install:all
-
-# Or install individually
-cd extension && npm install
-cd ../api && npm install
-```
-
-### Configure Local Environment
-
-```bash
-# Copy example env file
-cp api/.env.example api/.env
-
-# Edit api/.env with your values
-# - Set JWT_SECRET (generate with: openssl rand -base64 32)
-# - Set OAUTH_CLIENT_ID
-```
-
-### Authenticate for Firestore Access
-
-```bash
-# Login and set up ADC
-gcloud auth application-default login
-gcloud config set project motorscope
-```
-
-### Run Development Servers
-
-```bash
-# Terminal 1: Run API
-npm run dev:api
-
-# Terminal 2: Run Extension dev server (optional, for HMR)
-npm run dev:extension
-```
-
-The API will be available at `http://localhost:8080`.
-
-### Test Endpoints
-
-```bash
-# Health check
-curl http://localhost:8080/api/healthz
-
-# Note: Authentication requires a valid Google ID token
-```
-
----
-
-## Deployment to Cloud Run
-
-### Option 1: Continuous Deployment from Repository (Recommended)
-
-1. **Go to Cloud Run in GCP Console**
-
-2. **Create Service**
-   - Click "Create Service"
-   - Choose "Continuously deploy from a repository (source)"
-
-3. **Connect Repository**
-   - Connect your GitHub repository
-   - Select branch (e.g., `main`)
-
-4. **Configure Build**
-   - Build type: Dockerfile or Buildpack
-   - Source location: `/api`
-   - Build command: `npm run build`
-   - Run command: `node dist/index.js`
-
-5. **Configure Service**
-   - Service name: `motorscope-api`
-   - Region: `europe-west1`
-   - CPU allocation: Request-based
-   - Minimum instances: 0
-   - Maximum instances: 10
-   - Memory: 256 MiB
-   - CPU: 1
-
-6. **Set Environment Variables**
-   
-   In the "Container" section, add:
-   
-   | Name | Value |
-   |------|-------|
-   | `NODE_ENV` | `production` |
-   | `GCP_PROJECT_ID` | `motorscope` |
-   | `JWT_SECRET` | `<your-secret>` |
-   | `OAUTH_CLIENT_ID` | `663051224718-nj03sld1761g1oicnngk1umj0ob717qe.apps.googleusercontent.com` |
-   | `ALLOWED_ORIGIN_EXTENSION` | `chrome-extension://<your-extension-id>` |
-   | `BACKEND_BASE_URL` | `https://motorscope-api-xxxxx-ew.a.run.app` |
-
-7. **Configure Authentication**
-   - Allow unauthenticated invocations (API handles its own auth)
-
-8. **Deploy**
-   - Click "Create"
-   - Note the service URL for `BACKEND_BASE_URL`
-
-### Option 2: Manual Deployment with gcloud
-
-```bash
-# Deploy from api directory
 cd api
 
 gcloud run deploy motorscope-api \
@@ -452,23 +377,43 @@ gcloud run deploy motorscope-api \
   --region europe-west1 \
   --platform managed \
   --allow-unauthenticated \
-  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,OAUTH_CLIENT_ID=xxx,ALLOWED_ORIGIN_EXTENSION=chrome-extension://xxx" \
+  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope" \
+  --set-env-vars "OAUTH_CLIENT_ID=663051224718-xxx.apps.googleusercontent.com" \
+  --set-env-vars "ALLOWED_ORIGIN_EXTENSION=chrome-extension://your-extension-id" \
   --set-secrets "JWT_SECRET=jwt-secret:latest"
 ```
 
----
+> **Note:** Create the secret first: `echo -n "your-secret" | gcloud secrets create jwt-secret --data-file=-`
 
-## Security Considerations
+#### Option B: Continuous Deployment via Console
 
-1. **JWT Secret**: Use a strong, random secret (32+ bytes). Store in Secret Manager for production.
+1. Go to [Cloud Run Console](https://console.cloud.google.com/run)
+2. Click **Create Service**
+3. Select **Continuously deploy from a repository (source)**
+4. Connect your GitHub repository
+5. Configure:
+   - **Branch**: `main`
+   - **Source location**: `/api`
+   - **Dockerfile**: `api/Dockerfile`
+6. Set environment variables (see table below)
+7. Allow unauthenticated invocations
+8. Deploy
 
-2. **CORS**: Only the Chrome extension origin is allowed in production.
+### Environment Variables for Cloud Run
 
-3. **Token Expiration**: JWTs expire after 24 hours. Users must re-authenticate periodically.
+| Name | Value |
+|------|-------|
+| `NODE_ENV` | `production` |
+| `GCP_PROJECT_ID` | `motorscope` |
+| `JWT_SECRET` | (use Secret Manager) |
+| `OAUTH_CLIENT_ID` | `663051224718-xxx.apps.googleusercontent.com` |
+| `ALLOWED_ORIGIN_EXTENSION` | `chrome-extension://your-extension-id` |
 
-4. **Firestore Rules**: Consider adding Firestore security rules as an additional layer.
+### Step 5: Get Service URL
 
-5. **Rate Limiting**: Consider adding rate limiting for production use.
+After deployment, note the service URL (e.g., `https://motorscope-api-xxx-ew.a.run.app`).
+
+Update the extension's backend URL configuration if needed.
 
 ---
 
@@ -476,22 +421,32 @@ gcloud run deploy motorscope-api \
 
 ### "Firestore health check failed"
 
-- Verify the service account has `roles/datastore.user` role
-- Check that Firestore database exists with ID `motorscopedb`
-- Ensure the GCP project ID is correct
+- Verify IAM roles are correctly assigned
+- Check that Firestore database `motorscopedb` exists
+- Ensure `GCP_PROJECT_ID` environment variable is set
 
 ### "Invalid or expired Google token"
 
-- Verify `OAUTH_CLIENT_ID` matches the one in Chrome extension
-- Check that the token hasn't expired
+- Verify `OAUTH_CLIENT_ID` matches the Chrome extension's OAuth configuration
+- Check token hasn't expired (tokens are short-lived)
 
 ### CORS Errors
 
-- Verify `ALLOWED_ORIGIN_EXTENSION` matches exactly (including `chrome-extension://` prefix)
-- Check browser developer tools for the actual origin being sent
+- Ensure `ALLOWED_ORIGIN_EXTENSION` exactly matches your extension origin
+- Format: `chrome-extension://your-extension-id`
 
-### Build Failures on Cloud Run
+### Local Development Auth Issues
 
-- Ensure `api/package.json` has correct Node.js engine version
-- Verify TypeScript compilation works locally first
-- Check Cloud Build logs for detailed errors
+- Run `gcloud auth application-default login` to refresh credentials
+- Verify correct project: `gcloud config get-value project`
+
+---
+
+## Security Considerations
+
+1. **JWT Secret**: Use strong, random secret (32+ bytes). Store in Secret Manager for production.
+2. **CORS**: Only extension origin is allowed in production.
+3. **Token Expiration**: JWTs expire after 24 hours.
+4. **Firestore Rules**: Consider adding security rules as additional protection.
+5. **Non-root Container**: Docker runs as non-root user for security.
+

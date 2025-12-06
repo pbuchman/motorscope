@@ -1,5 +1,6 @@
 import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats, RefreshStatus } from '../types';
 import { extensionStorage } from './extensionStorage';
+import { DEFAULT_BACKEND_URL } from '../auth/config';
 
 export const STORAGE_KEYS = {
   listings: 'motorscope_listings',
@@ -7,11 +8,13 @@ export const STORAGE_KEYS = {
   geminiKey: 'motorscope_gemini_key',
   geminiStats: 'motorscope_gemini_stats',
   refreshStatus: 'motorscope_refresh_status',
+  backendUrl: 'motorscope_backend_url',
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   geminiApiKey: '',
   checkFrequencyMinutes: 60,
+  backendUrl: DEFAULT_BACKEND_URL,
 };
 
 const clampFrequency = (value?: number): number => {
@@ -29,22 +32,37 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
   await extensionStorage.set(STORAGE_KEYS.geminiKey, key.trim());
 };
 
+// Backend URL stored separately
+export const getBackendUrl = async (): Promise<string> => {
+  const url = await extensionStorage.get<string>(STORAGE_KEYS.backendUrl);
+  return url || DEFAULT_BACKEND_URL;
+};
+
+export const saveBackendUrl = async (url: string): Promise<void> => {
+  await extensionStorage.set(STORAGE_KEYS.backendUrl, url.trim());
+};
+
 // Settings combines the API key from dedicated storage with other settings
 export const getSettings = async (): Promise<ExtensionSettings> => {
   const stored = await extensionStorage.get<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings);
   const geminiApiKey = await getGeminiApiKey();
+  const backendUrl = await getBackendUrl();
   return {
     geminiApiKey,
     checkFrequencyMinutes: clampFrequency(stored?.checkFrequencyMinutes),
+    backendUrl,
   };
 };
 
-// Save settings - API key goes to dedicated storage, other settings to settings storage
+// Save settings - API key and backend URL go to dedicated storage, other settings to settings storage
 export const saveSettings = async (settings: ExtensionSettings): Promise<void> => {
   // Save API key to dedicated storage
   await saveGeminiApiKey(settings.geminiApiKey);
 
-  // Save other settings (without API key) to settings storage
+  // Save backend URL to dedicated storage
+  await saveBackendUrl(settings.backendUrl);
+
+  // Save other settings (without API key and backend URL) to settings storage
   await extensionStorage.set(STORAGE_KEYS.settings, {
     checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
   });

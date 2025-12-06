@@ -3,11 +3,11 @@
  *
  * Manages application state with support for both local and remote storage.
  * - When logged out: uses local storage
- * - When logged in: uses remote backend API
+ * - When logged in: uses remote backend API for listings and settings
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { CarListing, ExtensionSettings, RefreshStatus } from '../types';
+import { CarListing, ExtensionSettings, RefreshStatus, GeminiStats } from '../types';
 import {
   getListings as getLocalListings,
   saveListing as saveLocalListing,
@@ -17,9 +17,19 @@ import {
   getRemoteListings,
   saveRemoteListing,
   deleteRemoteListing,
+  getRemoteSettings,
+  saveRemoteSettings,
   ApiError,
 } from '../api/client';
-import { getSettings, saveSettings as saveSettingsToStorage, getRefreshStatus, DEFAULT_SETTINGS, DEFAULT_REFRESH_STATUS } from '../services/settingsService';
+import {
+  getSettings as getLocalSettings,
+  saveSettings as saveLocalSettings,
+  getRefreshStatus,
+  DEFAULT_SETTINGS,
+  DEFAULT_REFRESH_STATUS,
+  getGeminiStats as getLocalGeminiStats,
+  recordGeminiCall as recordLocalGeminiCall,
+} from '../services/settingsService';
 import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '../hooks/useChromeMessaging';
 import { refreshSingleListing, RefreshResult } from '../services/refreshService';
 import { useAuth } from '../auth/AuthContext';
@@ -141,17 +151,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isLoggedIn, clearError, handleApiError]);
 
-  // Load settings from storage
+  // Load settings from appropriate source
   const reloadSettings = useCallback(async () => {
     try {
-      const data = await getSettings();
-      setSettings(data);
+      if (isLoggedIn) {
+        // Load from remote backend (except backendUrl which is always local)
+        const remoteSettings = await getRemoteSettings();
+        const localSettings = await getLocalSettings();
+        setSettings({
+          geminiApiKey: remoteSettings.geminiApiKey,
+          checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes,
+          backendUrl: localSettings.backendUrl, // Backend URL is always local
+        });
+      } else {
+        // Load from local storage
+        const data = await getLocalSettings();
+        setSettings(data);
+      }
     } catch (err) {
       console.error('[AppContext] Failed to load settings:', err);
+      // Fallback to local settings on error
+      try {
+        const data = await getLocalSettings();
+        setSettings(data);
+      } catch {
+        // Use defaults
+      }
     } finally {
       setIsLoadingSettings(false);
     }
-  }, []);
+  }, [isLoggedIn]);
 
   // Load refresh status from storage
   const reloadRefreshStatus = useCallback(async () => {
@@ -240,12 +269,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Update settings
   const updateSettings = useCallback(async (newSettings: ExtensionSettings) => {
-    await saveSettingsToStorage(newSettings);
+    // Backend URL is always saved locally
+    await saveLocalSettings(newSettings);
+
+    if (isLoggedIn) {
+      // Save to remote backend (excluding backendUrl)
+      try {
+        const localStats = await getLocalGeminiStats();
+        await saveRemoteSettings({
+          geminiApiKey: newSettings.geminiApiKey,
+          checkFrequencyMinutes: newSettings.checkFrequencyMinutes,
+          geminiStats: localStats,
+        });
+      } catch (err) {
+        console.error('[AppContext] Failed to save remote settings:', err);
+        // Don't throw - local settings are still saved
+      }
+    }
+
     setSettings(newSettings);
 
     // Trigger alarm reschedule
     await rescheduleAlarm(newSettings.checkFrequencyMinutes);
-  }, [rescheduleAlarm]);
+  }, [isLoggedIn, rescheduleAlarm]);
 
   // Initial data load and reload when auth state changes
   useEffect(() => {

@@ -147,6 +147,7 @@ export interface GeminiStats {
 export interface ExtensionSettings {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
+  backendUrl: string;
 }
 
 export interface RefreshStatus {

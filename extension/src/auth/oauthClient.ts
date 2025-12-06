@@ -7,11 +7,12 @@
 
 import { extensionStorage } from '../services/extensionStorage';
 import {
-  BACKEND_BASE_URL,
   AUTH_ENDPOINT_PATH,
   STORAGE_KEY_BACKEND_TOKEN,
   STORAGE_KEY_USER_PROFILE,
+  DEFAULT_BACKEND_URL,
 } from './config';
+import { getBackendUrl } from '../services/settingsService';
 
 /**
  * User profile returned from the backend
@@ -137,8 +138,16 @@ export const loginWithProvider = async (): Promise<{ user: UserProfile; token: s
   // Get Google ID token
   const idToken = await getGoogleIdToken();
 
+  // Get configured backend URL
+  let backendUrl: string;
+  try {
+    backendUrl = await getBackendUrl();
+  } catch {
+    backendUrl = DEFAULT_BACKEND_URL;
+  }
+
   // Send to backend for verification and JWT generation
-  const response = await fetch(`${BACKEND_BASE_URL}${AUTH_ENDPOINT_PATH}`, {
+  const response = await fetch(`${backendUrl}${AUTH_ENDPOINT_PATH}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

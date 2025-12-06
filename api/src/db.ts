@@ -23,7 +23,7 @@ import {
   FIRESTORE_LISTINGS_COLLECTION,
   FIRESTORE_LISTINGS_USER_FIELD,
 } from './config.js';
-import type { User, ListingDocument, CarListing } from './types.js';
+import type { User, ListingDocument, CarListing, UserSettings } from './types.js';
 
 // Initialize Firestore with ADC
 // Cloud Run automatically provides credentials via the service account
@@ -219,6 +219,64 @@ export async function checkFirestoreHealth(): Promise<boolean> {
     console.error('Firestore health check failed:', error);
     return false;
   }
+}
+
+// =============================================================================
+// Settings Operations
+// =============================================================================
+
+const settingsCollection = firestore.collection('settings');
+
+/** Default settings for new users */
+const DEFAULT_SETTINGS: Omit<UserSettings, 'userId' | 'updatedAt'> = {
+  geminiApiKey: '',
+  checkFrequencyMinutes: 60,
+  geminiStats: {
+    allTimeTotalCalls: 0,
+    totalCalls: 0,
+    successCount: 0,
+    errorCount: 0,
+    history: [],
+  },
+};
+
+/**
+ * Get settings for a user
+ * Returns default settings if none exist
+ */
+export async function getUserSettings(userId: string): Promise<UserSettings> {
+  const doc = await settingsCollection.doc(userId).get();
+
+  if (!doc.exists) {
+    return {
+      ...DEFAULT_SETTINGS,
+      userId,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  return doc.data() as UserSettings;
+}
+
+/**
+ * Save or update user settings
+ */
+export async function saveUserSettings(
+  userId: string,
+  settings: Partial<Omit<UserSettings, 'userId' | 'updatedAt'>>
+): Promise<UserSettings> {
+  const existingSettings = await getUserSettings(userId);
+
+  const updatedSettings: UserSettings = {
+    ...existingSettings,
+    ...settings,
+    userId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await settingsCollection.doc(userId).set(updatedSettings);
+
+  return updatedSettings;
 }
 
 // Export firestore instance for advanced use cases

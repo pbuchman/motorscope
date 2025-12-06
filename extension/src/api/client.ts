@@ -5,9 +5,10 @@
  * Automatically includes authentication token in requests.
  */
 
-import { CarListing } from '../types';
+import { CarListing, GeminiStats } from '../types';
 import { getToken } from '../auth/oauthClient';
-import { BACKEND_BASE_URL, LISTINGS_ENDPOINT_PATH } from '../auth/config';
+import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL } from '../auth/config';
+import { getBackendUrl } from '../services/settingsService';
 
 /**
  * API Error class for handling backend errors
@@ -22,6 +23,17 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
+
+/**
+ * Get the configured backend URL
+ */
+const getBaseUrl = async (): Promise<string> => {
+  try {
+    return await getBackendUrl();
+  } catch {
+    return DEFAULT_BACKEND_URL;
+  }
+};
 
 /**
  * Make an authenticated API request
@@ -40,7 +52,8 @@ const apiRequest = async <T>(
     throw new ApiError('Not authenticated', 401, true);
   }
 
-  const url = `${BACKEND_BASE_URL}${endpoint}`;
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
@@ -121,10 +134,38 @@ export const deleteRemoteListing = async (
  * @returns Health status
  */
 export const checkBackendHealth = async (): Promise<{ status: string; firestore: string }> => {
-  const response = await fetch(`${BACKEND_BASE_URL}/healthz`);
+  const baseUrl = await getBaseUrl();
+  const response = await fetch(`${baseUrl}/healthz`);
   if (!response.ok) {
     throw new Error('Backend health check failed');
   }
   return response.json();
+};
+
+// =============================================================================
+// Settings API (for remote settings storage when logged in)
+// =============================================================================
+
+export interface RemoteSettings {
+  geminiApiKey: string;
+  checkFrequencyMinutes: number;
+  geminiStats: GeminiStats;
+}
+
+/**
+ * Get user settings from the backend
+ */
+export const getRemoteSettings = async (): Promise<RemoteSettings> => {
+  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH);
+};
+
+/**
+ * Save user settings to the backend
+ */
+export const saveRemoteSettings = async (settings: RemoteSettings): Promise<RemoteSettings> => {
+  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
 };
 

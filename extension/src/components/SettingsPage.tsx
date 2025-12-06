@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { GeminiStats } from '../types';
 import { useSettings, useRefreshStatus } from '../context/AppContext';
+import { useAuth } from '../auth/AuthContext';
 import { getGeminiStats, clearGeminiLogs } from '../services/settingsService';
+import { BACKEND_URL_OPTIONS } from '../auth/config';
 import { useChromeMessaging } from '../hooks/useChromeMessaging';
-import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2 } from 'lucide-react';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Cloud, CloudOff } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
@@ -34,7 +36,10 @@ const formatFrequency = (minutes: number): string => {
 const SettingsPage: React.FC = () => {
   const { settings, update: updateSettings } = useSettings();
   const { status: refreshStatus } = useRefreshStatus();
+  const auth = useAuth();
   const { triggerManualRefresh } = useChromeMessaging();
+
+  const isLoggedIn = auth.status === 'logged_in';
 
   // Local form state (synced from context)
   const [formSettings, setFormSettings] = useState(settings);
@@ -151,6 +156,43 @@ const SettingsPage: React.FC = () => {
       </header>
 
       <form onSubmit={handleSave} className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
+        {/* Cloud Sync Status */}
+        <div className={`flex items-center gap-3 p-3 rounded-lg ${isLoggedIn ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'}`}>
+          {isLoggedIn ? (
+            <>
+              <Cloud className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-green-800">Cloud Sync Enabled</p>
+                <p className="text-xs text-green-600">Settings synced to {auth.user?.email}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <CloudOff className="w-5 h-5 text-slate-500" />
+              <div>
+                <p className="text-sm font-medium text-slate-700">Local Storage Mode</p>
+                <p className="text-xs text-slate-500">Sign in to sync settings across devices</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Backend Server</label>
+          <select
+            value={formSettings.backendUrl}
+            onChange={(e) => setFormSettings((prev) => ({ ...prev, backendUrl: e.target.value }))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            {BACKEND_URL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">Select which backend server to connect to.</p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Gemini API Key</label>
           <input
@@ -160,7 +202,9 @@ const SettingsPage: React.FC = () => {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
             placeholder="Enter your Gemini API key"
           />
-          <p className="text-xs text-slate-400 mt-1">Stored securely in chrome.storage.local on this device.</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {isLoggedIn ? 'Stored securely in the cloud.' : 'Stored locally on this device.'}
+          </p>
         </div>
 
         <div>
