@@ -165,6 +165,14 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
                VIN: {vehicleData.vin}
              </span>
           )}
+          {listing.seller?.phone && (
+             <a
+               href={`tel:${listing.seller.phone}`}
+               className="inline-flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 font-mono"
+             >
+               📞 {listing.seller.phone}
+             </a>
+          )}
           {vehicleData.engineCapacity && (
              <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                <Settings2 className="w-3 h-3 mr-1" />
@@ -218,14 +226,6 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
              <span className="inline-flex items-center text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
                Imported
              </span>
-          )}
-          {listing.seller?.phone && (
-             <a
-               href={`tel:${listing.seller.phone}`}
-               className="inline-flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100"
-             >
-               📞 {listing.seller.phone}
-             </a>
           )}
         </div>
 
