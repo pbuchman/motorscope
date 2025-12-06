@@ -184,7 +184,7 @@ const SettingsPage: React.FC = () => {
   }, [formSettings.backendUrl]);
 
   const handleTriggerManualRefresh = useCallback(async () => {
-    if (!formSettings.geminiApiKey) return;
+    if (!settings.geminiApiKey) return; // Use persisted key, not form key
     setTriggeringRefresh(true);
     try {
       const response = await triggerManualRefresh();
@@ -196,7 +196,7 @@ const SettingsPage: React.FC = () => {
     } finally {
       setTimeout(() => setTriggeringRefresh(false), 1000);
     }
-  }, [triggerManualRefresh, formSettings.geminiApiKey]);
+  }, [triggerManualRefresh, settings.geminiApiKey]);
 
   const handleSave = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -243,7 +243,14 @@ const SettingsPage: React.FC = () => {
     setTimeout(() => setRefreshing(false), 500);
   }, []);
 
-  const hasApiKey = !!formSettings.geminiApiKey;
+  // Persisted API key (what's actually saved)
+  const hasSavedApiKey = !!settings.geminiApiKey;
+  // Form API key (what user is typing)
+  const hasFormApiKey = !!formSettings.geminiApiKey.trim();
+  // Check if form has unsaved changes
+  const apiKeyChanged = formSettings.geminiApiKey !== settings.geminiApiKey;
+  // Save button should be disabled if: empty form key, or currently saving/validating
+  const canSave = hasFormApiKey && !saving && !validatingKey;
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen overflow-y-auto">
@@ -334,7 +341,10 @@ const SettingsPage: React.FC = () => {
                   setApiKeyError('');
                 }}
                 className={`w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  apiKeyError ? 'border-red-300 bg-red-50' : hasApiKey ? 'border-gray-300' : 'border-amber-300 bg-amber-50'
+                  apiKeyError ? 'border-red-300 bg-red-50' 
+                    : !hasFormApiKey ? 'border-amber-300 bg-amber-50'
+                    : apiKeyChanged ? 'border-blue-300 bg-blue-50'
+                    : 'border-gray-300'
                 }`}
                 placeholder="Enter your Gemini API key"
               />
@@ -344,10 +354,15 @@ const SettingsPage: React.FC = () => {
                 <AlertCircle className="w-3 h-3" />
                 {apiKeyError}
               </p>
-            ) : !hasApiKey ? (
+            ) : !hasFormApiKey ? (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 API key is required to analyze and track car listings
+              </p>
+            ) : apiKeyChanged ? (
+              <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Click "Save Settings" to validate and save your API key
               </p>
             ) : (
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
@@ -402,8 +417,8 @@ const SettingsPage: React.FC = () => {
           {/* Save Button */}
           <button
             type="submit"
-            disabled={saving || validatingKey}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            disabled={!canSave}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {(saving || validatingKey) && <Loader2 className="w-4 h-4 animate-spin" />}
             {validatingKey ? 'Validating...' : saving ? 'Saving...' : 'Save Settings'}
@@ -418,19 +433,16 @@ const SettingsPage: React.FC = () => {
               Background Sync
             </h2>
             <div className="flex items-center gap-2">
-              {!hasApiKey ? (
-                <a
-                  href="index.html?view=settings"
-                  className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700"
-                >
+              {!hasSavedApiKey ? (
+                <span className="flex items-center gap-1 text-xs text-amber-600">
                   <AlertCircle className="w-3 h-3" />
-                  Configure API key
-                </a>
+                  Configure API key first
+                </span>
               ) : (
                 <button
                   type="button"
                   onClick={handleTriggerManualRefresh}
-                  disabled={triggeringRefresh || refreshStatus.isRefreshing || !hasApiKey}
+                  disabled={triggeringRefresh || refreshStatus.isRefreshing || !hasSavedApiKey}
                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {refreshStatus.isRefreshing ? (
