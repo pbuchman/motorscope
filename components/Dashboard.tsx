@@ -113,10 +113,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const filteredListings = listings.filter(l => 
-    l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (l.vehicle.make || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredListings = listings.filter(l => {
+    const term = searchTerm.toLowerCase();
+    return (
+      l.title.toLowerCase().includes(term) ||
+      (l.vehicle?.make || '').toLowerCase().includes(term) ||
+      (l.vehicle?.model || '').toLowerCase().includes(term) ||
+      (l.vehicle?.vin || '').toLowerCase().includes(term) ||
+      (l.seller?.phone || '').includes(searchTerm) // Phone search without toLowerCase since it's digits
+    );
+  });
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen p-6 overflow-y-auto">
@@ -134,7 +140,7 @@ const Dashboard: React.FC = () => {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search make, model..." 
+              placeholder="Search make, model, VIN, phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
