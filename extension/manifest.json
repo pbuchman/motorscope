@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "MotorScope - Car Listing Tracker",
+  "key": "djadhibkloebjbcjpiahnhmhmfeekfmn",
+  "version": "1.0.0",
+  "description": "Track car listings, monitor price changes, and extract vehicle data from online marketplaces",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "notifications",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "663051224718-nj03sld1761g1oicnngk1umj0ob717qe.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_popup": "index.html?view=popup",
+    "default_title": "MotorScope",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "options_page": "index.html?view=settings",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"],
+      "js": ["content-scripts/otomoto.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}
