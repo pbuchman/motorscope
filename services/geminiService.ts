@@ -405,12 +405,17 @@ ${pageText.substring(0, 15000)}
 
 Key extraction rules:
 1. VIN: Must be EXACTLY 17 characters (A-Z, 0-9, excluding I, O, Q). If invalid or not found, set to null.
-2. Mileage: Extract numeric value and unit (km/mi).
-3. Engine capacity: Convert to cubic centimeters (e.g., 2.0L = 1998cc).
-4. Price: Extract as number without formatting. Currency as code (PLN/EUR/USD).
-5. Origin country (registration.originCountry): The country the vehicle was IMPORTED FROM or originally came from - NOT the current location.
-6. Condition fields: Only set true/false if EXPLICITLY stated in listing, otherwise null.
-7. Dates: Use ISO 8601 format.
+2. POSTED DATE (CRITICAL): Find when the listing was posted. On otomoto.pl, the date is usually just BEFORE the "ID:" line.
+   Examples of posted date patterns:
+   - "3 grudnia 2025 6:23" followed by "ID: 6143969486"
+   - "3 grudnia 2025 15:52" followed by "ID: 6144015463"
+   Polish month names: stycznia, lutego, marca, kwietnia, maja, czerwca, lipca, sierpnia, września, października, listopada, grudnia
+   Convert to ISO 8601 format (e.g., "2025-12-03T06:23:00.000Z").
+3. Mileage: Extract numeric value and unit (km/mi).
+4. Engine capacity: Convert to cubic centimeters (e.g., 2.0L = 1998cc).
+5. Price: Extract as number without formatting. Currency as code (PLN/EUR/USD).
+6. Origin country (registration.originCountry): The country the vehicle was IMPORTED FROM or originally came from - NOT the current location.
+7. Condition fields: Only set true/false if EXPLICITLY stated in listing, otherwise null.
 8. Infer make/model from URL or title if not explicitly stated.
   `;
 
