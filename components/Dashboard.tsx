@@ -1,128 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { CarListing, ListingStatus } from '../types';
-import { getListings, removeListing, refreshListing } from '../services/storageService';
-import { refreshListingWithGemini } from '../services/geminiService';
+import React, { useState, useMemo, useCallback } from 'react';
+import { CarListing } from '../types';
+import { useListings } from '../context/AppContext';
 import CarCard from './CarCard';
-import { Search, Car, Settings } from 'lucide-react';
+import { Search, Car, Settings, Loader2 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-  const [listings, setListings] = useState<CarListing[]>([]);
+  const { listings, isLoading, refreshingIds, remove, refresh } = useListings();
   const [searchTerm, setSearchTerm] = useState('');
-  const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
 
-  const loadData = async () => {
-    const data = await getListings();
-    setListings(data);
-  };
-
-  useEffect(() => {
-    loadData();
-    
-    // Listen for storage events (cross-tab sync)
-    const handleStorageChange = () => loadData();
-    window.addEventListener('storage', handleStorageChange);
-
-    // Listen for Extension Runtime messages (if Popup adds item)
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-        const messageListener = (request: any) => {
-            if (request.type === 'LISTING_UPDATED') {
-                loadData();
-            }
-        };
-        chrome.runtime.onMessage.addListener(messageListener);
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            chrome.runtime.onMessage.removeListener(messageListener);
-        };
-    }
-
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const handleRemove = async (id: string) => {
+  // Memoize the removal handler
+  const handleRemove = useCallback(async (id: string) => {
     if (confirm('Are you sure you want to stop tracking this car?')) {
-      await removeListing(id);
-      await loadData();
+      await remove(id);
     }
-  };
+  }, [remove]);
 
-  const handleRefresh = async (listing: CarListing) => {
-    // Add to refreshing set
-    setRefreshingIds(prev => new Set(prev).add(listing.id));
+  // Memoize the refresh handler
+  const handleRefresh = useCallback(async (listing: CarListing) => {
+    await refresh(listing);
+  }, [refresh]);
 
-    try {
-      // Fetch the page content
-      const response = await fetch(listing.source.url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-      });
+  // Memoize filtered listings for performance
+  const filteredListings = useMemo(() => {
+    if (!searchTerm.trim()) return listings;
 
-      // Only mark as expired if we get a clear 404 or 410
-      if (response.status === 404 || response.status === 410) {
-        await refreshListing(listing.id, listing.currentPrice, listing.currency, ListingStatus.EXPIRED, 'success');
-        await loadData();
-        return;
-      }
-
-      // If we can't fetch (CORS, etc), mark as error
-      if (!response.ok) {
-        await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status, 'error', `HTTP ${response.status}`);
-        await loadData();
-        return;
-      }
-
-      const html = await response.text();
-
-      // Extract page title from HTML
-      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      const pageTitle = titleMatch ? titleMatch[1] : listing.title;
-
-      // Extract text content (strip HTML tags for Gemini)
-      const textContent = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .substring(0, 20000);
-
-      // Use Gemini to analyze the page and extract price/status
-      const result = await refreshListingWithGemini(listing.source.url, textContent, pageTitle);
-
-      // If Gemini returned a valid price, use it; otherwise keep existing
-      const newPrice = result.price > 0 ? result.price : listing.currentPrice;
-      const newCurrency = result.currency || listing.currency;
-
-      await refreshListing(listing.id, newPrice, newCurrency, result.status, 'success');
-      await loadData();
-
-    } catch (error) {
-      // Network error, CORS, or Gemini error - mark as failed
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Refresh failed:', error);
-      await refreshListing(listing.id, listing.currentPrice, listing.currency, listing.status, 'error', errorMessage);
-      await loadData();
-    } finally {
-      // Remove from refreshing set
-      setRefreshingIds(prev => {
-        const next = new Set(prev);
-        next.delete(listing.id);
-        return next;
-      });
-    }
-  };
-
-  const filteredListings = listings.filter(l => {
     const term = searchTerm.toLowerCase();
+    return listings.filter(l => {
+      return (
+        l.title.toLowerCase().includes(term) ||
+        (l.vehicle?.make || '').toLowerCase().includes(term) ||
+        (l.vehicle?.model || '').toLowerCase().includes(term) ||
+        (l.vehicle?.vin || '').toLowerCase().includes(term) ||
+        (l.seller?.phone || '').includes(searchTerm)
+      );
+    });
+  }, [listings, searchTerm]);
+
+  // Loading state
+  if (isLoading) {
     return (
-      l.title.toLowerCase().includes(term) ||
-      (l.vehicle?.make || '').toLowerCase().includes(term) ||
-      (l.vehicle?.model || '').toLowerCase().includes(term) ||
-      (l.vehicle?.vin || '').toLowerCase().includes(term) ||
-      (l.seller?.phone || '').includes(searchTerm) // Phone search without toLowerCase since it's digits
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-500">Loading tracked vehicles...</p>
+        </div>
+      </div>
     );
-  });
+  }
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen p-6 overflow-y-auto">
