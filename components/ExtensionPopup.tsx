@@ -16,6 +16,7 @@ const ExtensionPopup: React.FC = () => {
   // Preview state for confirmation flow
   const [previewData, setPreviewData] = useState<CarListing | null>(null);
   const [showVinWarning, setShowVinWarning] = useState(false);
+  const [showDateWarning, setShowDateWarning] = useState(false);
 
   useEffect(() => {
     // 1. Get Active Tab
@@ -84,7 +85,12 @@ const ExtensionPopup: React.FC = () => {
       if (!listingData.vehicle?.vin) {
         setShowVinWarning(true);
       }
-      
+
+      // Check if posted date is missing
+      if (!listingData.postedDate) {
+        setShowDateWarning(true);
+      }
+
     } catch (e: any) {
       if (process.env.NODE_ENV === 'development') {
         console.error(e);
@@ -103,6 +109,7 @@ const ExtensionPopup: React.FC = () => {
       setSavedItem(previewData);
       setPreviewData(null);
       setShowVinWarning(false);
+      setShowDateWarning(false);
 
       // Notify other views
       if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -116,6 +123,7 @@ const ExtensionPopup: React.FC = () => {
   const handleCancelPreview = () => {
     setPreviewData(null);
     setShowVinWarning(false);
+    setShowDateWarning(false);
   };
 
   const handleUnbookmark = async () => {
@@ -184,6 +192,20 @@ const ExtensionPopup: React.FC = () => {
               </div>
             )}
 
+            {/* Posted Date Warning */}
+            {showDateWarning && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2 text-left">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-medium text-sm">Posted date not detected</p>
+                  <p className="text-amber-600 text-xs mt-1">
+                    The listing date helps track how long a car has been on the market.
+                    This is useful for price negotiation insights.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <h3 className="font-bold text-slate-800 mb-3 text-left">Confirm Details</h3>
 
             {/* Preview Card */}
@@ -237,6 +259,16 @@ const ExtensionPopup: React.FC = () => {
                 </div>
               )}
 
+              {previewData.postedDate ? (
+                <div className="mt-2 bg-green-50 border border-green-200 rounded px-2 py-1">
+                  <span className="text-xs text-green-700">📅 Posted: {formatEuropeanDateTime(previewData.postedDate)}</span>
+                </div>
+              ) : (
+                <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                  <span className="text-xs text-amber-700">📅 Posted date not detected</span>
+                </div>
+              )}
+
               {previewData.vehicle?.engine?.capacityCc && (
                 <p className="text-xs text-slate-500 mt-2">Engine: {(previewData.vehicle.engine.capacityCc / 1000).toFixed(1)}L</p>
               )}
@@ -260,7 +292,7 @@ const ExtensionPopup: React.FC = () => {
                 onClick={handleConfirmSave}
                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
               >
-                {showVinWarning ? 'Save Anyway' : 'Save'}
+                {(showVinWarning || showDateWarning) ? 'Save Anyway' : 'Save'}
               </button>
             </div>
           </div>

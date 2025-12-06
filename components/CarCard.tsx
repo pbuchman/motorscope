@@ -155,13 +155,13 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
         {/* VIN & Tech specs (mini) */}
         <div className="flex flex-wrap gap-2 mb-4">
           {listing.postedDate && (
-            <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+            <span className="inline-flex items-center text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
               <Clock className="w-3 h-3 mr-1" />
               Posted {formatEuropeanDateTime(listing.postedDate)}
             </span>
           )}
           {vehicleData.vin && (
-             <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-mono">
+             <span className="inline-flex items-center text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200 font-mono">
                VIN: {vehicleData.vin}
              </span>
           )}
