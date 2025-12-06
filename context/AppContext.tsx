@@ -125,6 +125,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (result.success || result.listing.lastRefreshStatus === 'error') {
         await saveListing(result.listing);
         await reloadListings();
+        notifyListingUpdated();
       }
 
       return result;
@@ -136,7 +137,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return next;
       });
     }
-  }, [reloadListings]);
+  }, [reloadListings, notifyListingUpdated]);
 
   // Update settings
   const updateSettings = useCallback(async (newSettings: ExtensionSettings) => {
