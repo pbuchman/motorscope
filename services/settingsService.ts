@@ -1,10 +1,11 @@
-import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats } from '../types';
+import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats, RefreshStatus } from '../types';
 import { extensionStorage } from './extensionStorage';
 
 export const STORAGE_KEYS = {
-  settings: 'moto_tracker_settings',
-  geminiKey: 'moto_tracker_gemini_key',
-  geminiStats: 'moto_tracker_gemini_stats',
+  settings: 'motorscope_settings',
+  geminiKey: 'motorscope_gemini_key',
+  geminiStats: 'motorscope_gemini_stats',
+  refreshStatus: 'motorscope_refresh_status',
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -14,9 +15,10 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
 
 const clampFrequency = (value?: number): number => {
   const numeric = typeof value === 'number' && !Number.isNaN(value) ? value : DEFAULT_SETTINGS.checkFrequencyMinutes;
-  return Math.min(1440, Math.max(15, numeric));
+  return Math.min(43200, Math.max(0.167, numeric)); // 10 seconds (0.167 min) to 1 month
 };
 
+// Gemini API key is stored separately for security (not mixed with other settings)
 export const getGeminiApiKey = async (): Promise<string> => {
   const key = await extensionStorage.get<string>(STORAGE_KEYS.geminiKey);
   return key || '';
@@ -26,8 +28,9 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
   await extensionStorage.set(STORAGE_KEYS.geminiKey, key.trim());
 };
 
+// Settings combines the API key from dedicated storage with other settings
 export const getSettings = async (): Promise<ExtensionSettings> => {
-  const stored = await extensionStorage.get<ExtensionSettings>(STORAGE_KEYS.settings);
+  const stored = await extensionStorage.get<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings);
   const geminiApiKey = await getGeminiApiKey();
   return {
     geminiApiKey,
@@ -35,29 +38,71 @@ export const getSettings = async (): Promise<ExtensionSettings> => {
   };
 };
 
+// Save settings - API key goes to dedicated storage, other settings to settings storage
 export const saveSettings = async (settings: ExtensionSettings): Promise<void> => {
-  const merged: ExtensionSettings = {
-    geminiApiKey: settings.geminiApiKey.trim(),
+  // Save API key to dedicated storage
+  await saveGeminiApiKey(settings.geminiApiKey);
+
+  // Save other settings (without API key) to settings storage
+  await extensionStorage.set(STORAGE_KEYS.settings, {
     checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
-  };
-  await extensionStorage.set(STORAGE_KEYS.settings, merged);
-  await saveGeminiApiKey(merged.geminiApiKey);
+  });
 };
 
 export const getGeminiStats = async (): Promise<GeminiStats> => {
   const stats = await extensionStorage.get<GeminiStats>(STORAGE_KEYS.geminiStats);
-  return stats || { totalCalls: 0, history: [] };
+  return stats || { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] };
 };
 
 export const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<void> => {
   const stats = await getGeminiStats();
   const history = [entry, ...stats.history].slice(0, 200);
   await extensionStorage.set(STORAGE_KEYS.geminiStats, {
+    allTimeTotalCalls: (stats.allTimeTotalCalls || 0) + 1,
     totalCalls: stats.totalCalls + 1,
+    successCount: entry.status === 'success' ? stats.successCount + 1 : stats.successCount,
+    errorCount: entry.status === 'error' ? stats.errorCount + 1 : stats.errorCount,
     history,
   });
 };
 
-export const resetGeminiStats = async (): Promise<void> => {
-  await extensionStorage.set(STORAGE_KEYS.geminiStats, { totalCalls: 0, history: [] });
+// Clear logs and session counts, but preserve allTimeTotalCalls
+export const clearGeminiLogs = async (): Promise<void> => {
+  const stats = await getGeminiStats();
+  await extensionStorage.set(STORAGE_KEYS.geminiStats, {
+    allTimeTotalCalls: stats.allTimeTotalCalls || 0,
+    totalCalls: 0,
+    successCount: 0,
+    errorCount: 0,
+    history: []
+  });
 };
+
+// Full reset (only used for testing/admin)
+export const resetGeminiStats = async (): Promise<void> => {
+  await extensionStorage.set(STORAGE_KEYS.geminiStats, { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
+};
+
+export const DEFAULT_REFRESH_STATUS: RefreshStatus = {
+  lastRefreshTime: null,
+  nextRefreshTime: null,
+  lastRefreshCount: 0,
+  isRefreshing: false,
+  currentIndex: 0,
+  totalCount: 0,
+  currentListingTitle: null,
+  pendingItems: [],
+  recentlyRefreshed: [],
+  refreshErrors: [],
+};
+
+export const getRefreshStatus = async (): Promise<RefreshStatus> => {
+  const status = await extensionStorage.get<RefreshStatus>(STORAGE_KEYS.refreshStatus);
+  return status || DEFAULT_REFRESH_STATUS;
+};
+
+export const saveRefreshStatus = async (status: Partial<RefreshStatus>): Promise<void> => {
+  const current = await getRefreshStatus();
+  await extensionStorage.set(STORAGE_KEYS.refreshStatus, { ...current, ...status });
+};
+

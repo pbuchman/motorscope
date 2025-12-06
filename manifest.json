@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "MotoTracker - Market Extension",
+  "name": "MotorScope - Car Listing Tracker",
   "version": "1.0.0",
-  "description": "Track car prices, VINs, and specs from Otomoto and other marketplaces.",
+  "description": "Track car listings, monitor price changes, and extract vehicle data from online marketplaces",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "alarms",
+    "notifications"
   ],
   "icons": {
     "16": "icon.png",
@@ -15,7 +17,7 @@
   },
   "action": {
     "default_popup": "index.html?view=popup",
-    "default_title": "MotoTracker",
+    "default_title": "MotorScope",
     "default_icon": {
       "16": "icon.png",
       "48": "icon.png",
@@ -24,9 +26,18 @@
   },
   "options_page": "index.html?view=settings",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"],
+      "js": ["content-scripts/otomoto.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:*; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }

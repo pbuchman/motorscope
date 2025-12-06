@@ -1,0 +1,387 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mototracker.app/schemas/car-listing-v1.json",
+  "title": "Car Listing Schema",
+  "description": "Normalized JSON structure for car listings extracted from vehicle marketplaces",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["id", "schemaVersion", "source", "title", "thumbnailUrl", "currentPrice", "currency", "priceHistory", "vehicle", "location", "seller", "status", "firstSeenAt", "lastSeenAt"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier. Format: 'vin_[VIN]' for VIN-based IDs or 'url_[hash]' for URL-based IDs",
+      "pattern": "^(vin_[A-HJ-NPR-Z0-9]{17}|url_[A-Za-z0-9+/=]{1,22})$",
+      "examples": ["vin_WBA51BL000WY24374", "url_aHR0cHM6Ly93d3"]
+    },
+    "schemaVersion": {
+      "type": "string",
+      "description": "Schema version for data compatibility",
+      "const": "1.0.0"
+    },
+    "source": {
+      "type": "object",
+      "description": "Information about where the listing was found",
+      "required": ["platform", "url"],
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "Hostname of the source platform",
+          "examples": ["www.otomoto.pl", "www.mobile.de", "www.autoscout24.de"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Full URL to the original listing"
+        },
+        "listingId": {
+          "type": ["string", "null"],
+          "description": "Platform-specific listing ID if available",
+          "examples": ["ID6HMMYt", "123456789"]
+        },
+        "countryCode": {
+          "type": ["string", "null"],
+          "description": "ISO 3166-1 alpha-2 country code of the platform",
+          "pattern": "^[A-Z]{2}$",
+          "examples": ["PL", "DE", "NL"]
+        }
+      }
+    },
+    "title": {
+      "type": "string",
+      "description": "Listing title, typically containing make, model, and year",
+      "examples": ["BMW Seria 5 520d xDrive M Sport 2023"]
+    },
+    "thumbnailUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the main listing image"
+    },
+    "currentPrice": {
+      "type": "number",
+      "description": "Current asking price",
+      "minimum": 0,
+      "examples": [216000, 45900]
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO 4217 currency code",
+      "pattern": "^[A-Z]{3}$",
+      "examples": ["PLN", "EUR", "USD", "GBP"]
+    },
+    "priceHistory": {
+      "type": "array",
+      "description": "Historical price changes",
+      "items": {
+        "type": "object",
+        "required": ["date", "price", "currency"],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of the price observation"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price at this observation"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code at this observation"
+          }
+        }
+      }
+    },
+    "originalPrice": {
+      "type": ["number", "null"],
+      "description": "Original price before any discount",
+      "minimum": 0
+    },
+    "negotiable": {
+      "type": ["boolean", "null"],
+      "description": "Whether the price is marked as negotiable"
+    },
+    "vehicle": {
+      "type": "object",
+      "description": "All vehicle-specific information",
+      "required": ["mileage", "engine", "drivetrain", "registration", "condition", "colorAndInterior"],
+      "properties": {
+        "vin": {
+          "type": ["string", "null"],
+          "description": "Vehicle Identification Number - exactly 17 characters",
+          "pattern": "^[A-HJ-NPR-Z0-9]{17}$",
+          "examples": ["WBA51BL000WY24374"]
+        },
+        "make": {
+          "type": ["string", "null"],
+          "description": "Vehicle manufacturer",
+          "examples": ["BMW", "Audi", "Mercedes-Benz", "Toyota", "Volkswagen"]
+        },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Vehicle model name",
+          "examples": ["Seria 5", "A4", "E-Class", "Camry", "Golf"]
+        },
+        "generation": {
+          "type": ["string", "null"],
+          "description": "Model generation code",
+          "examples": ["G30", "B9", "W213"]
+        },
+        "trim": {
+          "type": ["string", "null"],
+          "description": "Trim level or equipment package",
+          "examples": ["M Sport", "S-line", "AMG Line", "Limited"]
+        },
+        "bodyType": {
+          "type": ["string", "null"],
+          "description": "Vehicle body style",
+          "examples": ["Sedan", "SUV", "Kombi", "Hatchback", "Coupe", "Cabrio"]
+        },
+        "productionYear": {
+          "type": ["integer", "null"],
+          "description": "Year the vehicle was manufactured",
+          "minimum": 1900,
+          "maximum": 2100,
+          "examples": [2023, 2021, 2019]
+        },
+        "firstRegistrationYear": {
+          "type": ["integer", "null"],
+          "description": "Year of first registration (may differ from production year)",
+          "minimum": 1900,
+          "maximum": 2100
+        },
+        "mileage": {
+          "type": "object",
+          "description": "Vehicle odometer reading",
+          "properties": {
+            "value": {
+              "type": ["number", "null"],
+              "description": "Numeric mileage value",
+              "minimum": 0,
+              "examples": [36000, 125000, 89500]
+            },
+            "unit": {
+              "type": ["string", "null"],
+              "enum": ["km", "mi", null],
+              "description": "Unit of measurement"
+            }
+          }
+        },
+        "engine": {
+          "type": "object",
+          "description": "Engine specifications",
+          "properties": {
+            "capacityCc": {
+              "type": ["integer", "null"],
+              "description": "Engine displacement in cubic centimeters",
+              "minimum": 0,
+              "examples": [1998, 2993, 1984]
+            },
+            "fuelType": {
+              "type": ["string", "null"],
+              "description": "Fuel type",
+              "examples": ["Diesel", "Benzyna", "Petrol", "Electric", "Hybrid", "LPG"]
+            },
+            "powerKw": {
+              "type": ["number", "null"],
+              "description": "Engine power in kilowatts",
+              "minimum": 0
+            },
+            "powerHp": {
+              "type": ["number", "null"],
+              "description": "Engine power in horsepower",
+              "minimum": 0,
+              "examples": [190, 252, 150]
+            },
+            "engineCode": {
+              "type": ["string", "null"],
+              "description": "Manufacturer engine code",
+              "examples": ["B47", "EA888", "M57"]
+            },
+            "euroStandard": {
+              "type": ["string", "null"],
+              "description": "Emission standard",
+              "examples": ["Euro 6", "Euro 5", "Euro 6d"]
+            },
+            "hybridType": {
+              "type": ["string", "null"],
+              "description": "Type of hybrid system if applicable",
+              "enum": ["mild", "full", "plug-in", null]
+            }
+          }
+        },
+        "drivetrain": {
+          "type": "object",
+          "description": "Transmission and drive configuration",
+          "properties": {
+            "transmissionType": {
+              "type": ["string", "null"],
+              "description": "Transmission type",
+              "examples": ["Automatyczna", "Automatic", "Manualna", "Manual"]
+            },
+            "transmissionSubtype": {
+              "type": ["string", "null"],
+              "description": "Specific transmission type",
+              "examples": ["DSG", "CVT", "Tiptronic", "ZF 8HP"]
+            },
+            "gearsCount": {
+              "type": ["integer", "null"],
+              "description": "Number of gears",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "driveType": {
+              "type": ["string", "null"],
+              "description": "Drive configuration",
+              "examples": ["FWD", "RWD", "AWD", "4x4", "xDrive", "quattro"]
+            }
+          }
+        },
+        "registration": {
+          "type": "object",
+          "description": "Registration and origin information",
+          "properties": {
+            "plateNumber": {
+              "type": ["string", "null"],
+              "description": "License plate number if visible"
+            },
+            "originCountry": {
+              "type": ["string", "null"],
+              "description": "Country the vehicle was IMPORTED FROM or originally registered in. This is the ORIGIN country, not current location.",
+              "examples": ["Niemcy", "Germany", "USA", "Francja", "Holandia"]
+            },
+            "registeredInCountryCode": {
+              "type": ["string", "null"],
+              "description": "Country code where vehicle is currently registered",
+              "pattern": "^[A-Z]{2}$",
+              "examples": ["PL", "DE", "NL"]
+            }
+          }
+        },
+        "condition": {
+          "type": "object",
+          "description": "Vehicle condition declarations - only set if explicitly stated",
+          "properties": {
+            "isNew": {
+              "type": ["boolean", "null"],
+              "description": "true if brand new, false if used, null if not stated"
+            },
+            "isImported": {
+              "type": ["boolean", "null"],
+              "description": "true if imported from another country, null if not stated"
+            },
+            "accidentFreeDeclared": {
+              "type": ["boolean", "null"],
+              "description": "true if seller declares 'bezwypadkowy'/accident-free, null if not stated"
+            },
+            "serviceHistoryDeclared": {
+              "type": ["boolean", "null"],
+              "description": "true if seller mentions full service history/ASO, null if not stated"
+            }
+          }
+        },
+        "colorAndInterior": {
+          "type": "object",
+          "description": "Color and interior details",
+          "properties": {
+            "exteriorColor": {
+              "type": ["string", "null"],
+              "description": "Exterior paint color",
+              "examples": ["Czarny", "Black", "Biały", "White", "Szary", "Niebieski"]
+            },
+            "interiorColor": {
+              "type": ["string", "null"],
+              "description": "Interior color",
+              "examples": ["Czarny", "Beżowy", "Brązowy"]
+            },
+            "upholsteryType": {
+              "type": ["string", "null"],
+              "description": "Interior material",
+              "examples": ["Skóra", "Leather", "Alcantara", "Tkanina", "Fabric"]
+            }
+          }
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "description": "Seller/vehicle location",
+      "properties": {
+        "city": {
+          "type": ["string", "null"],
+          "description": "City name",
+          "examples": ["Warszawa", "Kraków", "Wieliczka"]
+        },
+        "region": {
+          "type": ["string", "null"],
+          "description": "Region/voivodeship/state",
+          "examples": ["Małopolskie", "Mazowieckie", "Wielkopolskie"]
+        },
+        "postalCode": {
+          "type": ["string", "null"],
+          "description": "Postal/ZIP code",
+          "examples": ["00-001", "30-001"]
+        },
+        "countryCode": {
+          "type": ["string", "null"],
+          "description": "ISO 3166-1 alpha-2 country code",
+          "pattern": "^[A-Z]{2}$",
+          "examples": ["PL", "DE"]
+        }
+      }
+    },
+    "seller": {
+      "type": "object",
+      "description": "Seller information",
+      "properties": {
+        "type": {
+          "type": ["string", "null"],
+          "description": "Seller type",
+          "examples": ["private", "dealer", "komis"]
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Seller or dealership name"
+        },
+        "phone": {
+          "type": ["string", "null"],
+          "description": "Seller phone number",
+          "examples": ["+48 123 456 789", "123456789"]
+        },
+        "isCompany": {
+          "type": ["boolean", "null"],
+          "description": "true if seller is a company/dealer"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Current listing status",
+      "enum": ["ACTIVE", "SOLD", "EXPIRED"]
+    },
+    "postedDate": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When the listing was originally posted (ISO 8601)"
+    },
+    "firstSeenAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When we first tracked this listing (ISO 8601)"
+    },
+    "lastSeenAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When we last successfully checked this listing (ISO 8601)"
+    },
+    "lastRefreshStatus": {
+      "type": "string",
+      "description": "Status of the last refresh attempt",
+      "enum": ["success", "error", "pending"]
+    },
+    "lastRefreshError": {
+      "type": "string",
+      "description": "Error message if last refresh failed"
+    }
+  }
+}
+

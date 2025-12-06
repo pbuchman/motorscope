@@ -1,10 +1,17 @@
 // Global type declarations for Chrome Extension APIs
 declare namespace chrome {
   export namespace runtime {
-    export function sendMessage(message: any): void;
+    export function sendMessage(message: any): Promise<any>;
     export function openOptionsPage(): void;
+    export function getURL(path: string): string;
+    export const onInstalled: {
+      addListener(callback: () => void): void;
+    };
+    export const onStartup: {
+      addListener(callback: () => void): void;
+    };
     export const onMessage: {
-      addListener(callback: (request: any) => void): void;
+      addListener(callback: (request: any, sender: any, sendResponse: (response?: any) => void) => boolean | void): void;
       removeListener(callback: (request: any) => void): void;
     };
     export const lastError: { message: string } | undefined;
@@ -19,6 +26,9 @@ declare namespace chrome {
     export function query(
       queryInfo: { active?: boolean; currentWindow?: boolean },
       callback: (tabs: Tab[]) => void
+    ): void;
+    export function create(
+      createProperties: { url?: string; active?: boolean }
     ): void;
   }
 
@@ -49,10 +59,54 @@ declare namespace chrome {
     export const onChanged: {
       addListener(
         callback: (
+          changes: { [key: string]: { oldValue?: any; newValue?: any } },
+          namespace: string
+        ) => void
+      ): void;
+      removeListener(
+        callback: (
           changes: { [key: string]: any },
           namespace: string
         ) => void
       ): void;
     };
+  }
+
+  export namespace alarms {
+    export interface Alarm {
+      name: string;
+      scheduledTime: number;
+      periodInMinutes?: number;
+    }
+    export function create(
+      name: string,
+      alarmInfo: { delayInMinutes?: number; periodInMinutes?: number; when?: number }
+    ): void;
+    export function clear(name: string): Promise<boolean>;
+    export function get(name: string): Promise<Alarm | undefined>;
+    export function getAll(): Promise<Alarm[]>;
+    export const onAlarm: {
+      addListener(callback: (alarm: Alarm) => void): void;
+    };
+  }
+
+  export namespace notifications {
+    export interface NotificationOptions {
+      type: 'basic' | 'image' | 'list' | 'progress';
+      iconUrl: string;
+      title: string;
+      message: string;
+      priority?: number;
+      buttons?: { title: string }[];
+    }
+    export function create(
+      notificationId: string | undefined,
+      options: NotificationOptions,
+      callback?: (notificationId: string) => void
+    ): void;
+    export function create(
+      options: NotificationOptions,
+      callback?: (notificationId: string) => void
+    ): void;
   }
 }

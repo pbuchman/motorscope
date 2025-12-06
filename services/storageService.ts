@@ -1,19 +1,26 @@
-import { CarListing, PricePoint } from "../types";
+import { CarListing, ListingStatus, PricePoint } from "../types";
 import { extensionStorage } from "./extensionStorage";
+import { normalizeUrl } from "../utils/formatters";
 
-const STORAGE_KEY = "moto_tracker_listings";
+const STORAGE_KEY = "motorscope_listings";
 
 export const getListings = async (): Promise<CarListing[]> => {
   const data = await extensionStorage.get<CarListing[]>(STORAGE_KEY);
   return data || [];
 };
 
+
 export const saveListing = async (listing: CarListing): Promise<void> => {
   const listings = await getListings();
-  const existingIndex = listings.findIndex((l) => l.url === listing.url);
+  const normalizedUrl = normalizeUrl(listing.source.url);
+
+  // Find by ID or normalized URL
+  const existingIndex = listings.findIndex((l) =>
+    l.id === listing.id || normalizeUrl(l.source.url) === normalizedUrl
+  );
 
   if (existingIndex >= 0) {
-    // Update existing, preserving history
+    // Update existing, preserving history and timestamps
     const existing = listings[existingIndex];
     
     // Check if price changed during this manual re-save
@@ -28,40 +35,67 @@ export const saveListing = async (listing: CarListing): Promise<void> => {
     listings[existingIndex] = { 
       ...listing, 
       priceHistory: existing.priceHistory,
-      dateAdded: existing.dateAdded,
-      postedDate: existing.postedDate ?? listing.postedDate
+      firstSeenAt: existing.firstSeenAt,
+      postedDate: existing.postedDate ?? listing.postedDate,
+      lastSeenAt: new Date().toISOString(),
+      // Preserve VIN if already set (never overwrite with empty)
+      vehicle: {
+        ...listing.vehicle,
+        vin: existing.vehicle.vin || listing.vehicle.vin
+      },
     };
   } else {
-    // Add new
-    listings.push({ ...listing, postedDate: listing.postedDate });
+    // Add new listing
+    listings.push(listing);
   }
   await extensionStorage.set(STORAGE_KEY, listings);
+};
+
+// Refresh listing: update price history, status, and refresh status
+export const refreshListing = async (
+  id: string,
+  newPrice: number,
+  currency: string,
+  status: ListingStatus,
+  refreshStatus: 'success' | 'error' = 'success',
+  refreshError?: string
+): Promise<void> => {
+  const listings = await getListings();
+  const index = listings.findIndex((l) => l.id === id);
+
+  if (index >= 0) {
+    const item = listings[index];
+
+    // Only add to price history if price changed
+    if (item.currentPrice !== newPrice) {
+      const newPoint: PricePoint = {
+        date: new Date().toISOString(),
+        price: newPrice,
+        currency: currency,
+      };
+      item.priceHistory.push(newPoint);
+      item.currentPrice = newPrice;
+    }
+
+    item.status = status;
+    item.currency = currency;
+
+    // Update refresh status
+    item.lastRefreshStatus = refreshStatus;
+    if (refreshStatus === 'success') {
+      item.lastSeenAt = new Date().toISOString();
+      item.lastRefreshError = undefined;
+    } else {
+      // On error, don't update lastSeenAt, but store the error
+      item.lastRefreshError = refreshError;
+    }
+
+    await extensionStorage.set(STORAGE_KEY, listings);
+  }
 };
 
 export const removeListing = async (id: string): Promise<void> => {
   const listings = await getListings();
   const filtered = listings.filter((l) => l.id !== id);
   await extensionStorage.set(STORAGE_KEY, filtered);
-};
-
-export const updatePrice = async (id: string, newPrice: number): Promise<void> => {
-  const listings = await getListings();
-  const index = listings.findIndex((l) => l.id === id);
-
-  if (index >= 0) {
-    const item = listings[index];
-    // Only update if price changed
-    if (item.currentPrice !== newPrice) {
-      const newPoint: PricePoint = {
-        date: new Date().toISOString(),
-        price: newPrice,
-        currency: item.currency,
-      };
-      item.priceHistory.push(newPoint);
-      item.currentPrice = newPrice;
-      item.lastChecked = new Date().toISOString();
-      
-      await extensionStorage.set(STORAGE_KEY, listings);
-    }
-  }
 };
