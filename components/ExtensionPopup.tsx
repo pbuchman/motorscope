@@ -373,6 +373,12 @@ const ExtensionPopup: React.FC = () => {
                      </div>
                    )}
 
+                   {savedItem.postedDate && (
+                     <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
+                       <span className="text-[10px] text-green-700">📅 Posted: {formatEuropeanDateTime(savedItem.postedDate)}</span>
+                     </div>
+                   )}
+
                    {/* Tracking Info */}
                    <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
                      <span className="inline-flex items-center gap-1">

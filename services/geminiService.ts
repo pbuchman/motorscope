@@ -410,7 +410,9 @@ Key extraction rules:
    - "3 grudnia 2025 6:23" followed by "ID: 6143969486"
    - "3 grudnia 2025 15:52" followed by "ID: 6144015463"
    Polish month names: stycznia, lutego, marca, kwietnia, maja, czerwca, lipca, sierpnia, września, października, listopada, grudnia
-   Convert to ISO 8601 format (e.g., "2025-12-03T06:23:00.000Z").
+   IMPORTANT: Dates on Polish websites are in Europe/Warsaw timezone (CET/CEST).
+   Convert to ISO 8601 format WITH timezone offset +01:00 for winter (Nov-Mar) or +02:00 for summer (Apr-Oct).
+   Example: "3 grudnia 2025 15:52" -> "2025-12-03T15:52:00+01:00"
 3. Mileage: Extract numeric value and unit (km/mi).
 4. Engine capacity: Convert to cubic centimeters (e.g., 2.0L = 1998cc).
 5. Price: Extract as number without formatting. Currency as code (PLN/EUR/USD).
