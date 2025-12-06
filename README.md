@@ -1,13 +1,20 @@
-# MotoTracker - Chrome Extension
+# MotorScope - Car Listing Tracker
 
-MotoTracker is a browser extension that uses Google Gemini AI to scrape, parse, and track car listings from marketplaces like Otomoto.pl.
+MotorScope is a browser extension that uses Google Gemini AI to track car listings, monitor price changes, and extract vehicle data from online marketplaces.
 
 ## Features
 
-- **One-click Tracking**: Open the extension popup on any car listing to extract data.
-- **AI Extraction**: Uses Gemini Flash 2.5 to parse unstructured web content into structured data (VIN, Mileage, Engine, etc.).
-- **Price History**: Visualizes price changes over time for tracked vehicles.
-- **Dashboard**: A centralized view of all your tracked vehicles.
+- **One-click Tracking**: Open the extension popup on any car listing to extract data
+- **AI-Powered Extraction**: Uses Gemini 2.5 Flash to parse unstructured web content into structured data (VIN, mileage, engine specs, seller info)
+- **Price History**: Visualizes price changes over time with interactive charts
+- **Auto Phone/VIN Reveal**: Automatically extracts hidden phone numbers and VINs from React-based marketplaces
+- **Dashboard**: Centralized view of all tracked vehicles with search and filtering
+- **Background Refresh**: Periodically checks for price updates on tracked listings
+
+## Supported Marketplaces
+
+- **Otomoto.pl** (primary support with auto-reveal features)
+- Other marketplaces with basic support (mobile.de, autoscout24, olx)
 
 ## Data Schema
 
@@ -17,99 +24,77 @@ Car listings are stored using a normalized JSON structure. See the full schema d
 
 ### Key data fields extracted:
 - **Vehicle**: VIN, make, model, year, mileage, engine specs, drivetrain, condition
-- **Pricing**: Current price, original price, price history, currency
+- **Pricing**: Current price, original price, price history with dates, currency
 - **Origin**: Import country, registration country, seller location
 - **Condition**: Accident-free declaration, service history, new/used status
-- **Seller**: Type (private/dealer), name, company status
+- **Seller**: Type (private/dealer), name, phone number, company status
+- **Dates**: Posted date, first seen, last checked
 
 ## Prerequisites
 
-1.  **Node.js**: Ensure you have Node.js installed.
-2.  **Google Gemini API Key**: You must have a valid API Key.
-    *   Get your API key from: https://ai.google.dev/
-    *   Copy `.env.example` to `.env` and add your API key:
-        ```bash
-        cp .env.example .env
-        # Edit .env and add your GEMINI_API_KEY
-        ```
-    *   **Security Note**: Never commit your `.env` file to version control. It's already in `.gitignore`.
+1. **Node.js**: Ensure you have Node.js (v18+) installed
+2. **Google Gemini API Key**: Required for AI-powered data extraction
+   - Get your API key from: https://ai.google.dev/
+   - Add it in the extension settings after installation
 
-## Build Instructions
+## Installation
 
-1.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+### From Source
 
-2.  **Build the Project**
-    Run the build script to generate the static files (HTML, JS, CSS) into a `dist` or `build` folder.
-    ```bash
-    npm run build
-    ```
-    *Ensure your build process copies `manifest.json` and `background.js` to the output folder.*
-
-## Forcing a Fresh dist Build
-
-If you touch production files such as `manifest.json`, `background.js`, assets, or anything under `components/` and `services/`, regenerate the unpacked bundle before loading it into Chrome.
-
-1. Remove the previous output and rebuild with the helper script:
+1. **Clone the repository**
    ```bash
-   npm run rebuild:dist
+   git clone https://github.com/pbuchman/motorscope.git
+   cd motorscope
    ```
-   This cleans the `dist` folder and runs the regular build in one go.
-2. Re-load the unpacked extension from the refreshed `dist` directory in `chrome://extensions/`.
 
-Use this same command in CI/CD or release steps whenever you need to guarantee Chrome receives the latest production bundle.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## Continuous Rebuild Options
+3. **Build the extension**
+   ```bash
+   npm run build
+   ```
 
-Keep `dist` in sync while iterating on production code with one of these watchers:
+4. **Load in Chrome**
+   - Open `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `dist` folder
 
-**Option 1 – Vite watch mode**
-
-```bash
-npx vite build --watch
-```
-
-- Rebuilds whenever Vite detects a change in your source graph.
-- Leave the process running in a terminal; stop it with `Ctrl+C`.
-- Reload the unpacked extension in Chrome after each rebuild to pull the refreshed assets.
-
-**Option 2 – chokidar-triggered rebuild**
+## Development
 
 ```bash
-npm install --save-dev chokidar-cli
-npx chokidar "components/**/*" "services/**/*" "manifest.json" "background.js" "metadata.json" -c "npm run rebuild:dist"
+# Install dependencies
+npm install
+
+# Run in development mode with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Type check
+npx tsc --noEmit
 ```
 
-- Watches the listed production paths and runs the full clean build when anything changes.
-- Adjust the glob list to cover any other production assets.
-- Useful when you need the cleaned `dist` produced by `rebuild:dist` without rerunning the command manually.
+## Configuration
 
-## Installation in Chrome
+After installing the extension:
 
-1.  Open Chrome and navigate to `chrome://extensions/`.
-2.  Toggle **Developer mode** in the top right corner.
-3.  Click **Load unpacked**.
-4.  Select the `dist` (or `build`) folder generated in the previous step.
-5.  The extension is now installed!
+1. Click the MotorScope icon in Chrome toolbar
+2. Go to Settings
+3. Enter your Gemini API key
+4. Set the refresh frequency (how often to check for price updates)
 
-## Usage
+## Privacy
 
-1.  Go to a car listing (e.g., https://www.otomoto.pl/).
-2.  Click the MotoTracker extension icon in your browser toolbar.
-3.  Click **Add to Watchlist**. The AI will analyze the page and save the car.
-4.  Click **Dashboard** in the popup (or right-click the extension icon -> Options) to view your collection.
+- All data is stored locally in your browser
+- API calls are made directly to Google Gemini (no proxy server)
+- No tracking or analytics
 
-### Key Security Features
-- ✅ Uses `chrome.storage.local` for secure data storage
-- ✅ Input validation on all user inputs
-- ✅ API response validation
-- ✅ Type-safe TypeScript implementation
-- ✅ Environment variables for API key management
+## License
 
-### Development Notes
-- TypeScript compilation is strict and error-free
-- All Chrome extension APIs are properly typed
-- Console statements are development-only
-- Storage operations are async with proper error handling
+MIT
+

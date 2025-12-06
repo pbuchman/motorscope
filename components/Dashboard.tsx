@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Car className="w-8 h-8 text-blue-600" />
-            MotoTracker Dashboard
+            MotorScope Dashboard
           </h1>
           <p className="text-slate-500 mt-1">Tracking {listings.length} active vehicle listings</p>
         </div>

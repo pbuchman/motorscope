@@ -2,7 +2,7 @@ import { CarListing, ListingStatus, PricePoint } from "../types";
 import { extensionStorage } from "./extensionStorage";
 import { normalizeUrl } from "../utils/formatters";
 
-const STORAGE_KEY = "moto_tracker_listings";
+const STORAGE_KEY = "motorscope_listings";
 
 export const getListings = async (): Promise<CarListing[]> => {
   const data = await extensionStorage.get<CarListing[]>(STORAGE_KEY);

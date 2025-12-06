@@ -18,7 +18,7 @@ type SearchDirection = 'up' | 'down';
 // ==================== CONSTANTS ====================
 
 const CONFIG = {
-    LOG_PREFIX: '[MotoTracker]',
+    LOG_PREFIX: '[MotorScope]',
     LISTING_PATH: '/oferta/',
     POLAND_COUNTRY_CODE: '+48',
     MAX_FIBER_DEPTH: 30,
@@ -50,7 +50,7 @@ const TEXTS = {
 } as const;
 
 const DATA_ATTRIBUTES = {
-    PHONE: 'data-mototracker-phone',
+    PHONE: 'data-motorscope-phone',
 } as const;
 
 // ==================== UTILITIES ====================

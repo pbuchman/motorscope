@@ -161,7 +161,7 @@ const SettingsPage: React.FC = () => {
     <div className="max-w-4xl mx-auto py-10 px-4">
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">MotoTracker Settings</h1>
+          <h1 className="text-xl font-bold text-slate-800">MotorScope Settings</h1>
           <p className="text-slate-500">Configure your Gemini API key and background verification cadence.</p>
         </div>
         <a

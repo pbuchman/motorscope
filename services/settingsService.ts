@@ -2,10 +2,10 @@ import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats, RefreshStatus }
 import { extensionStorage } from './extensionStorage';
 
 export const STORAGE_KEYS = {
-  settings: 'moto_tracker_settings',
-  geminiKey: 'moto_tracker_gemini_key',
-  geminiStats: 'moto_tracker_gemini_stats',
-  refreshStatus: 'moto_tracker_refresh_status',
+  settings: 'motorscope_settings',
+  geminiKey: 'motorscope_gemini_key',
+  geminiStats: 'motorscope_gemini_stats',
+  refreshStatus: 'motorscope_refresh_status',
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

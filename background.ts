@@ -1,17 +1,17 @@
-// Background service worker for MotoTracker (ES Module)
+// Background service worker for MotorScope (ES Module)
 import { ListingStatus, CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { refreshListingWithGemini, RateLimitError } from './services/geminiService';
 
-const CHECK_ALARM_NAME = 'moto_tracker_check_alarm';
+const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
 const RATE_LIMIT_RETRY_MINUTES = 5; // Schedule retry in 5 minutes if rate limited
 
 const STORAGE_KEYS = {
-  listings: 'moto_tracker_listings',
-  settings: 'moto_tracker_settings',
-  geminiKey: 'moto_tracker_gemini_key',
-  refreshStatus: 'moto_tracker_refresh_status',
-  geminiStats: 'moto_tracker_gemini_stats',
+  listings: 'motorscope_listings',
+  settings: 'motorscope_settings',
+  geminiKey: 'motorscope_gemini_key',
+  refreshStatus: 'motorscope_refresh_status',
+  geminiStats: 'motorscope_gemini_stats',
 };
 
 // ============ Storage Helpers ============
@@ -291,7 +291,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
   chrome.notifications.create(`refresh-start-${Date.now()}`, {
     type: 'basic',
     iconUrl: 'icon.png',
-    title: 'MotoTracker Refreshing',
+    title: 'MotorScope Refreshing',
     message: `Starting refresh of ${sortedListings.length} listing${sortedListings.length !== 1 ? 's' : ''}...`,
     priority: 2,
   });
@@ -400,7 +400,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
   chrome.notifications.create(`refresh-complete-${Date.now()}`, {
     type: 'basic',
     iconUrl: 'icon.png',
-    title: rateLimitHit ? 'MotoTracker Rate Limited' : 'MotoTracker Refresh Complete',
+    title: rateLimitHit ? 'MotorScope Rate Limited' : 'MotorScope Refresh Complete',
     message,
     priority: 2,
   });
@@ -477,7 +477,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
         chrome.notifications.create(`settings-changed-${Date.now()}`, {
           type: 'basic',
           iconUrl: 'icon.png',
-          title: 'MotoTracker Schedule Updated',
+          title: 'MotorScope Schedule Updated',
           message: `Refresh interval changed to ${formatTimeText(newFrequency)}.`,
           priority: 2,
         });
@@ -515,5 +515,5 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 });
 
 // Log that the service worker has started
-console.log('MotoTracker background service worker started');
+console.log('MotorScope background service worker started');
 
