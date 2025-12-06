@@ -35,6 +35,7 @@ export default defineConfig({
                 main: resolve(__dirname, 'index.html'),
                 background: resolve(__dirname, 'background.ts'),
                 'content-scripts/otomoto': resolve(__dirname, 'content-scripts/otomoto.ts'),
+                'content-scripts/otomoto-main': resolve(__dirname, 'content-scripts/otomoto-main.ts'),
             },
             output: {
                 entryFileNames: (chunkInfo) => {
