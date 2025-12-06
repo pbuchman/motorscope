@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { CarListing, ListingStatus } from '../types';
 import PriceChart from './PriceChart';
 import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe } from 'lucide-react';
@@ -280,4 +280,16 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
   );
 };
 
-export default CarCard;
+// Memoize component to prevent unnecessary re-renders
+// Only re-render when listing data or refresh state changes
+export default memo(CarCard, (prevProps, nextProps) => {
+  return (
+    prevProps.listing.id === nextProps.listing.id &&
+    prevProps.listing.currentPrice === nextProps.listing.currentPrice &&
+    prevProps.listing.status === nextProps.listing.status &&
+    prevProps.listing.lastSeenAt === nextProps.listing.lastSeenAt &&
+    prevProps.listing.lastRefreshStatus === nextProps.listing.lastRefreshStatus &&
+    prevProps.listing.priceHistory.length === nextProps.listing.priceHistory.length &&
+    prevProps.isRefreshing === nextProps.isRefreshing
+  );
+});

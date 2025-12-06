@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { ExtensionSettings, GeminiStats, RefreshStatus } from '../types';
-import { DEFAULT_SETTINGS, getGeminiStats, getSettings, saveSettings, getRefreshStatus, DEFAULT_REFRESH_STATUS, clearGeminiLogs } from '../services/settingsService';
+import React, { useEffect, useState, useCallback } from 'react';
+import { GeminiStats } from '../types';
+import { useSettings, useRefreshStatus } from '../context/AppContext';
+import { getGeminiStats, clearGeminiLogs } from '../services/settingsService';
+import { useChromeMessaging } from '../hooks/useChromeMessaging';
 import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2 } from 'lucide-react';
 import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
 
@@ -30,37 +32,31 @@ const formatFrequency = (minutes: number): string => {
 
 
 const SettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
+  const { settings, update: updateSettings } = useSettings();
+  const { status: refreshStatus } = useRefreshStatus();
+  const { triggerManualRefresh } = useChromeMessaging();
+
+  // Local form state (synced from context)
+  const [formSettings, setFormSettings] = useState(settings);
   const [stats, setStats] = useState<GeminiStats>({ allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
-  const [refreshStatus, setRefreshStatus] = useState<RefreshStatus>(DEFAULT_REFRESH_STATUS);
   const [countdown, setCountdown] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [triggeringRefresh, setTriggeringRefresh] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Load initial data
+  // Sync form state when context settings change
+  useEffect(() => {
+    setFormSettings(settings);
+  }, [settings]);
+
+  // Load stats on mount
   useEffect(() => {
     const load = async () => {
-      const loadedSettings = await getSettings();
       const loadedStats = await getGeminiStats();
-      const loadedRefreshStatus = await getRefreshStatus();
-      setSettings(loadedSettings);
       setStats(loadedStats);
-      setRefreshStatus(loadedRefreshStatus);
     };
     load();
-
-    // Listen for storage changes to update refresh status
-    const handleStorageChange = () => {
-      getRefreshStatus().then(setRefreshStatus);
-      getGeminiStats().then(setStats);
-    };
-
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.onChanged.addListener(handleStorageChange);
-      return () => chrome.storage.onChanged.removeListener(handleStorageChange);
-    }
   }, []);
 
   // Countdown timer
@@ -98,64 +94,45 @@ const SettingsPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshStatus.nextRefreshTime]);
 
-  const triggerManualRefresh = async () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      setTriggeringRefresh(true);
-      setStatusMessage('');
-      try {
-        const response = await chrome.runtime.sendMessage({ type: 'TRIGGER_MANUAL_REFRESH' });
-        if (response?.success) {
-          setStatusMessage('Refresh started in background.');
-        } else {
-          setStatusMessage('Failed to trigger refresh: ' + (response?.error || 'Unknown error'));
-        }
-      } catch (e) {
-        console.error('Failed to trigger refresh:', e);
-        setStatusMessage('Failed to trigger refresh. Is the extension loaded correctly?');
-      } finally {
-        // Delay to show the triggering state
-        setTimeout(() => setTriggeringRefresh(false), 1000);
+  const handleTriggerManualRefresh = useCallback(async () => {
+    setTriggeringRefresh(true);
+    setStatusMessage('');
+    try {
+      const response = await triggerManualRefresh();
+      if (response?.success) {
+        setStatusMessage('Refresh started in background.');
+      } else {
+        setStatusMessage('Failed to trigger refresh: ' + (response?.error || 'Unknown error'));
       }
-    } else {
-      setStatusMessage('Chrome runtime not available. Are you running in the extension context?');
+    } catch (e) {
+      console.error('Failed to trigger refresh:', e);
+      setStatusMessage('Failed to trigger refresh. Is the extension loaded correctly?');
+    } finally {
+      setTimeout(() => setTriggeringRefresh(false), 1000);
     }
-  };
+  }, [triggerManualRefresh]);
 
-  const handleSave = async (event: React.FormEvent) => {
+  const handleSave = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
     setStatusMessage('');
 
     try {
-      await saveSettings(settings);
-
-      // Explicitly trigger alarm reschedule
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        try {
-          await chrome.runtime.sendMessage({
-            type: 'RESCHEDULE_ALARM',
-            minutes: settings.checkFrequencyMinutes
-          });
-        } catch (e) {
-          console.log('Could not reschedule alarm via message, storage listener should handle it');
-        }
-      }
-
+      await updateSettings(formSettings);
       setStatusMessage('Settings saved successfully. Refresh schedule updated.');
     } catch (error) {
       setStatusMessage('Failed to save settings.');
     } finally {
       setSaving(false);
     }
-  };
+  }, [formSettings, updateSettings]);
 
-  const refreshStats = async () => {
+  const refreshStats = useCallback(async () => {
     setRefreshing(true);
     const latestStats = await getGeminiStats();
     setStats(latestStats);
-    // Keep spinning for at least 500ms so user sees the animation
     setTimeout(() => setRefreshing(false), 500);
-  };
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
@@ -178,8 +155,8 @@ const SettingsPage: React.FC = () => {
           <label className="block text-sm font-medium text-slate-700 mb-1">Gemini API Key</label>
           <input
             type="password"
-            value={settings.geminiApiKey}
-            onChange={(e) => setSettings((prev) => ({ ...prev, geminiApiKey: e.target.value }))}
+            value={formSettings.geminiApiKey}
+            onChange={(e) => setFormSettings((prev) => ({ ...prev, geminiApiKey: e.target.value }))}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
             placeholder="Enter your Gemini API key"
           />
@@ -194,12 +171,12 @@ const SettingsPage: React.FC = () => {
                 type="range"
                 min={0}
                 max={FREQUENCY_STEPS.length - 1}
-                value={FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes) !== -1
-                  ? FREQUENCY_STEPS.indexOf(settings.checkFrequencyMinutes)
-                  : FREQUENCY_STEPS.findIndex(s => s >= settings.checkFrequencyMinutes) || 0}
+                value={FREQUENCY_STEPS.indexOf(formSettings.checkFrequencyMinutes) !== -1
+                  ? FREQUENCY_STEPS.indexOf(formSettings.checkFrequencyMinutes)
+                  : FREQUENCY_STEPS.findIndex(s => s >= formSettings.checkFrequencyMinutes) || 0}
                 onChange={(e) => {
                   const stepIndex = parseInt(e.target.value, 10);
-                  setSettings((prev) => ({ ...prev, checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex] }));
+                  setFormSettings((prev) => ({ ...prev, checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex] }));
                 }}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
@@ -209,7 +186,7 @@ const SettingsPage: React.FC = () => {
               </div>
             </div>
             <span className="w-20 text-sm font-medium text-slate-700 text-center bg-slate-100 px-2 py-1 rounded">
-              {formatFrequency(settings.checkFrequencyMinutes)}
+              {formatFrequency(formSettings.checkFrequencyMinutes)}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-2">How often the background worker re-checks tracked listings.</p>
@@ -231,7 +208,7 @@ const SettingsPage: React.FC = () => {
           <h2 className="text-lg font-semibold text-slate-900">Listing Refresh</h2>
           <button
             type="button"
-            onClick={triggerManualRefresh}
+            onClick={handleTriggerManualRefresh}
             disabled={triggeringRefresh || refreshStatus.isRefreshing}
             className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >

@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { getListings, saveListing, removeListing } from '../services/storageService';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useListings } from '../context/AppContext';
 import { parseCarDataWithGemini } from '../services/geminiService';
 import { CarListing, PageContentResult } from '../types';
 import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel, Eye, RefreshCw } from 'lucide-react';
 import PriceChart from './PriceChart';
 import { formatEuropeanDateTime, normalizeUrl } from '../utils/formatters';
+import { isChromeExtension } from '../hooks/useChromeMessaging';
 
 const ExtensionPopup: React.FC = () => {
+  const { listings, add, remove } = useListings();
+
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedItem, setSavedItem] = useState<CarListing | null>(null);
   const [pageData, setPageData] = useState<PageContentResult | null>(null);
 
   // Preview state for confirmation flow
@@ -18,24 +20,28 @@ const ExtensionPopup: React.FC = () => {
   const [showVinWarning, setShowVinWarning] = useState(false);
   const [showDateWarning, setShowDateWarning] = useState(false);
 
+  // Find existing saved item based on URL
+  const savedItem = useMemo(() => {
+    if (!currentUrl) return null;
+    const normalizedUrl = normalizeUrl(currentUrl);
+    return listings.find(l => normalizeUrl(l.source.url) === normalizedUrl) || null;
+  }, [listings, currentUrl]);
+
   useEffect(() => {
-    // 1. Get Active Tab
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
+    // Get Active Tab
+    if (isChromeExtension() && chrome.tabs) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
         const activeTab = tabs[0];
         if (activeTab?.url) {
           setCurrentUrl(activeTab.url);
-          checkIfSaved(activeTab.url);
-          
-          // 2. Execute script to get page content
+
+          // Execute script to get page content
           if (activeTab.id && !activeTab.url.startsWith('chrome://')) {
             chrome.scripting.executeScript({
               target: { tabId: activeTab.id },
               func: (): PageContentResult => {
-                // Content Script Logic
                 return {
                   title: document.title,
-                  // Limit content size for AI context window
                   content: document.body.innerText.substring(0, 20000),
                   image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
                 };
@@ -49,20 +55,13 @@ const ExtensionPopup: React.FC = () => {
         }
       });
     } else {
-      // Fallback for non-extension environment (e.g. debugging locally)
+      // Fallback for non-extension environment
       setCurrentUrl(window.location.href);
       setError("Extension context not found. Cannot scrape page.");
     }
   }, []);
 
-  const checkIfSaved = async (url: string) => {
-    const normalizedUrl = normalizeUrl(url);
-    const listings = await getListings();
-    const existing = listings.find(l => normalizeUrl(l.source.url) === normalizedUrl);
-    setSavedItem(existing || null);
-  };
-
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     if (!pageData) {
       setError("Could not read page content. Refresh the page and try again.");
       return;
@@ -91,62 +90,54 @@ const ExtensionPopup: React.FC = () => {
         setShowDateWarning(true);
       }
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (process.env.NODE_ENV === 'development') {
         console.error(e);
       }
-      setError(e.message || "Failed to extract car data.");
+      const errorMessage = e instanceof Error ? e.message : "Failed to extract car data.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageData, currentUrl]);
 
-  const handleConfirmSave = async () => {
+  const handleConfirmSave = useCallback(async () => {
     if (!previewData) return;
 
     try {
-      await saveListing(previewData);
-      setSavedItem(previewData);
+      await add(previewData);
       setPreviewData(null);
       setShowVinWarning(false);
       setShowDateWarning(false);
-
-      // Notify other views
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' });
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to save listing.");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Failed to save listing.";
+      setError(errorMessage);
     }
-  };
+  }, [previewData, add]);
 
-  const handleCancelPreview = () => {
+  const handleCancelPreview = useCallback(() => {
     setPreviewData(null);
     setShowVinWarning(false);
     setShowDateWarning(false);
-  };
+  }, []);
 
-  const handleUnbookmark = async () => {
+  const handleUnbookmark = useCallback(async () => {
     if (savedItem) {
-      await removeListing(savedItem.id);
-      setSavedItem(null);
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' });
-      }
+      await remove(savedItem.id);
     }
-  };
+  }, [savedItem, remove]);
 
-  const openDashboard = () => {
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
+  const openDashboard = useCallback(() => {
+    if (isChromeExtension() && chrome.tabs) {
       chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=dashboard') });
     }
-  };
+  }, []);
 
-  const openSettings = () => {
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
+  const openSettings = useCallback(() => {
+    if (isChromeExtension() && chrome.tabs) {
       chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=settings') });
     }
-  };
+  }, []);
 
   // Simple heuristic for supported sites
   const isMarketplace = currentUrl.includes('otomoto') || currentUrl.includes('mobile.de') || currentUrl.includes('autoscout') || currentUrl.includes('olx') || currentUrl.includes('allegro');
