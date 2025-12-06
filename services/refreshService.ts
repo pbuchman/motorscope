@@ -91,8 +91,8 @@ export const refreshSingleListing = async (listing: CarListing): Promise<Refresh
       };
     }
 
-    // Non-OK response that isn't 404/410
-    if (status !== 0 && status !== 200) {
+    // Non-OK response (including status 0, which indicates a network error)
+    if (status !== 200) {
       return {
         listing: {
           ...listing,
