@@ -1,33 +1,107 @@
 # MotorScope Authentication Flow
 
-This document describes the authentication and data synchronization flow implemented in the MotorScope Chrome extension.
+This document describes the authentication system implemented in the MotorScope Chrome extension.
 
 ## Overview
 
-The extension supports two storage modes:
+The authentication system uses a two-token approach:
+1. **Google OAuth Token**: Short-lived access token from `chrome.identity.getAuthToken()`
+2. **Backend JWT**: Session token issued by the MotorScope backend after verifying Google token
 
-1. **Logged-out mode**: Data is stored locally in `chrome.storage.local`
-2. **Logged-in mode**: Data is stored remotely in the MotorScope backend API
+### Key Behaviors
 
-## Storage Keys
+- **First Login**: Google OAuth consent screen appears, user authenticates
+- **Subsequent Sessions**: JWT is validated locally; if valid, no Google call needed
+- **JWT Expired**: Silent re-authentication using cached Google token
+- **Silent Auth Fails**: User must re-login interactively
+
+## Storage Schema
 
 ### Authentication Keys
 
-| Key | Description |
-|-----|-------------|
-| `authToken` | JWT token for backend API authentication |
-| `userProfile` | User profile data (id, email, displayName) |
+| Key | Type | Description |
+|-----|------|-------------|
+| `motorscope_auth_token` | `string` | Backend JWT for API authentication |
+| `motorscope_auth_user` | `User` | User profile (id, email, displayName) |
+| `motorscope_auth_stored_at` | `number` | Unix timestamp when auth was stored |
 
-### Local App State Keys
+### User Type
 
-| Key | Description |
-|-----|-------------|
-| `motorscope_listings` | Array of car listings (used in logged-out mode only) |
-| `motorscope_settings` | Extension settings (always local) |
-| `motorscope_gemini_key` | Gemini API key (always local) |
-| `motorscope_refresh_status` | Background refresh status (always local) |
+```typescript
+interface User {
+  id: string;
+  email: string;
+  displayName?: string;
+  picture?: string;
+}
+```
 
-## Login Flow
+### JWT Payload
+
+```typescript
+interface JwtPayload {
+  userId: string;
+  email: string;
+  iat: number;  // Issued at (Unix timestamp)
+  exp: number;  // Expiration (Unix timestamp)
+}
+```
+
+## Authentication Flows
+
+### Startup Flow
+
+```
+┌─────────────────────┐
+│  Extension Starts   │
+│  (popup/background) │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Read stored JWT    │
+│  from storage       │
+└──────────┬──────────┘
+           │
+     ┌─────┴─────┐
+     │ JWT       │
+     │ exists?   │
+     └─────┬─────┘
+       NO  │  YES
+     ┌─────┴─────┐
+     │           │
+     ▼           ▼
+┌─────────┐  ┌─────────────────┐
+│LOGGED   │  │  Validate JWT   │
+│OUT      │  │  (check exp)    │
+└─────────┘  └────────┬────────┘
+                      │
+              ┌───────┴───────┐
+              │ JWT valid?    │
+              └───────┬───────┘
+                YES   │   NO
+              ┌───────┴───────┐
+              │               │
+              ▼               ▼
+        ┌─────────┐    ┌─────────────────┐
+        │LOGGED   │    │  Try Silent     │
+        │IN       │    │  Login          │
+        └─────────┘    └────────┬────────┘
+                                │
+                       ┌────────┴────────┐
+                       │ Silent success? │
+                       └────────┬────────┘
+                           YES  │  NO
+                       ┌────────┴────────┐
+                       │                 │
+                       ▼                 ▼
+                 ┌─────────┐       ┌─────────┐
+                 │LOGGED   │       │LOGGED   │
+                 │IN       │       │OUT      │
+                 └─────────┘       └─────────┘
+```
+
+### Interactive Login Flow
 
 ```
 ┌─────────────────┐
@@ -36,127 +110,91 @@ The extension supports two storage modes:
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Chrome Identity│
-│  OAuth Flow     │
-│  (Google)       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Get ID Token   │
-│  from Google    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Send to Backend│
-│  /api/auth/google│
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Backend verifies│
-│  and returns JWT│
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Store JWT &    │
-│  user profile   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  Check for      │ YES │  Show Merge     │
-│  local data?    ├────►│  Dialog         │
-└────────┬────────┘     └────────┬────────┘
-         │ NO                    │
-         │              ┌────────┴────────┐
-         │              │                 │
-         ▼              ▼                 ▼
-┌─────────────────┐  ┌──────┐        ┌────────┐
-│  Load remote    │  │Merge │        │Discard │
-│  listings       │  │Data  │        │Local   │
-└─────────────────┘  └──┬───┘        └───┬────┘
-                        │                │
-                        ▼                ▼
-                   ┌──────────┐    ┌──────────┐
-                   │Merge local│    │Clear     │
-                   │& remote   │    │local data│
-                   └────┬─────┘    └────┬─────┘
-                        │               │
-                        ▼               ▼
-                   ┌──────────┐    ┌──────────┐
-                   │Save merged│    │Load remote│
-                   │to backend │    │listings   │
-                   └────┬─────┘    └──────────┘
-                        │
-                        ▼
-                   ┌──────────┐
-                   │Clear local│
-                   │listings   │
-                   └──────────┘
+┌─────────────────────────────┐
+│  chrome.identity.getAuthToken│
+│  { interactive: true }       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Google OAuth consent       │
+│  (first time only)          │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  POST /api/auth/google      │
+│  { accessToken: ... }       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Backend verifies token,    │
+│  returns { jwt, user }      │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Store JWT + user in        │
+│  chrome.storage.local       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Check for local listings   │
+│  to potentially merge       │
+└────────────┬────────────────┘
+             │
+       (merge flow)
+             │
+             ▼
+┌─────────────────────────────┐
+│  LOGGED IN                  │
+└─────────────────────────────┘
 ```
 
-## Merge Strategy
+### Silent Login Flow
 
-When the user chooses to merge local data into remote data, the following strategy is used:
+Used when JWT is expired but Google token might still be valid in Chrome's cache.
 
-### Deduplication
-
-Listings are identified by their unique `id` field. The ID is either:
-- VIN-based: `vin_<VIN>` for listings with a VIN
-- URL-based: `url_<hash>` for listings without a VIN
-
-### Conflict Resolution
-
-When the same listing exists in both local and remote:
-
-1. **Compare `lastSeenAt` timestamps** - the more recent listing is used as the base
-2. **Merge price histories** - all price points from both sources are combined and deduplicated
-3. **Preserve `firstSeenAt`** - the earliest timestamp is kept
-4. **Keep all unique data** - VIN, seller phone, etc. are preserved from both sources
-
-### Example
-
-```typescript
-// Local listing
-{
-  id: "vin_ABC123...",
-  currentPrice: 50000,
-  lastSeenAt: "2024-12-06T10:00:00Z",
-  priceHistory: [
-    { date: "2024-12-01", price: 52000 },
-    { date: "2024-12-05", price: 50000 }
-  ]
-}
-
-// Remote listing
-{
-  id: "vin_ABC123...",
-  currentPrice: 51000,
-  lastSeenAt: "2024-12-04T10:00:00Z",
-  priceHistory: [
-    { date: "2024-12-01", price: 52000 },
-    { date: "2024-12-03", price: 51000 }
-  ]
-}
-
-// Merged result (local is more recent)
-{
-  id: "vin_ABC123...",
-  currentPrice: 50000,
-  lastSeenAt: "2024-12-06T10:00:00Z",
-  priceHistory: [
-    { date: "2024-12-01", price: 52000 },
-    { date: "2024-12-03", price: 51000 },
-    { date: "2024-12-05", price: 50000 }
-  ]
-}
+```
+┌─────────────────────────────┐
+│  JWT expired, try silent    │
+│  re-authentication          │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  chrome.identity.getAuthToken│
+│  { interactive: false }      │
+└────────────┬────────────────┘
+             │
+       ┌─────┴─────┐
+       │  Token    │
+       │  returned?│
+       └─────┬─────┘
+         YES │  NO
+       ┌─────┴─────┐
+       │           │
+       ▼           ▼
+┌─────────────┐  ┌─────────────┐
+│ POST to     │  │ Return null │
+│ backend     │  │ (need       │
+│ /auth/google│  │ interactive)│
+└──────┬──────┘  └─────────────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│  Store new JWT + user       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Return { user, token }     │
+└─────────────────────────────┘
 ```
 
-## Logout Flow
+### Logout Flow
 
 ```
 ┌─────────────────┐
@@ -165,136 +203,161 @@ When the same listing exists in both local and remote:
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  Clear authToken│
-│  & userProfile  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Clear Chrome   │
-│  Identity cache │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Switch to      │
-│  local storage  │
-│  mode           │
-└─────────────────┘
+┌─────────────────────────────┐
+│  Clear JWT + user from      │
+│  chrome.storage.local       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  chrome.identity            │
+│  .removeCachedAuthToken()   │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Revoke token with Google   │
+│  (optional, best-effort)    │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Clear local listings       │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  LOGGED OUT                 │
+└─────────────────────────────┘
 ```
 
-**Important**: Logout does NOT delete any data:
-- Remote data remains in the backend
-- Local settings and refresh status remain
-- User starts fresh with an empty local listing set
+## Background Service Worker
+
+The background service worker handles:
+
+1. **Periodic Auth Check**: Every 5 minutes, checks if JWT is expired and attempts silent refresh
+2. **API Request Auth**: Attaches JWT to all backend API requests
+3. **Auth State Change Events**: Notifies UI components when auth state changes
+
+### Auth Check Alarm
+
+```javascript
+// Runs every 5 minutes
+chrome.alarms.create('motorscope_auth_check', {
+  delayInMinutes: 5,
+  periodInMinutes: 5,
+});
+```
+
+## JWT Validation
+
+JWT validation is done client-side by decoding and checking expiration:
+
+```typescript
+const isJwtExpired = (token: string, leewaySeconds = 60): boolean => {
+  const payload = decodeJwt(token);
+  if (!payload) return true;
+  
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = payload.exp - leewaySeconds;
+  
+  return now >= expiresAt;
+};
+```
+
+The `leewaySeconds` (default: 60) prevents edge cases where the token expires between check and use.
+
+## Merge Strategy
+
+When logging in with existing local data:
+
+### User Choices
+
+1. **Merge**: Combines local and remote listings, saves to backend, clears local
+2. **Discard**: Clears local listings, uses remote data only
+
+### Merge Algorithm
+
+- Listings are identified by their unique `id` field
+- When same listing exists in both:
+  - Use more recent `lastSeenAt` as base
+  - Merge price histories (deduplicated by date+price)
+  - Preserve earliest `firstSeenAt`
 
 ## Error Handling
 
-### Authentication Errors (401)
+### 401 Unauthorized
 
-When the backend returns a 401 (Unauthorized):
-
-1. The JWT is automatically cleared
-2. User is switched to logged-out mode
-3. An error message is shown: "Your session has expired. Please sign in again."
+When backend returns 401:
+1. Clear stored JWT
+2. Attempt silent re-login
+3. If silent fails, show login button
 
 ### Network Errors
 
-Network errors show a user-friendly message in the UI without crashing the extension.
+- Retry with exponential backoff
+- Show user-friendly error message
+- Allow offline mode for read operations
 
-### OAuth Errors
+## Manual Testing Checklist
 
-OAuth errors (user cancels, network issues) are caught and displayed without affecting existing data.
+### First Login
 
-## UI States
+1. Clear extension data
+2. Click "Sign in"
+3. Verify Google consent screen appears
+4. Complete Google auth
+5. Verify JWT + user stored in chrome.storage.local
+6. Verify "Logged in as {email}" appears in UI
 
-### Logged Out
+### Subsequent Login (JWT Valid)
+
+1. Close and reopen extension popup
+2. Verify no Google consent screen
+3. Verify immediately shows "Logged in as {email}"
+
+### JWT Expired, Silent Refresh Works
+
+1. Manually set JWT exp to past (in dev tools)
+2. Close and reopen popup
+3. Verify silent refresh happens (no consent screen)
+4. Verify new JWT stored
+
+### JWT Expired, Silent Refresh Fails
+
+1. Log in to extension
+2. Revoke app access at https://myaccount.google.com/permissions
+3. Manually expire JWT
+4. Reopen popup
+5. Verify shows "Sign in" button
+
+### Logout
+
+1. Click logout
+2. Verify JWT + user cleared from storage
+3. Verify shows "Sign in" button
+4. Click "Sign in" again
+5. May need to consent again (depending on Google's token cache)
+
+## Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `BACKEND_BASE_URL` | Backend API URL | `https://motorscope-dev.run.app` |
+| `JWT_EXP_LEEWAY_SECONDS` | Seconds before exp to consider token expired | `60` |
+
+## File Structure
 
 ```
-┌─────────────────────────────────────┐
-│  MotorScope          [Dashboard]    │
-├─────────────────────────────────────┤
-│  Not signed in        [Sign in]     │
-├─────────────────────────────────────┤
-│                                     │
-│         (local content)             │
-│                                     │
-├─────────────────────────────────────┤
-│  https://otomoto.pl/...             │
-└─────────────────────────────────────┘
+extension/src/auth/
+├── types.ts         # TypeScript types for auth
+├── config.ts        # Auth configuration constants
+├── storage.ts       # Chrome storage utilities
+├── jwt.ts           # JWT decode/validate utilities
+├── googleAuth.ts    # Google OAuth via chrome.identity
+├── oauthClient.ts   # Main auth orchestrator
+├── AuthContext.tsx  # React context provider
+└── __tests__/
+    └── auth.test.ts # Jest tests
 ```
-
-### Logged In
-
-```
-┌─────────────────────────────────────┐
-│  MotorScope          [Dashboard]    │
-├─────────────────────────────────────┤
-│  Logged in as user@email   [Log out]│
-├─────────────────────────────────────┤
-│                                     │
-│         (remote content)            │
-│                                     │
-├─────────────────────────────────────┤
-│  https://otomoto.pl/...  ☁️ Cloud   │
-└─────────────────────────────────────┘
-```
-
-### Merge Dialog
-
-```
-┌─────────────────────────────────────┐
-│                                     │
-│    ┌─────────────────────────┐      │
-│    │   Local Data Found      │      │
-│    │                         │      │
-│    │   You have 5 listings   │      │
-│    │   saved locally...      │      │
-│    │                         │      │
-│    │   [Merge Local Data]    │      │
-│    │   [Discard Local Data]  │      │
-│    │                         │      │
-│    │   Discarding will       │      │
-│    │   remove data forever   │      │
-│    └─────────────────────────┘      │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-## Security Considerations
-
-1. **JWT Storage**: The backend JWT is stored in `chrome.storage.local`, which is only accessible to the extension itself.
-
-2. **Token Expiration**: JWTs expire after 24 hours. Users must re-authenticate when the token expires.
-
-3. **No Sensitive Data in Local Storage**: In logged-in mode, listing data is NOT stored locally - only in the backend.
-
-4. **OAuth Token Caching**: Chrome caches OAuth tokens. On logout, we clear this cache to ensure a fresh authentication on next login.
-
-## Files and Modules
-
-### Auth Module (`extension/src/auth/`)
-
-| File | Description |
-|------|-------------|
-| `config.ts` | Configuration constants for auth |
-| `oauthClient.ts` | OAuth flow and token management |
-| `AuthContext.tsx` | React context for auth state |
-
-### API Client (`extension/src/api/`)
-
-| File | Description |
-|------|-------------|
-| `client.ts` | Backend API client with auth |
-
-### Updated Files
-
-| File | Changes |
-|------|---------|
-| `manifest.json` | Added `identity` permission and `oauth2` config |
-| `App.tsx` | Wrapped with `AuthProvider` |
-| `context/AppContext.tsx` | Uses remote/local storage based on auth |
-| `components/ExtensionPopup.tsx` | Login/logout UI and merge dialog |
-| `services/storageService.ts` | Added `clearAllLocalListings` function |
 

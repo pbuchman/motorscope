@@ -45,6 +45,17 @@ export const STORAGE_KEY_USER_PROFILE = 'userProfile';
 export const STORAGE_KEY_LOCAL_STATE_PREFIX = 'motorscope_';
 
 // =============================================================================
+// JWT Configuration
+// =============================================================================
+
+/**
+ * Leeway in seconds for JWT expiration check
+ * Token is considered expired this many seconds before actual expiration
+ * This prevents edge cases where token expires between check and use
+ */
+export const JWT_EXP_LEEWAY_SECONDS = 60;
+
+// =============================================================================
 // UI Labels
 // =============================================================================
 

@@ -1,13 +1,16 @@
 // Background service worker for MotorScope (ES Module)
 import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
-import { RateLimitError } from './services/geminiService';
 import { extensionStorage } from './services/extensionStorage';
 import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
 import { STORAGE_KEYS } from './services/settingsService';
+import { initializeAuth, trySilentLogin, isTokenExpired } from './auth/oauthClient';
+import { getStoredToken } from './auth/storage';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
+const AUTH_CHECK_ALARM_NAME = 'motorscope_auth_check';
 const DEFAULT_FREQUENCY_MINUTES = 60;
-const RATE_LIMIT_RETRY_MINUTES = 5; // Schedule retry in 5 minutes if rate limited
+const AUTH_CHECK_INTERVAL_MINUTES = 5; // Check auth every 5 minutes
+const RATE_LIMIT_RETRY_MINUTES = 5;
 
 // ============ Storage Helpers ============
 
@@ -281,6 +284,54 @@ const runBackgroundRefresh = async (): Promise<void> => {
 
 // ============ Event Listeners ============
 
+// ============ Auth Token Management ============
+
+/**
+ * Check and refresh auth token if expired
+ * This runs periodically to ensure API calls don't fail due to expired JWT
+ */
+const checkAndRefreshAuth = async (): Promise<void> => {
+  try {
+    const token = await getStoredToken();
+    if (!token) {
+      console.log('[BG Auth] No token stored, skipping refresh');
+      return;
+    }
+
+    const expired = await isTokenExpired();
+    if (!expired) {
+      console.log('[BG Auth] Token still valid');
+      return;
+    }
+
+    console.log('[BG Auth] Token expired, attempting silent refresh...');
+    const result = await trySilentLogin();
+
+    if (result) {
+      console.log('[BG Auth] Silent refresh successful');
+      // Notify UI that auth state may have changed
+      chrome.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED', status: 'logged_in' }).catch(() => {});
+    } else {
+      console.log('[BG Auth] Silent refresh failed, user needs to re-login');
+      chrome.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED', status: 'logged_out' }).catch(() => {});
+    }
+  } catch (error) {
+    console.error('[BG Auth] Error checking auth:', error);
+  }
+};
+
+/**
+ * Schedule periodic auth token checks
+ */
+const scheduleAuthCheck = async (): Promise<void> => {
+  await chrome.alarms.clear(AUTH_CHECK_ALARM_NAME);
+  chrome.alarms.create(AUTH_CHECK_ALARM_NAME, {
+    delayInMinutes: AUTH_CHECK_INTERVAL_MINUTES,
+    periodInMinutes: AUTH_CHECK_INTERVAL_MINUTES,
+  });
+  console.log('[BG Auth] Auth check alarm scheduled');
+};
+
 // Helper to schedule alarm based on stored nextRefreshTime or default interval
 const initializeAlarm = async (): Promise<void> => {
   const settings = await getSettings();
@@ -313,17 +364,25 @@ const initializeAlarm = async (): Promise<void> => {
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
   await initializeAlarm();
+  await scheduleAuthCheck();
+  // Initialize auth state
+  await initializeAuth().catch(err => console.error('[BG] Auth init failed:', err));
 });
 
 // Initialize on startup
 chrome.runtime.onStartup.addListener(async () => {
   await initializeAlarm();
+  await scheduleAuthCheck();
+  // Check and refresh auth on startup
+  await checkAndRefreshAuth().catch(err => console.error('[BG] Auth check failed:', err));
 });
 
 // Handle alarms
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === CHECK_ALARM_NAME) {
     await runBackgroundRefresh();
+  } else if (alarm.name === AUTH_CHECK_ALARM_NAME) {
+    await checkAndRefreshAuth();
   }
 });
 
@@ -376,6 +435,21 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'CLEAR_REFRESH_ERRORS') {
     updateRefreshStatus({ refreshErrors: [] })
       .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: String(error) }));
+    return true;
+  }
+
+  // Handle auth-related messages
+  if (request.type === 'CHECK_AUTH') {
+    checkAndRefreshAuth()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: String(error) }));
+    return true;
+  }
+
+  if (request.type === 'TRY_SILENT_LOGIN') {
+    trySilentLogin()
+      .then((result) => sendResponse({ success: !!result, user: result?.user }))
       .catch((error) => sendResponse({ success: false, error: String(error) }));
     return true;
   }

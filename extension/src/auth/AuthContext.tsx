@@ -2,7 +2,12 @@
  * Authentication Context
  *
  * Manages authentication state and provides login/logout functionality.
- * Handles the merge flow when logging in with existing local data.
+ * Implements the complete auth flow:
+ * - Startup: Check JWT validity, try silent login if expired
+ * - Login: Interactive Google OAuth → Backend JWT
+ * - Logout: Clear all auth state
+ *
+ * Also handles the merge flow when logging in with existing local data.
  */
 
 import React, {
@@ -17,22 +22,23 @@ import React, {
 import {
   loginWithProvider,
   logout as logoutFromProvider,
-  getAuthState,
-  UserProfile,
-  AuthState,
+  initializeAuth,
+  trySilentLogin,
+  User,
 } from './oauthClient';
-import { getRemoteListings, saveRemoteListings, ApiError } from '../api/client';
+import { getRemoteListings, saveRemoteListings } from '../api/client';
 import { getListings as getLocalListings, clearAllLocalListings } from '../services/storageService';
 import { CarListing } from '../types';
-import { STORAGE_KEY_LOCAL_STATE_PREFIX } from './config';
-import { extensionStorage } from '../services/extensionStorage';
+
+// Re-export User type as UserProfile for backward compatibility
+export type UserProfile = User;
 
 /**
  * Auth context state
  */
 interface AuthContextState {
   status: 'loading' | 'logged_out' | 'logged_in';
-  user: UserProfile | null;
+  user: User | null;
   token: string | null;
   error: string | null;
 }
@@ -62,11 +68,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
  * Merge local listings into remote listings
- *
- * Strategy:
- * - Use listing.id as the unique key
- * - If a listing exists in both, prefer the one with the more recent lastSeenAt
- * - Add local listings that don't exist in remote
  */
 const mergeListings = (
   localListings: CarListing[],
@@ -84,41 +85,26 @@ const mergeListings = (
     const existing = mergedMap.get(localListing.id);
 
     if (!existing) {
-      // New listing from local, add it
       mergedMap.set(localListing.id, localListing);
     } else {
-      // Listing exists in both - merge intelligently
+      // Merge intelligently - prefer more recent, combine histories
       const localDate = new Date(localListing.lastSeenAt).getTime();
       const remoteDate = new Date(existing.lastSeenAt).getTime();
+      const primary = localDate > remoteDate ? localListing : existing;
+      const secondary = localDate > remoteDate ? existing : localListing;
 
-      if (localDate > remoteDate) {
-        // Local is more recent, use it but merge price histories
-        const mergedHistory = mergeListingPriceHistory(
-          localListing.priceHistory,
-          existing.priceHistory
-        );
-        mergedMap.set(localListing.id, {
-          ...localListing,
-          priceHistory: mergedHistory,
-          // Preserve earliest firstSeenAt
-          firstSeenAt: new Date(localListing.firstSeenAt) < new Date(existing.firstSeenAt)
-            ? localListing.firstSeenAt
-            : existing.firstSeenAt,
-        });
-      } else {
-        // Remote is more recent, keep it but merge price histories
-        const mergedHistory = mergeListingPriceHistory(
-          existing.priceHistory,
-          localListing.priceHistory
-        );
-        mergedMap.set(existing.id, {
-          ...existing,
-          priceHistory: mergedHistory,
-          firstSeenAt: new Date(localListing.firstSeenAt) < new Date(existing.firstSeenAt)
-            ? localListing.firstSeenAt
-            : existing.firstSeenAt,
-        });
-      }
+      const mergedHistory = mergeListingPriceHistory(
+        primary.priceHistory,
+        secondary.priceHistory
+      );
+
+      mergedMap.set(primary.id, {
+        ...primary,
+        priceHistory: mergedHistory,
+        firstSeenAt: new Date(localListing.firstSeenAt) < new Date(existing.firstSeenAt)
+          ? localListing.firstSeenAt
+          : existing.firstSeenAt,
+      });
     }
   }
 
@@ -126,7 +112,7 @@ const mergeListings = (
 };
 
 /**
- * Merge price histories from two sources, removing duplicates
+ * Merge price histories from two sources
  */
 const mergeListingPriceHistory = (
   primary: CarListing['priceHistory'],
@@ -134,7 +120,6 @@ const mergeListingPriceHistory = (
 ): CarListing['priceHistory'] => {
   const historyMap = new Map<string, CarListing['priceHistory'][0]>();
 
-  // Add all entries, using date as key to dedupe
   for (const entry of [...primary, ...secondary]) {
     const key = `${entry.date}-${entry.price}-${entry.currency}`;
     if (!historyMap.has(key)) {
@@ -142,7 +127,6 @@ const mergeListingPriceHistory = (
     }
   }
 
-  // Sort by date ascending
   return Array.from(historyMap.values()).sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -169,9 +153,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Initialize auth state on mount
   useEffect(() => {
-    const initAuth = async () => {
+    const init = async () => {
       try {
-        const authState = await getAuthState();
+        // initializeAuth handles:
+        // 1. Check stored JWT
+        // 2. If valid → logged_in
+        // 3. If expired → try silent login
+        // 4. If silent fails → logged_out
+        const authState = await initializeAuth();
+
         setState({
           status: authState.status,
           user: authState.user,
@@ -189,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
-    initAuth();
+    init();
   }, []);
 
   // Clear error
@@ -198,7 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   // Complete the login process after merge decision
-  const completeLogin = useCallback(async (user: UserProfile, token: string) => {
+  const completeLogin = useCallback(async (user: User, token: string) => {
     setState({
       status: 'logged_in',
       user,
@@ -213,39 +203,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearError();
 
     try {
-      // Step 1: Authenticate with Google and backend
+      // Interactive login (may show consent screen first time)
       const { user, token } = await loginWithProvider();
 
-      // Step 2: Check for local data
+      // Check for local data to potentially merge
       const localListings = await getLocalListings();
       const hasLocalData = localListings.length > 0;
 
       if (!hasLocalData) {
-        // No local data, just complete login
         await completeLogin(user, token);
         setIsLoggingIn(false);
         return;
       }
 
-      // Step 3: Show merge dialog
+      // Show merge dialog
       setMergeDialog({
         isOpen: true,
         localCount: localListings.length,
         onMerge: async () => {
           try {
-            // Fetch remote listings
             const remoteListings = await getRemoteListings();
-
-            // Merge local into remote
             const mergedListings = mergeListings(localListings, remoteListings);
-
-            // Save merged listings to backend
             await saveRemoteListings(mergedListings);
-
-            // Clear local listings
             await clearAllLocalListings();
-
-            // Close dialog and complete login
             setMergeDialog(prev => ({ ...prev, isOpen: false }));
             await completeLogin(user, token);
           } catch (error) {
@@ -258,10 +238,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         },
         onDiscard: async () => {
           try {
-            // Just clear local listings
             await clearAllLocalListings();
-
-            // Close dialog and complete login
             setMergeDialog(prev => ({ ...prev, isOpen: false }));
             await completeLogin(user, token);
           } catch (error) {
@@ -281,12 +258,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [clearError, completeLogin]);
 
-  // Logout - clears auth state and local listings
+  // Logout
   const logout = useCallback(async () => {
     try {
       await logoutFromProvider();
-
-      // Clear local listings so user starts fresh
       await clearAllLocalListings();
 
       setState({

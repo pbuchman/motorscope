@@ -15,6 +15,7 @@ dist/
 dist-ssr/
 api/dist/
 extension/dist/
+extension/coverage/
 *.local
 
 # Environment variables
