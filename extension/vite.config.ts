@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import {resolve} from 'path';
+// @ts-ignore
 import fs from 'fs';
 
 // Simple plugin to copy manifest and static files to dist

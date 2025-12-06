@@ -1,6 +1,7 @@
 // Background service worker for MotorScope (ES Module)
 import { ListingStatus, CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { refreshListingWithGemini, RateLimitError } from './services/geminiService';
+import { extensionStorage } from './services/extensionStorage';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
@@ -16,18 +17,13 @@ const STORAGE_KEYS = {
 
 // ============ Storage Helpers ============
 
-const getFromStorage = <T>(key: string): Promise<T | null> => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([key], (result) => {
-      resolve(result[key] ?? null);
-    });
-  });
+const getFromStorage = async <T>(key: string): Promise<T | null> => {
+  const result = await extensionStorage.get<T>(key);
+  return result ?? null;
 };
 
-const setInStorage = <T>(key: string, value: T): Promise<void> => {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [key]: value }, resolve);
-  });
+const setInStorage = async <T>(key: string, value: T): Promise<void> => {
+  await extensionStorage.set(key, value);
 };
 
 // ============ Settings ============
