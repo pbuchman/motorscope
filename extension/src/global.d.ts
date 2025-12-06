@@ -4,6 +4,13 @@ declare namespace chrome {
     export function sendMessage(message: any): Promise<any>;
     export function openOptionsPage(): void;
     export function getURL(path: string): string;
+    export function getManifest(): {
+      oauth2?: {
+        client_id: string;
+        scopes: string[];
+      };
+      [key: string]: any;
+    };
     export const onInstalled: {
       addListener(callback: () => void): void;
     };

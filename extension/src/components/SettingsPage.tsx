@@ -100,6 +100,12 @@ const SettingsPage: React.FC = () => {
   }, [refreshStatus.nextRefreshTime]);
 
   const handleTriggerManualRefresh = useCallback(async () => {
+    // Check if Gemini API key is configured
+    if (!formSettings.geminiApiKey) {
+      setStatusMessage('Please configure your Gemini API key before refreshing.');
+      return;
+    }
+
     setTriggeringRefresh(true);
     setStatusMessage('');
     try {
@@ -115,7 +121,7 @@ const SettingsPage: React.FC = () => {
     } finally {
       setTimeout(() => setTriggeringRefresh(false), 1000);
     }
-  }, [triggerManualRefresh]);
+  }, [triggerManualRefresh, formSettings.geminiApiKey]);
 
   const handleSave = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -250,24 +256,30 @@ const SettingsPage: React.FC = () => {
       <section className="mt-10 bg-white shadow-sm rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Listing Refresh</h2>
-          <button
-            type="button"
-            onClick={handleTriggerManualRefresh}
-            disabled={triggeringRefresh || refreshStatus.isRefreshing}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {refreshStatus.isRefreshing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Refreshing {refreshStatus.currentIndex}/{refreshStatus.totalCount}
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Refresh Now
-              </>
+          <div className="flex items-center gap-2">
+            {!formSettings.geminiApiKey && (
+              <span className="text-xs text-amber-600">API key required</span>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={handleTriggerManualRefresh}
+              disabled={triggeringRefresh || refreshStatus.isRefreshing || !formSettings.geminiApiKey}
+              title={!formSettings.geminiApiKey ? 'Configure Gemini API key first' : 'Refresh all listings now'}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {refreshStatus.isRefreshing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Refreshing {refreshStatus.currentIndex}/{refreshStatus.totalCount}
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  Refresh Now
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

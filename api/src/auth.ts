@@ -74,6 +74,53 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPay
   }
 }
 
+/**
+ * Verify a Google access token by calling the userinfo endpoint
+ *
+ * This is used when the Chrome extension uses chrome.identity.getAuthToken()
+ * which returns an access token (not an ID token).
+ *
+ * @param accessToken - The Google access token from Chrome extension
+ * @returns User info from Google
+ * @throws Error if token is invalid or expired
+ */
+export async function verifyGoogleAccessToken(accessToken: string): Promise<GoogleTokenPayload> {
+  try {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google userinfo request failed: ${response.status}`);
+    }
+
+    const userInfo = await response.json() as {
+      sub?: string;
+      email?: string;
+      email_verified?: boolean;
+      name?: string;
+      picture?: string;
+    };
+
+    if (!userInfo.sub || !userInfo.email) {
+      throw new Error('User info missing required fields (sub, email)');
+    }
+
+    return {
+      sub: userInfo.sub,
+      email: userInfo.email,
+      email_verified: userInfo.email_verified,
+      name: userInfo.name,
+      picture: userInfo.picture,
+    };
+  } catch (error) {
+    console.error('Google access token verification failed:', error);
+    throw new Error('Invalid or expired Google access token');
+  }
+}
+
 // =============================================================================
 // JWT Token Operations
 // =============================================================================

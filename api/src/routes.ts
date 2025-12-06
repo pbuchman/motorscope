@@ -5,7 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { authMiddleware, verifyGoogleToken, generateJwt } from './auth.js';
+import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt } from './auth.js';
 import {
   upsertUser,
   getListingsByUserId,
@@ -50,11 +50,17 @@ router.get('/healthz', async (_req: Request, res: Response) => {
 /**
  * POST /api/auth/google
  *
- * Authenticate with a Google ID token from the Chrome extension.
+ * Authenticate with a Google token from the Chrome extension.
+ *
+ * Supports two token types:
+ * - accessToken: From chrome.identity.getAuthToken() (Chrome extension OAuth)
+ * - idToken: From launchWebAuthFlow (Web application OAuth) - legacy support
  *
  * Request body:
  * {
- *   "idToken": "<google-id-token>"
+ *   "accessToken": "<google-access-token>"  // Preferred
+ *   // OR
+ *   "idToken": "<google-id-token>"  // Legacy support
  * }
  *
  * Response:
@@ -65,19 +71,32 @@ router.get('/healthz', async (_req: Request, res: Response) => {
  */
 router.post('/auth/google', async (req: Request, res: Response) => {
   try {
-    const { idToken } = req.body;
+    const { accessToken, idToken } = req.body;
 
-    if (!idToken || typeof idToken !== 'string') {
+    if (!accessToken && !idToken) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'idToken is required in request body',
+        message: 'accessToken or idToken is required in request body',
         statusCode: 400,
       });
       return;
     }
 
-    // Verify the Google token
-    const googlePayload = await verifyGoogleToken(idToken);
+    // Verify the Google token (prefer accessToken, fall back to idToken)
+    let googlePayload;
+    if (accessToken && typeof accessToken === 'string') {
+      googlePayload = await verifyGoogleAccessToken(accessToken);
+    } else if (idToken && typeof idToken === 'string') {
+      googlePayload = await verifyGoogleToken(idToken);
+    } else {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Token must be a string',
+        statusCode: 400,
+      });
+      return;
+    }
+
 
     // Create internal user ID from Google sub
     // Prefix with 'google_' to support potential future auth providers

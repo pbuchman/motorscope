@@ -2,7 +2,10 @@
  * OAuth Client Module
  *
  * Handles Google OAuth authentication flow and backend token management.
- * Uses Chrome Identity API for OAuth and stores backend JWT locally.
+ * Uses Chrome Identity API with getAuthToken() for Chrome extension OAuth.
+ *
+ * This approach uses the "Chrome extension" OAuth client type in GCP,
+ * which is configured with the extension's Item ID (not redirect URIs).
  */
 
 import { extensionStorage } from '../services/extensionStorage';
@@ -48,12 +51,15 @@ const hasIdentityApi = (): boolean => {
 };
 
 /**
- * Get OAuth token using Chrome Identity API
+ * Get OAuth access token using Chrome Identity API
+ *
+ * This uses chrome.identity.getAuthToken() which works with
+ * "Chrome extension" type OAuth clients in GCP.
  *
  * @param interactive - Whether to show the OAuth consent screen
  * @returns The OAuth access token
  */
-const getOAuthToken = async (interactive: boolean = true): Promise<string> => {
+const getOAuthAccessToken = async (interactive: boolean = true): Promise<string> => {
   if (!hasIdentityApi()) {
     throw new Error('Chrome Identity API not available');
   }
@@ -74,69 +80,44 @@ const getOAuthToken = async (interactive: boolean = true): Promise<string> => {
 };
 
 /**
- * Exchange OAuth token for Google ID token
- * Chrome identity API returns an access token, but we need an ID token for backend verification.
- * We'll use the tokeninfo endpoint to get user info and construct our auth flow.
+ * Get user info from Google using an access token
  */
-const getGoogleIdToken = async (): Promise<string> => {
-  if (!hasIdentityApi()) {
-    throw new Error('Chrome Identity API not available');
+const getGoogleUserInfo = async (accessToken: string): Promise<{
+  sub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+}> => {
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get user info: ${response.status}`);
   }
 
-  // Use launchWebAuthFlow to get an ID token directly
-  const redirectUrl = chrome.identity.getRedirectURL();
-  const clientId = '663051224718-nj03sld1761g1oicnngk1umj0ob717qe.apps.googleusercontent.com';
-  const scopes = encodeURIComponent('openid email profile');
-  const nonce = Math.random().toString(36).substring(2);
-
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-    `client_id=${clientId}` +
-    `&response_type=id_token` +
-    `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
-    `&scope=${scopes}` +
-    `&nonce=${nonce}` +
-    `&prompt=consent`;
-
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(
-      { url: authUrl, interactive: true },
-      (responseUrl) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        if (!responseUrl) {
-          reject(new Error('No response URL from OAuth flow'));
-          return;
-        }
-
-        // Extract ID token from the URL fragment
-        const urlParams = new URLSearchParams(responseUrl.split('#')[1]);
-        const idToken = urlParams.get('id_token');
-
-        if (!idToken) {
-          reject(new Error('No ID token in OAuth response'));
-          return;
-        }
-
-        resolve(idToken);
-      }
-    );
-  });
+  return response.json();
 };
 
 /**
  * Login with Google OAuth provider
  *
- * 1. Gets Google ID token via Chrome Identity API
- * 2. Sends token to backend for verification
- * 3. Receives and stores backend JWT and user profile
+ * Flow:
+ * 1. Get access token via chrome.identity.getAuthToken()
+ * 2. Fetch user info from Google
+ * 3. Send access token to backend for verification
+ * 4. Receive and store backend JWT and user profile
  *
  * @returns User profile and token
  */
 export const loginWithProvider = async (): Promise<{ user: UserProfile; token: string }> => {
-  // Get Google ID token
-  const idToken = await getGoogleIdToken();
+  console.log('[OAuth] Starting login flow...');
+
+  // Get Google access token using Chrome Identity API
+  const accessToken = await getOAuthAccessToken(true);
+  console.log('[OAuth] Got access token');
 
   // Get configured backend URL
   let backendUrl: string;
@@ -146,13 +127,14 @@ export const loginWithProvider = async (): Promise<{ user: UserProfile; token: s
     backendUrl = DEFAULT_BACKEND_URL;
   }
 
-  // Send to backend for verification and JWT generation
+  // Send access token to backend for verification and JWT generation
+  // Backend will verify the token with Google and create our JWT
   const response = await fetch(`${backendUrl}${AUTH_ENDPOINT_PATH}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ accessToken }),
   });
 
   if (!response.ok) {
@@ -165,6 +147,8 @@ export const loginWithProvider = async (): Promise<{ user: UserProfile; token: s
   // Store token and user profile
   await extensionStorage.set(STORAGE_KEY_BACKEND_TOKEN, authResponse.token);
   await extensionStorage.set(STORAGE_KEY_USER_PROFILE, authResponse.user);
+
+  console.log('[OAuth] Login successful:', authResponse.user.email);
 
   return {
     user: authResponse.user,
@@ -182,9 +166,18 @@ export const logout = async (): Promise<void> => {
   // Also revoke the Chrome identity token cache
   if (hasIdentityApi()) {
     try {
-      // Clear cached tokens
-      chrome.identity.clearAllCachedAuthTokens(() => {
-        console.log('[Auth] Cleared cached auth tokens');
+      // Get the current token to revoke it
+      chrome.identity.getAuthToken({ interactive: false }, (token) => {
+        if (token) {
+          // Remove from Chrome's cache
+          chrome.identity.removeCachedAuthToken({ token }, () => {
+            console.log('[Auth] Removed cached auth token');
+          });
+
+          // Optionally revoke the token with Google
+          fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`)
+            .catch(() => {}); // Ignore errors
+        }
       });
     } catch (error) {
       console.warn('[Auth] Failed to clear cached tokens:', error);
