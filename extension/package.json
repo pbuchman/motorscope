@@ -1,0 +1,32 @@
+{
+  "name": "motorscope-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension to track car listings, monitor price changes, and extract vehicle data from online marketplaces",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "rebuild": "rm -rf dist && vite build"
+  },
+  "dependencies": {
+    "@google/genai": "^1.31.0",
+    "lucide-react": "^0.555.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "recharts": "^3.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.1",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.4"
+  }
+}
+

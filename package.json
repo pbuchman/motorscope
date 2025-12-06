@@ -1,39 +1,20 @@
 {
   "name": "motorscope",
   "version": "1.0.0",
-  "description": "Browser extension to track car listings, monitor price changes, and extract vehicle data from online marketplaces",
-  "type": "module",
+  "description": "MotorScope - Car Listing Tracker monorepo containing Chrome extension and backend API",
+  "private": true,
+  "workspaces": [
+    "extension",
+    "api"
+  ],
   "scripts": {
-    "dev": "vite",
     "build": "npm run build:extension && npm run build:api",
-    "build:extension": "vite build",
+    "build:extension": "cd extension && npm run build",
     "build:api": "cd api && npm run build",
-    "start:api": "cd api && npm start",
+    "dev:extension": "cd extension && npm run dev",
     "dev:api": "cd api && npm run dev",
-    "install:all": "npm install && cd api && npm install",
-    "rebuild:dist": "rm -rf dist && npm run build:extension"
-  },
-  "dependencies": {
-    "@google/genai": "^1.31.0",
-    "lucide-react": "^0.555.0",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "recharts": "^3.5.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.17",
-    "@types/chrome": "^0.0.260",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.1",
-    "@types/react-dom": "^19.2.1",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.22",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17",
-    "typescript": "^5.2.2",
-    "vite": "^5.1.4"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "start:api": "cd api && npm start",
+    "install:all": "npm install && cd extension && npm install && cd ../api && npm install",
+    "clean": "rm -rf extension/dist api/dist"
   }
 }

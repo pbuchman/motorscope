@@ -4,6 +4,7 @@ This document describes the backend API for the MotorScope Chrome extension. The
 
 ## Table of Contents
 
+- [Project Structure](#project-structure)
 - [Architecture Overview](#architecture-overview)
 - [Data Model](#data-model)
 - [API Endpoints](#api-endpoints)
@@ -14,12 +15,63 @@ This document describes the backend API for the MotorScope Chrome extension. The
 
 ---
 
+## Project Structure
+
+This is a monorepo containing both the Chrome extension and the backend API:
+
+```
+motorscope/
+├── api/                          # Backend API (Node.js + TypeScript)
+│   ├── src/
+│   │   ├── index.ts             # Express server entry point
+│   │   ├── config.ts            # Configuration and environment variables
+│   │   ├── auth.ts              # Authentication (Google OAuth, JWT)
+│   │   ├── db.ts                # Firestore database operations
+│   │   ├── routes.ts            # API route handlers
+│   │   └── types.ts             # TypeScript type definitions
+│   ├── dist/                    # Compiled JavaScript output
+│   ├── package.json
+│   └── tsconfig.json
+├── extension/                    # Chrome Extension (React + TypeScript)
+│   ├── src/
+│   │   ├── components/          # React components
+│   │   ├── services/            # Extension services
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── context/             # React context providers
+│   │   ├── utils/               # Utility functions
+│   │   ├── content-scripts/     # Browser content scripts
+│   │   └── styles/              # CSS styles
+│   ├── dist/                    # Built extension
+│   ├── manifest.json            # Extension manifest
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+├── package.json                  # Root package.json with workspace scripts
+├── BACKEND.md                    # This file
+└── README.md                     # Project overview
+```
+
+### NPM Scripts (Root)
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `build` | `npm run build:extension && npm run build:api` | Build everything |
+| `build:extension` | `cd extension && npm run build` | Build Chrome extension |
+| `build:api` | `cd api && npm run build` | Build API (TypeScript) |
+| `dev:extension` | `cd extension && npm run dev` | Extension dev server |
+| `dev:api` | `cd api && npm run dev` | API dev server with hot reload |
+| `start:api` | `cd api && npm start` | Start compiled API |
+| `install:all` | Installs all dependencies | Install deps for root, extension, and API |
+| `clean` | `rm -rf extension/dist api/dist` | Clean build outputs |
+
+---
+
 ## Architecture Overview
 
 ```
 ┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
 │  Chrome Extension   │────▶│   Cloud Run API     │────▶│    Firestore        │
-│  (Frontend)         │     │   (Node.js)         │     │    (Database)       │
+│  (./extension)      │     │   (./api)           │     │    (Database)       │
 └─────────────────────┘     └─────────────────────┘     └─────────────────────┘
          │                           │
          │ Google OAuth              │ IAM (ADC)
@@ -32,8 +84,8 @@ This document describes the backend API for the MotorScope Chrome extension. The
 
 ### Key Components
 
-1. **Chrome Extension**: Frontend that collects car listings and syncs with the backend
-2. **Cloud Run API**: Stateless Node.js server handling authentication and data operations
+1. **Chrome Extension** (`./extension`): Frontend that collects car listings and syncs with the backend
+2. **Cloud Run API** (`./api`): Stateless Node.js server handling authentication and data operations
 3. **Firestore**: NoSQL document database storing users and listings
 4. **Google OAuth**: Authentication via Chrome Identity API
 5. **IAM**: Backend accesses Firestore using service account credentials (ADC)
@@ -283,18 +335,19 @@ See [Deployment to Cloud Run](#deployment-to-cloud-run) section.
 
 ### Prerequisites
 
-- Node.js 24+
+- Node.js 20+ (24 recommended for parity with Cloud Run)
 - GCP CLI (`gcloud`) configured
 - Application Default Credentials set up
 
 ### Setup
 
 ```bash
-# Install all dependencies
+# From repo root, install all dependencies
 npm run install:all
 
-# Or install API dependencies only
-cd api && npm install
+# Or install individually
+cd extension && npm install
+cd ../api && npm install
 ```
 
 ### Configure Local Environment
@@ -316,14 +369,14 @@ gcloud auth application-default login
 gcloud config set project motorscope
 ```
 
-### Run Development Server
+### Run Development Servers
 
 ```bash
-# From repo root
+# Terminal 1: Run API
 npm run dev:api
 
-# Or from api directory
-cd api && npm run dev
+# Terminal 2: Run Extension dev server (optional, for HMR)
+npm run dev:extension
 ```
 
 The API will be available at `http://localhost:8080`.
@@ -354,7 +407,7 @@ curl http://localhost:8080/api/healthz
    - Select branch (e.g., `main`)
 
 4. **Configure Build**
-   - Build type: Dockerfile (or Buildpack)
+   - Build type: Dockerfile or Buildpack
    - Source location: `/api`
    - Build command: `npm run build`
    - Run command: `node dist/index.js`
@@ -391,7 +444,7 @@ curl http://localhost:8080/api/healthz
 ### Option 2: Manual Deployment with gcloud
 
 ```bash
-# Build and deploy from api directory
+# Deploy from api directory
 cd api
 
 gcloud run deploy motorscope-api \
@@ -401,32 +454,6 @@ gcloud run deploy motorscope-api \
   --allow-unauthenticated \
   --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,OAUTH_CLIENT_ID=xxx,ALLOWED_ORIGIN_EXTENSION=chrome-extension://xxx" \
   --set-secrets "JWT_SECRET=jwt-secret:latest"
-```
-
-### Using Cloud Build (Alternative)
-
-Create `cloudbuild.yaml` in repo root:
-
-```yaml
-steps:
-  - name: 'node:24'
-    dir: 'api'
-    entrypoint: npm
-    args: ['install']
-  
-  - name: 'node:24'
-    dir: 'api'
-    entrypoint: npm
-    args: ['run', 'build']
-  
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - 'motorscope-api'
-      - '--source=api'
-      - '--region=europe-west1'
-      - '--platform=managed'
 ```
 
 ---
@@ -468,4 +495,3 @@ steps:
 - Ensure `api/package.json` has correct Node.js engine version
 - Verify TypeScript compilation works locally first
 - Check Cloud Build logs for detailed errors
-

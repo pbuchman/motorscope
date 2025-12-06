@@ -1,5 +1,0 @@
-{
-  "name": "MotorScope - Car Listing Tracker",
-  "description": "Browser extension to track car listings, monitor price changes, and extract vehicle data from online marketplaces with AI-powered data extraction.",
-  "requestFramePermissions": []
-}
