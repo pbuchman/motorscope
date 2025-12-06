@@ -229,6 +229,14 @@ const ExtensionPopup: React.FC = () => {
                 </div>
               )}
 
+              {previewData.seller?.phone && (
+                <div className="mt-2 bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                  <a href={`tel:${previewData.seller.phone}`} className="text-xs text-blue-700 font-mono hover:underline">
+                    📞 {previewData.seller.phone}
+                  </a>
+                </div>
+              )}
+
               {previewData.vehicle?.engine?.capacityCc && (
                 <p className="text-xs text-slate-500 mt-2">Engine: {(previewData.vehicle.engine.capacityCc / 1000).toFixed(1)}L</p>
               )}
@@ -237,11 +245,6 @@ const ExtensionPopup: React.FC = () => {
               )}
               {previewData.location?.city && (
                 <p className="text-xs text-slate-500">Location: {previewData.location.city}{previewData.location.region ? `, ${previewData.location.region}` : ''}</p>
-              )}
-              {previewData.seller?.phone && (
-                <a href={`tel:${previewData.seller.phone}`} className="text-xs text-blue-600 hover:underline">
-                  📞 {previewData.seller.phone}
-                </a>
               )}
             </div>
 
@@ -331,9 +334,11 @@ const ExtensionPopup: React.FC = () => {
                    )}
 
                    {savedItem.seller?.phone && (
-                     <a href={`tel:${savedItem.seller.phone}`} className="text-[10px] text-blue-600 hover:underline mb-2 block">
-                       📞 {savedItem.seller.phone}
-                     </a>
+                     <div className="bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mb-2">
+                       <a href={`tel:${savedItem.seller.phone}`} className="text-[10px] text-blue-700 font-mono hover:underline">
+                         📞 {savedItem.seller.phone}
+                       </a>
+                     </div>
                    )}
 
                    {/* Tracking Info */}

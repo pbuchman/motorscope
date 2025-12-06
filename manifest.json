@@ -33,11 +33,6 @@
     {
       "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"],
       "js": ["content-scripts/otomoto.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"],
-      "js": ["content-scripts/otomoto-main.js"],
       "run_at": "document_idle",
       "world": "MAIN"
     }
