@@ -12,13 +12,11 @@ import {
   getListings as getLocalListings,
   saveListing as saveLocalListing,
   removeListing as removeLocalListing,
-  saveAllListings as saveAllLocalListings,
 } from '../services/storageService';
 import {
   getRemoteListings,
   saveRemoteListing,
   deleteRemoteListing,
-  saveRemoteListings,
   ApiError,
 } from '../api/client';
 import { getSettings, saveSettings as saveSettingsToStorage, getRefreshStatus, DEFAULT_SETTINGS, DEFAULT_REFRESH_STATUS } from '../services/settingsService';

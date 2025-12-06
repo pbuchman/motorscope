@@ -1,19 +1,13 @@
 // Background service worker for MotorScope (ES Module)
-import { ListingStatus, CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
-import { refreshListingWithGemini, RateLimitError } from './services/geminiService';
+import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
+import { RateLimitError } from './services/geminiService';
 import { extensionStorage } from './services/extensionStorage';
+import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
+import { STORAGE_KEYS } from './services/settingsService';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const DEFAULT_FREQUENCY_MINUTES = 60;
 const RATE_LIMIT_RETRY_MINUTES = 5; // Schedule retry in 5 minutes if rate limited
-
-const STORAGE_KEYS = {
-  listings: 'motorscope_listings',
-  settings: 'motorscope_settings',
-  geminiKey: 'motorscope_gemini_key',
-  refreshStatus: 'motorscope_refresh_status',
-  geminiStats: 'motorscope_gemini_stats',
-};
 
 // ============ Storage Helpers ============
 
@@ -113,129 +107,6 @@ const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promi
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-// ============ Refresh Single Listing ============
-
-interface RefreshListingResult {
-  listing: CarListing;
-  success: boolean;
-  error?: string;
-  rateLimited?: boolean;
-}
-
-const refreshListing = async (listing: CarListing): Promise<RefreshListingResult> => {
-  try {
-    const response = await fetch(listing.source.url, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'omit',
-    });
-
-    if (response.status === 404 || response.status === 410) {
-      return {
-        listing: {
-          ...listing,
-          status: ListingStatus.EXPIRED,
-          lastSeenAt: new Date().toISOString(),
-          lastRefreshStatus: 'success',
-        },
-        success: true,
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        listing: { ...listing, lastRefreshStatus: 'error', lastRefreshError: `HTTP ${response.status}` },
-        success: false,
-        error: `HTTP error: ${response.status}`,
-      };
-    }
-
-    const html = await response.text();
-
-    // Extract page title
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const pageTitle = titleMatch ? titleMatch[1] : listing.title;
-
-    // Strip HTML for text content
-    const textContent = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 20000);
-
-    // Use geminiService to refresh listing (handles API key internally)
-    const result = await refreshListingWithGemini(listing.source.url, textContent, pageTitle);
-
-    const updatedListing = { ...listing };
-
-    // Update price if changed
-    if (result.price > 0 && result.price !== listing.currentPrice) {
-      updatedListing.priceHistory = [
-        ...listing.priceHistory,
-        {
-          date: new Date().toISOString(),
-          price: result.price,
-          currency: result.currency,
-        },
-      ];
-      updatedListing.currentPrice = result.price;
-    }
-
-    updatedListing.currency = result.currency || listing.currency;
-    updatedListing.status = result.status;
-    updatedListing.lastSeenAt = new Date().toISOString();
-    updatedListing.lastRefreshStatus = 'success';
-    updatedListing.lastRefreshError = undefined;
-
-    return { listing: updatedListing, success: true };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    const isRateLimited = error instanceof RateLimitError;
-
-    console.error(`Failed to refresh listing ${listing.source.url}:`, error);
-
-    // Don't update lastChecked or mark as refreshed on error
-    return {
-      listing: {
-        ...listing,
-        lastRefreshStatus: 'error',
-        lastRefreshError: errorMsg,
-      },
-      success: false,
-      error: errorMsg,
-      rateLimited: isRateLimited,
-    };
-  }
-};
-
-// ============ Sort listings by refresh priority ============
-
-const sortListingsByRefreshPriority = (listings: CarListing[]): CarListing[] => {
-  return [...listings].sort((a, b) => {
-    // Priority 1: Items never refreshed (no lastSeenAt or no lastRefreshStatus)
-    const aHasNeverRefreshed = !a.lastSeenAt || !a.lastRefreshStatus;
-    const bHasNeverRefreshed = !b.lastSeenAt || !b.lastRefreshStatus;
-
-    if (aHasNeverRefreshed && !bHasNeverRefreshed) return -1;
-    if (!aHasNeverRefreshed && bHasNeverRefreshed) return 1;
-
-    // Priority 2: Items that were successfully refreshed (older first)
-    const aIsSuccess = a.lastRefreshStatus === 'success';
-    const bIsSuccess = b.lastRefreshStatus === 'success';
-
-    if (aIsSuccess && !bIsSuccess) return -1;
-    if (!aIsSuccess && bIsSuccess) return 1;
-
-    // Priority 3: Within same status, sort by lastSeenAt (oldest first)
-    const aTime = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
-    const bTime = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
-
-    return aTime - bTime;
-  });
-};
-
 // ============ Background Refresh All ============
 
 const runBackgroundRefresh = async (): Promise<void> => {
@@ -312,7 +183,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
       pendingItems: [...pendingItems],
     });
 
-    const result = await refreshListing(listing);
+    const result = await refreshSingleListing(listing);
 
     // Update the listing in the map
     listingsMap.set(listing.id, result.listing);

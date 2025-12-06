@@ -5,7 +5,8 @@
  */
 
 // Backend API configuration
-export const BACKEND_BASE_URL = 'https://motorscope-663051224718.europe-west1.run.app/api';
+// This URL should match the Cloud Run service URL from GCP
+export const BACKEND_BASE_URL = 'https://motorscope-api-663051224718.europe-west1.run.app/api';
 export const AUTH_ENDPOINT_PATH = '/auth/google';
 export const LISTINGS_ENDPOINT_PATH = '/listings';
 

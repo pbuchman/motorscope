@@ -2,6 +2,7 @@ import { ExtensionSettings, GeminiCallHistoryEntry, GeminiStats, RefreshStatus }
 import { extensionStorage } from './extensionStorage';
 
 export const STORAGE_KEYS = {
+  listings: 'motorscope_listings',
   settings: 'motorscope_settings',
   geminiKey: 'motorscope_gemini_key',
   geminiStats: 'motorscope_gemini_stats',
@@ -78,11 +79,6 @@ export const clearGeminiLogs = async (): Promise<void> => {
   });
 };
 
-// Full reset (only used for testing/admin)
-export const resetGeminiStats = async (): Promise<void> => {
-  await extensionStorage.set(STORAGE_KEYS.geminiStats, { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
-};
-
 export const DEFAULT_REFRESH_STATUS: RefreshStatus = {
   lastRefreshTime: null,
   nextRefreshTime: null,
@@ -101,8 +97,4 @@ export const getRefreshStatus = async (): Promise<RefreshStatus> => {
   return status || DEFAULT_REFRESH_STATUS;
 };
 
-export const saveRefreshStatus = async (status: Partial<RefreshStatus>): Promise<void> => {
-  const current = await getRefreshStatus();
-  await extensionStorage.set(STORAGE_KEYS.refreshStatus, { ...current, ...status });
-};
 

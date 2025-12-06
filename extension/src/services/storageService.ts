@@ -1,27 +1,18 @@
-import { CarListing, ListingStatus, PricePoint } from "../types";
+import { CarListing } from "../types";
 import { extensionStorage } from "./extensionStorage";
 import { normalizeUrl } from "../utils/formatters";
-
-export const STORAGE_KEY = "motorscope_listings";
+import { STORAGE_KEYS } from "./settingsService";
 
 export const getListings = async (): Promise<CarListing[]> => {
-  const data = await extensionStorage.get<CarListing[]>(STORAGE_KEY);
+  const data = await extensionStorage.get<CarListing[]>(STORAGE_KEYS.listings);
   return data || [];
-};
-
-/**
- * Check if there are any local listings
- */
-export const hasLocalListings = async (): Promise<boolean> => {
-  const listings = await getListings();
-  return listings.length > 0;
 };
 
 /**
  * Clear all local listings (used when switching to remote storage)
  */
 export const clearAllLocalListings = async (): Promise<void> => {
-  await extensionStorage.set(STORAGE_KEY, []);
+  await extensionStorage.set(STORAGE_KEYS.listings, []);
 };
 
 
@@ -63,56 +54,14 @@ export const saveListing = async (listing: CarListing): Promise<void> => {
     // Add new listing
     listings.push(listing);
   }
-  await extensionStorage.set(STORAGE_KEY, listings);
+  await extensionStorage.set(STORAGE_KEYS.listings, listings);
 };
 
-// Refresh listing: update price history, status, and refresh status
-export const refreshListing = async (
-  id: string,
-  newPrice: number,
-  currency: string,
-  status: ListingStatus,
-  refreshStatus: 'success' | 'error' = 'success',
-  refreshError?: string
-): Promise<void> => {
-  const listings = await getListings();
-  const index = listings.findIndex((l) => l.id === id);
-
-  if (index >= 0) {
-    const item = listings[index];
-
-    // Only add to price history if price changed
-    if (item.currentPrice !== newPrice) {
-      const newPoint: PricePoint = {
-        date: new Date().toISOString(),
-        price: newPrice,
-        currency: currency,
-      };
-      item.priceHistory.push(newPoint);
-      item.currentPrice = newPrice;
-    }
-
-    item.status = status;
-    item.currency = currency;
-
-    // Update refresh status
-    item.lastRefreshStatus = refreshStatus;
-    if (refreshStatus === 'success') {
-      item.lastSeenAt = new Date().toISOString();
-      item.lastRefreshError = undefined;
-    } else {
-      // On error, don't update lastSeenAt, but store the error
-      item.lastRefreshError = refreshError;
-    }
-
-    await extensionStorage.set(STORAGE_KEY, listings);
-  }
-};
 
 export const removeListing = async (id: string): Promise<void> => {
   const listings = await getListings();
   const filtered = listings.filter((l) => l.id !== id);
-  await extensionStorage.set(STORAGE_KEY, filtered);
+  await extensionStorage.set(STORAGE_KEYS.listings, filtered);
 };
 
 /**
@@ -120,6 +69,6 @@ export const removeListing = async (id: string): Promise<void> => {
  * Used for syncing from remote
  */
 export const saveAllListings = async (listings: CarListing[]): Promise<void> => {
-  await extensionStorage.set(STORAGE_KEY, listings);
+  await extensionStorage.set(STORAGE_KEYS.listings, listings);
 };
 
