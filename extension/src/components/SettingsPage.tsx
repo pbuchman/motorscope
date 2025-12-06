@@ -99,7 +99,7 @@ const StatusMessage: React.FC<{ message: string; type?: 'success' | 'warning'; o
 };
 
 const SettingsPage: React.FC = () => {
-  const { settings, update: updateSettings } = useSettings();
+  const { settings, update: updateSettings, reload: reloadSettings, isLoading: isLoadingSettings } = useSettings();
   const { status: refreshStatus } = useRefreshStatus();
   const { reload: reloadListings } = useListings();
   const auth = useAuth();
@@ -123,6 +123,14 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     setFormSettings(settings);
   }, [settings]);
+
+  // Reload settings when auth status changes (e.g., after login)
+  useEffect(() => {
+    if (auth.status === 'logged_in' || auth.status === 'logged_out') {
+      // Force reload settings when auth state settles
+      reloadSettings();
+    }
+  }, [auth.status, reloadSettings]);
 
   // Load stats on mount
   useEffect(() => {

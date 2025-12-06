@@ -203,8 +203,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearError();
 
     try {
-      // Interactive login (may show consent screen first time)
-      const { user, token } = await loginWithProvider();
+      // First, try silent login (uses cached Google token if available)
+      // This avoids showing the consent screen if user recently logged in
+      let result = await trySilentLogin();
+
+      // If silent login fails, do interactive login
+      if (!result) {
+        console.log('[AuthContext] Silent login failed, trying interactive...');
+        result = await loginWithProvider();
+      }
+
+      const { user, token } = result;
 
       // Check for local data to potentially merge
       const localListings = await getLocalListings();

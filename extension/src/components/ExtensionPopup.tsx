@@ -106,7 +106,7 @@ const MergeDialog: React.FC<{
 
 const ExtensionPopup: React.FC = () => {
   const { listings, add, remove, error: listingsError, clearError } = useListings();
-  const { settings, isLoading: settingsLoading } = useSettings();
+  const { settings, isLoading: settingsLoading, reload: reloadSettings } = useSettings();
   const auth = useAuth();
 
   // API key is available if settings are loaded and key exists
@@ -124,6 +124,13 @@ const ExtensionPopup: React.FC = () => {
 
   // Combine errors from listings context and local error state
   const displayError = error || listingsError || auth.error;
+
+  // Reload settings when auth status changes (e.g., after login)
+  useEffect(() => {
+    if (auth.status === 'logged_in' || auth.status === 'logged_out') {
+      reloadSettings();
+    }
+  }, [auth.status, reloadSettings]);
 
   // Find existing saved item based on URL
   const savedItem = useMemo(() => {

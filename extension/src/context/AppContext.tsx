@@ -153,11 +153,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Load settings from appropriate source
   const reloadSettings = useCallback(async () => {
+    setIsLoadingSettings(true);
     try {
       if (isLoggedIn) {
         // Load from remote backend (except backendUrl which is always local)
         const remoteSettings = await getRemoteSettings();
         const localSettings = await getLocalSettings();
+
+        // IMPORTANT: Sync the remote API key to local storage
+        // This is needed because the background refresh service can't access the auth context
+        // and needs to get the API key from local storage
+        if (remoteSettings.geminiApiKey) {
+          await saveLocalSettings({
+            geminiApiKey: remoteSettings.geminiApiKey,
+            checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes,
+            backendUrl: localSettings.backendUrl,
+          });
+        }
+
         setSettings({
           geminiApiKey: remoteSettings.geminiApiKey,
           checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes,
