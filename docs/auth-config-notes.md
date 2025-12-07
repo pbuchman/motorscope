@@ -152,6 +152,30 @@ If `getAuthToken` returns errors:
 4. **Expected**: Account picker, NOT consent screen
 5. If consent screen appears again, check for token revocation in logout code
 
+### Clearing Identity Cache for Fresh Testing
+
+To test the "first time user" experience, you need to clear any existing consent/tokens:
+
+**Option 1: Revoke via Google Account (Recommended)**
+1. Go to https://myaccount.google.com/permissions
+2. Find "MotorScope" in the list
+3. Click "Remove Access"
+4. Now the next login will show the consent screen
+
+**Option 2: Remove and Reinstall Extension**
+1. Go to chrome://extensions
+2. Remove the MotorScope extension
+3. Clear browsing data (cookies & site data)
+4. Reinstall the extension
+
+**Option 3: Clear Chrome Profile Data**
+1. Go to chrome://settings/clearBrowserData
+2. Select "Cookies and other site data"
+3. Clear data
+4. Note: This affects all sites, not just MotorScope
+
+**Note**: `chrome://identity-internals/` no longer exists in modern Chrome versions.
+
 ## Environment Variables Summary
 
 ### Backend (.env or Cloud Run secrets)
