@@ -2,7 +2,7 @@
 import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { extensionStorage } from './services/extensionStorage';
 import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
-import { STORAGE_KEYS, getBackendUrl } from './services/settingsService';
+import { STORAGE_KEYS, getBackendUrl, DEFAULT_REFRESH_STATUS } from './services/settingsService';
 import { initializeAuth, trySilentLogin, isTokenExpired, getToken } from './auth/oauthClient';
 import { getStoredToken } from './auth/storage';
 import { LISTINGS_ENDPOINT_PATH, API_PREFIX } from './auth/config';
@@ -101,18 +101,7 @@ const saveListing = async (listing: CarListing): Promise<void> => {
 
 const getRefreshStatus = async (): Promise<RefreshStatus> => {
   const status = await getFromStorage<RefreshStatus>(STORAGE_KEYS.refreshStatus);
-  return status || {
-    lastRefreshTime: null,
-    nextRefreshTime: null,
-    lastRefreshCount: 0,
-    isRefreshing: false,
-    currentIndex: 0,
-    totalCount: 0,
-    currentListingTitle: null,
-    pendingItems: [],
-    recentlyRefreshed: [],
-    refreshErrors: [],
-  };
+  return status || DEFAULT_REFRESH_STATUS;
 };
 
 const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void> => {
