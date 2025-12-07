@@ -28,6 +28,7 @@ export const API_PREFIX = '/api';
 
 /** API endpoint paths (relative to API_PREFIX) */
 export const AUTH_ENDPOINT_PATH = '/auth/google';
+export const AUTH_ME_ENDPOINT_PATH = '/auth/me';
 export const LISTINGS_ENDPOINT_PATH = '/listings';
 export const SETTINGS_ENDPOINT_PATH = '/settings';
 

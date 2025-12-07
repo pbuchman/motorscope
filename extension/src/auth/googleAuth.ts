@@ -107,8 +107,18 @@ export const revokeGoogleToken = async (token: string): Promise<void> => {
 };
 
 /**
- * Clear all Google auth state
- * Removes cached token and revokes it with Google
+ * Clear Google auth from Chrome's cache
+ *
+ * IMPORTANT: This only removes the token from Chrome's local cache.
+ * It does NOT revoke the user's consent with Google.
+ *
+ * This is the correct behavior for a normal "log out" action:
+ * - User logs out of MotorScope
+ * - On next login, they see account picker (not consent screen)
+ * - Their consent grant with Google is preserved
+ *
+ * Only call revokeGoogleToken() for explicit "disconnect account"
+ * or security incidents.
  */
 export const clearGoogleAuth = async (): Promise<void> => {
   if (!hasIdentityApi()) {
@@ -116,13 +126,41 @@ export const clearGoogleAuth = async (): Promise<void> => {
   }
 
   return new Promise((resolve) => {
-    // Get current token to clear it
+    // Get current token to clear it from Chrome's cache
+    chrome.identity.getAuthToken({ interactive: false }, async (token) => {
+      if (token) {
+        // Remove from Chrome's cache only - DO NOT revoke with Google
+        // Revoking with Google would invalidate the user's consent grant,
+        // causing them to see the consent screen again on next login
+        await removeCachedGoogleToken(token);
+        console.log('[GoogleAuth] Cleared cached token (consent preserved)');
+      }
+      resolve();
+    });
+  });
+};
+
+/**
+ * Fully disconnect Google account
+ *
+ * This revokes the user's consent with Google and clears all cached tokens.
+ * Use this only for explicit "disconnect account" actions, not regular logout.
+ *
+ * After calling this, the user will see the full consent screen on next login.
+ */
+export const disconnectGoogleAccount = async (): Promise<void> => {
+  if (!hasIdentityApi()) {
+    return;
+  }
+
+  return new Promise((resolve) => {
     chrome.identity.getAuthToken({ interactive: false }, async (token) => {
       if (token) {
         // Remove from Chrome's cache
         await removeCachedGoogleToken(token);
-        // Revoke with Google
+        // Revoke consent with Google - user will see consent screen again
         await revokeGoogleToken(token);
+        console.log('[GoogleAuth] Disconnected Google account (consent revoked)');
       }
       resolve();
     });

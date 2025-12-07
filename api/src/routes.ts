@@ -141,6 +141,39 @@ router.post('/auth/google', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/auth/me
+ *
+ * Get current authenticated user information.
+ * Used to validate that a session is still valid.
+ * Requires JWT authentication.
+ *
+ * Response:
+ * {
+ *   "user": { "id": "...", "email": "...", "displayName": "..." }
+ * }
+ */
+router.get('/auth/me', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    // User info is already attached by authMiddleware
+    const { userId, email } = req.user!;
+
+    res.status(200).json({
+      user: {
+        id: userId,
+        email: email,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting user info:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to get user info',
+      statusCode: 500,
+    });
+  }
+});
+
 // =============================================================================
 // Listings API (Protected Routes)
 // =============================================================================

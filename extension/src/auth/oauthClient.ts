@@ -18,7 +18,8 @@ import { validateJwt, isJwtExpired } from './jwt';
 import {
   getGoogleTokenInteractive,
   getGoogleTokenSilent,
-  clearGoogleAuth
+  clearGoogleAuth,
+  disconnectGoogleAccount,
 } from './googleAuth';
 import {
   storeAuthData,
@@ -27,7 +28,7 @@ import {
   getStoredToken,
   getStoredUser,
 } from './storage';
-import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH } from './config';
+import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH } from './config';
 
 // Re-export types for convenience
 export type { User, AuthState } from './types';
@@ -63,6 +64,38 @@ const authenticateWithBackend = async (googleToken: string): Promise<BackendAuth
   console.log('[OAuth] Backend authentication successful');
 
   return authResponse;
+};
+
+/**
+ * Verify session with backend via GET /auth/me
+ * Returns true if session is valid, false otherwise
+ *
+ * This is an optional check to ensure the backend still recognizes the session.
+ * Useful for detecting server-side session invalidation.
+ */
+const verifySessionWithBackend = async (token: string): Promise<boolean> => {
+  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_ME_ENDPOINT_PATH}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log('[OAuth] Backend session verified');
+      return true;
+    }
+
+    console.log('[OAuth] Backend session invalid:', response.status);
+    return false;
+  } catch (error) {
+    // Network error - assume session is valid to allow offline usage
+    console.log('[OAuth] Backend verification failed (network error), assuming valid');
+    return true;
+  }
 };
 
 // =============================================================================
@@ -184,17 +217,21 @@ export const loginWithProvider = async (): Promise<{ user: User; token: string }
 };
 
 /**
- * Logout - clears all auth state
+ * Logout - clears local auth state
  *
  * Clears:
  * - Backend JWT from storage
  * - User profile from storage
- * - Cached Google token from Chrome
+ * - Cached Google token from Chrome's cache
+ *
+ * IMPORTANT: Does NOT revoke Google consent.
+ * User will see account picker (not consent screen) on next login.
+ * For full account disconnection, use disconnect() instead.
  */
 export const logout = async (): Promise<void> => {
   console.log('[OAuth] Logging out...');
 
-  // Clear Google auth (cached token + revoke)
+  // Clear Google auth from Chrome's cache (does NOT revoke consent)
   await clearGoogleAuth();
 
   // Clear stored auth data
@@ -269,3 +306,38 @@ export const initializeAuth = async (): Promise<AuthState> => {
   };
 };
 
+/**
+ * Verify current session with backend
+ *
+ * Optional: Call this to confirm the backend still recognizes the session.
+ * Returns true if valid, false if invalid or no session.
+ */
+export const verifySession = async (): Promise<boolean> => {
+  const token = await getStoredToken();
+  if (!token) {
+    return false;
+  }
+  return verifySessionWithBackend(token);
+};
+
+/**
+ * Fully disconnect Google account
+ *
+ * This is different from logout:
+ * - logout(): Clears local session, preserves Google consent
+ * - disconnect(): Revokes Google consent entirely
+ *
+ * After disconnect, user will see full consent screen on next login.
+ * Use for "Remove account" or security-related actions.
+ */
+export const disconnect = async (): Promise<void> => {
+  console.log('[OAuth] Disconnecting Google account...');
+
+  // Revoke Google consent entirely
+  await disconnectGoogleAccount();
+
+  // Clear stored auth data
+  await clearAuthData();
+
+  console.log('[OAuth] Disconnect complete');
+};
