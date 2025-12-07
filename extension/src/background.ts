@@ -2,7 +2,9 @@
 import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { extensionStorage } from './services/extensionStorage';
 import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
-import { STORAGE_KEYS, getBackendUrl, DEFAULT_REFRESH_STATUS } from './services/settingsService';
+import { STORAGE_KEYS } from './services/settings/storageKeys';
+import { getBackendUrl } from './services/settings/extensionSettings';
+import { DEFAULT_REFRESH_STATUS } from './services/settings/refreshStatus';
 import { initializeAuth, trySilentLogin, isTokenExpired, getToken } from './auth/oauthClient';
 import { getStoredToken } from './auth/storage';
 import { LISTINGS_ENDPOINT_PATH, API_PREFIX } from './auth/config';

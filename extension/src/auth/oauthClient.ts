@@ -27,7 +27,7 @@ import {
   getStoredToken,
   getStoredUser,
 } from './storage';
-import { getBackendUrl } from '../services/settingsService';
+import { getBackendUrl } from '../services/settings/extensionSettings';
 import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH } from './config';
 
 // Re-export types for convenience

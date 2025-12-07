@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { useSettings, useRefreshStatus, useListings } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
-import { getGeminiStats, getGeminiHistory, clearGeminiLogs } from '../services/settingsService';
+import { getGeminiStats, getGeminiHistory, clearGeminiLogs } from '../services/settings/geminiStats';
 import { BACKEND_SERVER_OPTIONS } from '../auth/config';
 import { useChromeMessaging } from '../hooks/useChromeMessaging';
 import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Car, Sparkles, LogOut, Key, ExternalLink } from 'lucide-react';

@@ -18,11 +18,13 @@ import {
 import {
   getSettings as getLocalSettings,
   saveSettings as saveLocalSettings,
-  getRefreshStatus,
   DEFAULT_SETTINGS,
+} from '../services/settings/extensionSettings';
+import {
+  getRefreshStatus,
   DEFAULT_REFRESH_STATUS,
-  getGeminiStats as getLocalGeminiStats,
-} from '../services/settingsService';
+} from '../services/settings/refreshStatus';
+import { getGeminiStats as getLocalGeminiStats } from '../services/settings/geminiStats';
 import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '../hooks/useChromeMessaging';
 import { refreshSingleListing, RefreshResult } from '../services/refreshService';
 import { useAuth } from '../auth/AuthContext';

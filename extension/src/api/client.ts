@@ -8,7 +8,7 @@
 import { CarListing, GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { getToken } from '../auth/oauthClient';
 import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL, API_PREFIX } from '../auth/config';
-import { getBackendUrl } from '../services/settingsService';
+import { getBackendUrl } from '../services/settings/extensionSettings';
 
 const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
 
@@ -170,8 +170,9 @@ export const getRemoteSettings = async (): Promise<RemoteSettings> => {
 
 /**
  * Save user settings to the backend
+ * Accepts partial settings - backend will merge with existing
  */
-export const saveRemoteSettings = async (settings: RemoteSettings): Promise<RemoteSettings> => {
+export const saveRemoteSettings = async (settings: Partial<RemoteSettings>): Promise<RemoteSettings> => {
   return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
     method: 'PUT',
     body: JSON.stringify(settings),
