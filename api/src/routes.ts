@@ -356,6 +356,9 @@ router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
       geminiApiKey: settings.geminiApiKey,
       checkFrequencyMinutes: settings.checkFrequencyMinutes,
       geminiStats: settings.geminiStats,
+      lastRefreshTime: settings.lastRefreshTime || null,
+      nextRefreshTime: settings.nextRefreshTime || null,
+      lastRefreshCount: settings.lastRefreshCount || 0,
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -379,13 +382,16 @@ router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
 router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const { geminiApiKey, checkFrequencyMinutes, geminiStats } = req.body;
+    const { geminiApiKey, checkFrequencyMinutes, geminiStats, lastRefreshTime, nextRefreshTime, lastRefreshCount } = req.body;
 
     // Build update object with only provided fields
     const updateData: Partial<UserSettings> = {};
     if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey;
     if (checkFrequencyMinutes !== undefined) updateData.checkFrequencyMinutes = checkFrequencyMinutes;
     if (geminiStats !== undefined) updateData.geminiStats = geminiStats;
+    if (lastRefreshTime !== undefined) updateData.lastRefreshTime = lastRefreshTime;
+    if (nextRefreshTime !== undefined) updateData.nextRefreshTime = nextRefreshTime;
+    if (lastRefreshCount !== undefined) updateData.lastRefreshCount = lastRefreshCount;
 
     const savedSettings = await saveUserSettings(userId, updateData);
 
@@ -394,6 +400,9 @@ router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
       geminiApiKey: savedSettings.geminiApiKey,
       checkFrequencyMinutes: savedSettings.checkFrequencyMinutes,
       geminiStats: savedSettings.geminiStats,
+      lastRefreshTime: savedSettings.lastRefreshTime || null,
+      nextRefreshTime: savedSettings.nextRefreshTime || null,
+      lastRefreshCount: savedSettings.lastRefreshCount || 0,
     });
   } catch (error) {
     console.error('Error saving settings:', error);

@@ -147,6 +147,10 @@ export interface RemoteSettings {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
   geminiStats: GeminiStats;
+  // Refresh schedule - persisted across browser sessions
+  lastRefreshTime?: string | null;
+  nextRefreshTime?: string | null;
+  lastRefreshCount?: number;
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   getGoogleTokenSilent,
   clearGoogleAuth,
   disconnectGoogleAccount,
+  removeCachedGoogleToken,
 } from './googleAuth';
 import {
   storeAuthData,
@@ -190,7 +191,8 @@ export const trySilentLogin = async (): Promise<{ user: User; token: string } | 
  * Flow:
  * 1. Get Google token interactively
  * 2. Send to backend for verification
- * 3. Store returned JWT + user profile
+ * 3. If backend rejects token (stale cache), clear cache and retry once
+ * 4. Store returned JWT + user profile
  *
  * @returns User profile and backend JWT
  * @throws Error if login fails
@@ -199,21 +201,46 @@ export const loginWithProvider = async (): Promise<{ user: User; token: string }
   console.log('[OAuth] Starting interactive login...');
 
   // Get Google token (may show consent screen)
-  const googleToken = await getGoogleTokenInteractive();
+  let googleToken = await getGoogleTokenInteractive();
   console.log('[OAuth] Got Google token');
 
-  // Authenticate with backend
-  const authResponse = await authenticateWithBackend(googleToken);
+  try {
+    // Authenticate with backend
+    const authResponse = await authenticateWithBackend(googleToken);
 
-  // Store auth data
-  await storeAuthData(authResponse.token, authResponse.user);
+    // Store auth data
+    await storeAuthData(authResponse.token, authResponse.user);
 
-  console.log('[OAuth] Interactive login successful:', authResponse.user.email);
+    console.log('[OAuth] Interactive login successful:', authResponse.user.email);
 
-  return {
-    user: authResponse.user,
-    token: authResponse.token,
-  };
+    return {
+      user: authResponse.user,
+      token: authResponse.token,
+    };
+  } catch (error) {
+    // If authentication failed, the cached token might be stale/revoked
+    // Clear it from Chrome's cache and try once more with a fresh token
+    console.log('[OAuth] Backend auth failed, clearing cached token and retrying...');
+
+    await removeCachedGoogleToken(googleToken);
+
+    // Get a fresh token (this will force Chrome to get a new one)
+    googleToken = await getGoogleTokenInteractive();
+    console.log('[OAuth] Got fresh Google token after cache clear');
+
+    // Try again with the fresh token
+    const authResponse = await authenticateWithBackend(googleToken);
+
+    // Store auth data
+    await storeAuthData(authResponse.token, authResponse.user);
+
+    console.log('[OAuth] Interactive login successful (after retry):', authResponse.user.email);
+
+    return {
+      user: authResponse.user,
+      token: authResponse.token,
+    };
+  }
 };
 
 /**

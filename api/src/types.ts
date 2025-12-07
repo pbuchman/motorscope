@@ -211,6 +211,15 @@ export interface UserSettings {
   /** Gemini API usage statistics */
   geminiStats: GeminiStats;
 
+  /** Last refresh timestamp (ISO string) - persists across browser sessions */
+  lastRefreshTime?: string | null;
+
+  /** Next scheduled refresh timestamp (ISO string) - persists across browser sessions */
+  nextRefreshTime?: string | null;
+
+  /** Number of listings refreshed in last run */
+  lastRefreshCount?: number;
+
   /** Last updated timestamp */
   updatedAt: string;
 }

@@ -167,15 +167,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isLoggedIn]);
 
-  // Load refresh status from storage
+  // Load refresh status from storage and merge with API settings for persistence
   const reloadRefreshStatus = useCallback(async () => {
     try {
-      const data = await getRefreshStatus();
-      setRefreshStatus(data);
+      // First get session storage data (runtime state)
+      const sessionData = await getRefreshStatus();
+
+      // If logged in, also get persisted data from API settings
+      if (isLoggedIn) {
+        try {
+          const remoteSettings = await getRemoteSettings();
+          // Merge API data (lastRefreshTime, nextRefreshTime, lastRefreshCount) with session data
+          const mergedStatus: RefreshStatus = {
+            ...sessionData,
+            lastRefreshTime: remoteSettings.lastRefreshTime ?? sessionData.lastRefreshTime,
+            nextRefreshTime: remoteSettings.nextRefreshTime ?? sessionData.nextRefreshTime,
+            lastRefreshCount: remoteSettings.lastRefreshCount ?? sessionData.lastRefreshCount,
+          };
+          setRefreshStatus(mergedStatus);
+        } catch (err) {
+          // If API fails, use session data only
+          console.warn('[AppContext] Failed to load refresh schedule from API:', err);
+          setRefreshStatus(sessionData);
+        }
+      } else {
+        setRefreshStatus(sessionData);
+      }
     } catch (err) {
       console.error('[AppContext] Failed to load refresh status:', err);
     }
-  }, []);
+  }, [isLoggedIn]);
 
   // Add or update a listing (requires login)
   const addListing = useCallback(async (listing: CarListing) => {

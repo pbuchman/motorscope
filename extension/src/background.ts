@@ -130,6 +130,42 @@ const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void
   await setInSessionStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
 };
 
+/**
+ * Persist refresh schedule to the backend API (for cross-session persistence)
+ * Only saves lastRefreshTime, nextRefreshTime, lastRefreshCount
+ */
+const persistRefreshScheduleToApi = async (schedule: {
+  lastRefreshTime?: string | null;
+  nextRefreshTime?: string | null;
+  lastRefreshCount?: number;
+}): Promise<void> => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      console.log('[BG] Not authenticated, skipping refresh schedule persistence');
+      return;
+    }
+
+    const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(schedule),
+    });
+
+    if (!response.ok) {
+      console.warn('[BG] Failed to persist refresh schedule:', response.status);
+    } else {
+      console.log('[BG] Refresh schedule persisted to API');
+    }
+  } catch (error) {
+    console.warn('[BG] Error persisting refresh schedule:', error);
+  }
+};
+
 // ============ Alarm Scheduling ============
 
 // Format time text for notifications
@@ -156,6 +192,9 @@ const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promi
 
   const nextRefreshTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
   await updateRefreshStatus({ nextRefreshTime });
+
+  // Persist to API for cross-session persistence
+  await persistRefreshScheduleToApi({ nextRefreshTime });
 
   console.log(`Alarm scheduled for ${minutes} minutes (${Math.round(minutes * 60)} seconds)`);
 };
@@ -319,6 +358,13 @@ const runBackgroundRefresh = async (): Promise<void> => {
     recentlyRefreshed: recentlyRefreshed.slice(0, 50),
   });
 
+  // Persist refresh schedule to API for cross-session persistence
+  await persistRefreshScheduleToApi({
+    lastRefreshTime: now,
+    nextRefreshTime,
+    lastRefreshCount: refreshedCount,
+  });
+
   // Show notification when refresh completes
   const timeText = formatTimeText(nextRefreshMinutes);
   let message = `Refreshed ${refreshedCount} listing${refreshedCount !== 1 ? 's' : ''}`;
@@ -397,7 +443,43 @@ const scheduleAuthCheck = async (): Promise<void> => {
 // Helper to schedule alarm based on stored nextRefreshTime or default interval
 const initializeAlarm = async (): Promise<void> => {
   const settings = await getSettings();
-  const refreshStatus = await getRefreshStatus();
+  let refreshStatus = await getRefreshStatus();
+
+  // If session storage has no nextRefreshTime, try to load from API settings
+  // This handles the case where browser was restarted
+  if (!refreshStatus.nextRefreshTime || !refreshStatus.lastRefreshTime) {
+    try {
+      const token = await getToken();
+      if (token) {
+        const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const apiSettings = await response.json();
+
+          // Merge API refresh schedule into session storage
+          if (apiSettings.nextRefreshTime || apiSettings.lastRefreshTime) {
+            const updatedStatus = {
+              ...refreshStatus,
+              lastRefreshTime: apiSettings.lastRefreshTime || refreshStatus.lastRefreshTime,
+              nextRefreshTime: apiSettings.nextRefreshTime || refreshStatus.nextRefreshTime,
+              lastRefreshCount: apiSettings.lastRefreshCount || refreshStatus.lastRefreshCount,
+            };
+            await updateRefreshStatus(updatedStatus);
+            refreshStatus = updatedStatus;
+            console.log('[BG] Restored refresh schedule from API');
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[BG] Could not load refresh schedule from API:', error);
+    }
+  }
 
   // Check if there's a stored nextRefreshTime that's still in the future
   if (refreshStatus.nextRefreshTime) {
