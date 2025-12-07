@@ -3,11 +3,10 @@ import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } f
 import { extensionStorage } from './services/extensionStorage';
 import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
 import { STORAGE_KEYS } from './services/settings/storageKeys';
-import { getBackendUrl } from './services/settings/extensionSettings';
 import { DEFAULT_REFRESH_STATUS } from './services/settings/refreshStatus';
 import { initializeAuth, trySilentLogin, isTokenExpired, getToken } from './auth/oauthClient';
 import { getStoredToken } from './auth/storage';
-import { LISTINGS_ENDPOINT_PATH, API_PREFIX } from './auth/config';
+import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, API_PREFIX, DEFAULT_BACKEND_URL } from './auth/config';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const AUTH_CHECK_ALARM_NAME = 'motorscope_auth_check';
@@ -15,18 +14,18 @@ const DEFAULT_FREQUENCY_MINUTES = 60;
 const AUTH_CHECK_INTERVAL_MINUTES = 5; // Check auth every 5 minutes
 const RATE_LIMIT_RETRY_MINUTES = 5;
 
-// ============ Storage Helpers ============
+// ============ Session Storage Helpers (for runtime state only) ============
 
-const getFromStorage = async <T>(key: string): Promise<T | null> => {
+const getFromSessionStorage = async <T>(key: string): Promise<T | null> => {
   const result = await extensionStorage.get<T>(key);
   return result ?? null;
 };
 
-const setInStorage = async <T>(key: string, value: T): Promise<void> => {
+const setInSessionStorage = async <T>(key: string, value: T): Promise<void> => {
   await extensionStorage.set(key, value);
 };
 
-// ============ Settings ============
+// ============ Settings (from API) ============
 
 interface Settings {
   checkFrequencyMinutes: number;
@@ -34,12 +33,33 @@ interface Settings {
 }
 
 const getSettings = async (): Promise<Settings> => {
-  const settings = await getFromStorage<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings);
-  const apiKey = await getFromStorage<string>(STORAGE_KEYS.geminiKey);
-  return {
-    checkFrequencyMinutes: settings?.checkFrequencyMinutes || DEFAULT_FREQUENCY_MINUTES,
-    geminiApiKey: apiKey || '',
-  };
+  try {
+    const token = await getToken();
+    if (!token) {
+      return { checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: '' };
+    }
+
+    const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Settings fetch failed: ${response.status}`);
+    }
+
+    const settings = await response.json();
+    return {
+      checkFrequencyMinutes: settings.checkFrequencyMinutes || DEFAULT_FREQUENCY_MINUTES,
+      geminiApiKey: settings.geminiApiKey || '',
+    };
+  } catch (error) {
+    console.warn('[BG] Failed to fetch settings from API:', error);
+    return { checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: '' };
+  }
 };
 
 // ============ API Helpers for Background Worker ============
@@ -57,8 +77,7 @@ const apiRequest = async <T>(
     throw new Error('Not authenticated');
   }
 
-  const baseUrl = await getBackendUrl();
-  const url = `${baseUrl}${API_PREFIX}${endpoint}`;
+  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
@@ -99,16 +118,16 @@ const saveListing = async (listing: CarListing): Promise<void> => {
   });
 };
 
-// ============ Refresh Status ============
+// ============ Refresh Status (session storage - runtime state only) ============
 
 const getRefreshStatus = async (): Promise<RefreshStatus> => {
-  const status = await getFromStorage<RefreshStatus>(STORAGE_KEYS.refreshStatus);
+  const status = await getFromSessionStorage<RefreshStatus>(STORAGE_KEYS.refreshStatus);
   return status || DEFAULT_REFRESH_STATUS;
 };
 
 const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void> => {
   const current = await getRefreshStatus();
-  await setInStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
+  await setInSessionStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
 };
 
 // ============ Alarm Scheduling ============
@@ -425,25 +444,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // Listen for settings changes to update alarm schedule
-chrome.storage.onChanged.addListener(async (changes, namespace) => {
-  if (namespace === 'local') {
-    if (changes[STORAGE_KEYS.settings]?.newValue) {
-      const newFrequency = changes[STORAGE_KEYS.settings].newValue.checkFrequencyMinutes;
-      if (typeof newFrequency === 'number' && newFrequency > 0) {
-        console.log(`Settings changed, rescheduling alarm for ${newFrequency} minutes`);
-        await scheduleAlarm(newFrequency);
-
-        chrome.notifications.create(`settings-changed-${Date.now()}`, {
-          type: 'basic',
-          iconUrl: 'icon.png',
-          title: 'MotorScope Schedule Updated',
-          message: `Refresh interval changed to ${formatTimeText(newFrequency)}.`,
-          priority: 2,
-        });
-      }
-    }
-  }
-});
+// Note: Settings are now stored in API, not local storage.
+// Settings changes are communicated via RESCHEDULE_ALARM message from the UI.
 
 // Handle manual refresh trigger from UI
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -460,7 +462,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'RESCHEDULE_ALARM') {
     const minutes = request.minutes || DEFAULT_FREQUENCY_MINUTES;
     scheduleAlarm(minutes)
-      .then(() => sendResponse({ success: true }))
+      .then(() => {
+        console.log(`Alarm rescheduled for ${minutes} minutes`);
+        sendResponse({ success: true });
+      })
       .catch((error) => sendResponse({ success: false, error: String(error) }));
     return true;
   }

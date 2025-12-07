@@ -1,16 +1,19 @@
 /**
  * Settings Service
  *
+ * All settings and data come from the backend API.
+ * Session storage is used ONLY for runtime state (refresh status).
+ * NO local/persistent storage is used.
+ *
  * @deprecated Import from './settings' instead for better tree-shaking.
- * This file re-exports for backward compatibility only.
  */
 
 // Re-export everything from the new modular structure
 export {
-  // Storage keys
+  // Storage keys (session storage only - for runtime state)
   STORAGE_KEYS,
 
-  // Extension settings
+  // Extension settings (from API)
   DEFAULT_SETTINGS,
   getSettings,
   saveSettings,
@@ -19,13 +22,13 @@ export {
   getBackendUrl,
   saveBackendUrl,
 
-  // Gemini stats & history
+  // Gemini stats & history (from API)
   getGeminiStats,
   getGeminiHistory,
   recordGeminiCall,
   clearGeminiLogs,
 
-  // Refresh status
+  // Refresh status (session storage - runtime state)
   DEFAULT_REFRESH_STATUS,
   getRefreshStatus,
 } from './settings';

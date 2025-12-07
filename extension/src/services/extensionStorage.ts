@@ -1,7 +1,15 @@
+/**
+ * Extension Session Storage
+ *
+ * Type-safe wrapper around chrome.storage.session for runtime state.
+ * Used ONLY for transient runtime state (refresh status, etc.).
+ * NOT for settings or persistent data - those come from API.
+ */
+
 const get = async <T>(key: string): Promise<T | undefined> => {
-  if (typeof chrome !== 'undefined' && chrome.storage) {
+  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
     return new Promise((resolve, reject) => {
-      chrome.storage.local.get([key], (result) => {
+      chrome.storage.session.get([key], (result) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
@@ -11,8 +19,9 @@ const get = async <T>(key: string): Promise<T | undefined> => {
     });
   }
 
+  // Fallback to sessionStorage for development (NOT localStorage)
   try {
-    const data = localStorage.getItem(key);
+    const data = sessionStorage.getItem(key);
     return data ? (JSON.parse(data) as T) : undefined;
   } catch (error) {
     return Promise.reject(error);
@@ -20,9 +29,9 @@ const get = async <T>(key: string): Promise<T | undefined> => {
 };
 
 const set = async (key: string, value: unknown): Promise<void> => {
-  if (typeof chrome !== 'undefined' && chrome.storage) {
+  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
     return new Promise((resolve, reject) => {
-      chrome.storage.local.set({ [key]: value }, () => {
+      chrome.storage.session.set({ [key]: value }, () => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
@@ -32,8 +41,9 @@ const set = async (key: string, value: unknown): Promise<void> => {
     });
   }
 
+  // Fallback to sessionStorage for development (NOT localStorage)
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    sessionStorage.setItem(key, JSON.stringify(value));
     return Promise.resolve();
   } catch (error) {
     return Promise.reject(error);

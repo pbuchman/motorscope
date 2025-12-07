@@ -2,13 +2,16 @@
  * Extension Settings Service
  *
  * Manages core extension configuration: API key, backend URL, check frequency.
- * Settings are stored across multiple storage keys for security (API key separate).
+ * All settings are fetched from and saved to the backend API.
+ * NO local storage is used for settings.
+ *
+ * Backend URL is the only exception - it's needed to know where to make API calls,
+ * so it has a hardcoded default.
  */
 
 import { ExtensionSettings } from '../../types';
 import { DEFAULT_BACKEND_URL } from '../../auth/config';
-import { STORAGE_KEYS } from './storageKeys';
-import { getWithDefault, setStorage } from './storageHelpers';
+import { getRemoteSettings, saveRemoteSettings } from '../../api/client';
 
 // ============================================================================
 // Defaults & Validation
@@ -29,52 +32,74 @@ function clampFrequency(value?: number): number {
 }
 
 // ============================================================================
-// Individual Setting Accessors
+// Settings Operations (API-only)
 // ============================================================================
 
-export async function getGeminiApiKey(): Promise<string> {
-  return getWithDefault(STORAGE_KEYS.geminiKey, '');
-}
-
-export async function saveGeminiApiKey(key: string): Promise<void> {
-  await setStorage(STORAGE_KEYS.geminiKey, key.trim());
-}
-
-export async function getBackendUrl(): Promise<string> {
-  return getWithDefault(STORAGE_KEYS.backendUrl, DEFAULT_BACKEND_URL);
-}
-
-export async function saveBackendUrl(url: string): Promise<void> {
-  await setStorage(STORAGE_KEYS.backendUrl, url.trim());
-}
-
-// ============================================================================
-// Combined Settings
-// ============================================================================
-
-/** Get all extension settings as a unified object */
+/**
+ * Get all extension settings from the API.
+ * Returns defaults if not authenticated or on error.
+ */
 export async function getSettings(): Promise<ExtensionSettings> {
-  const [stored, geminiApiKey, backendUrl] = await Promise.all([
-    getWithDefault<{ checkFrequencyMinutes?: number }>(STORAGE_KEYS.settings, {}),
-    getGeminiApiKey(),
-    getBackendUrl(),
-  ]);
-
-  return {
-    geminiApiKey,
-    checkFrequencyMinutes: clampFrequency(stored.checkFrequencyMinutes),
-    backendUrl,
-  };
+  try {
+    const remoteSettings = await getRemoteSettings();
+    return {
+      geminiApiKey: remoteSettings.geminiApiKey || '',
+      checkFrequencyMinutes: clampFrequency(remoteSettings.checkFrequencyMinutes),
+      backendUrl: DEFAULT_BACKEND_URL, // Backend URL is always the default
+    };
+  } catch (error) {
+    console.warn('Failed to fetch settings from API:', error);
+    return DEFAULT_SETTINGS;
+  }
 }
 
-/** Save all extension settings */
+/**
+ * Save all extension settings to the API.
+ */
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {
-  await Promise.all([
-    saveGeminiApiKey(settings.geminiApiKey),
-    saveBackendUrl(settings.backendUrl),
-    setStorage(STORAGE_KEYS.settings, {
+  try {
+    await saveRemoteSettings({
+      geminiApiKey: settings.geminiApiKey,
       checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
-    }),
-  ]);
+    });
+  } catch (error) {
+    console.warn('Failed to save settings to API:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// Individual Setting Accessors (for convenience)
+// ============================================================================
+
+/**
+ * Get Gemini API key from the API.
+ */
+export async function getGeminiApiKey(): Promise<string> {
+  const settings = await getSettings();
+  return settings.geminiApiKey;
+}
+
+/**
+ * Save Gemini API key to the API.
+ */
+export async function saveGeminiApiKey(key: string): Promise<void> {
+  await saveRemoteSettings({ geminiApiKey: key.trim() });
+}
+
+/**
+ * Get backend URL - always returns the default.
+ * The backend URL is hardcoded since we need it to make API calls.
+ */
+export async function getBackendUrl(): Promise<string> {
+  return DEFAULT_BACKEND_URL;
+}
+
+/**
+ * Save backend URL - no-op since backend URL is hardcoded.
+ * @deprecated Backend URL cannot be changed.
+ */
+export async function saveBackendUrl(_url: string): Promise<void> {
+  console.warn('saveBackendUrl is deprecated - backend URL is hardcoded');
 }
 

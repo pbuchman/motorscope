@@ -63,6 +63,20 @@ declare namespace chrome {
         callback?: () => void
       ): void;
     }
+    export namespace session {
+      export function get(
+        keys: string | string[] | null,
+        callback: (result: { [key: string]: any }) => void
+      ): void;
+      export function set(
+        items: { [key: string]: any },
+        callback?: () => void
+      ): void;
+      export function remove(
+        keys: string | string[],
+        callback?: () => void
+      ): void;
+    }
     export const onChanged: {
       addListener(
         callback: (

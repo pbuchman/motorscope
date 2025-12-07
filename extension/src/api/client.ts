@@ -3,12 +3,13 @@
  *
  * Handles all API calls to the backend for listing operations.
  * Automatically includes authentication token in requests.
+ *
+ * Backend URL is hardcoded - all settings come from API.
  */
 
 import { CarListing, GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { getToken } from '../auth/oauthClient';
 import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL, API_PREFIX } from '../auth/config';
-import { getBackendUrl } from '../services/settings/extensionSettings';
 
 const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
 
@@ -27,21 +28,10 @@ export class ApiError extends Error {
 }
 
 /**
- * Get the configured backend base URL
- */
-const getBaseUrl = async (): Promise<string> => {
-  try {
-    return await getBackendUrl();
-  } catch {
-    return DEFAULT_BACKEND_URL;
-  }
-};
-
-/**
  * Build full API URL from base URL and endpoint
  */
-const buildApiUrl = (baseUrl: string, endpoint: string): string => {
-  return `${baseUrl}${API_PREFIX}${endpoint}`;
+const buildApiUrl = (endpoint: string): string => {
+  return `${DEFAULT_BACKEND_URL}${API_PREFIX}${endpoint}`;
 };
 
 /**
@@ -61,8 +51,7 @@ const apiRequest = async <T>(
     throw new ApiError('Not authenticated', 401, true);
   }
 
-  const baseUrl = await getBaseUrl();
-  const url = buildApiUrl(baseUrl, endpoint);
+  const url = buildApiUrl(endpoint);
 
   const response = await fetch(url, {
     ...options,
@@ -143,8 +132,7 @@ export const deleteRemoteListing = async (
  * @returns Health status
  */
 export const checkBackendHealth = async (): Promise<{ status: string; firestore: string }> => {
-  const baseUrl = await getBaseUrl();
-  const response = await fetch(buildApiUrl(baseUrl, '/healthz'));
+  const response = await fetch(buildApiUrl('/healthz'));
   if (!response.ok) {
     throw new Error('Backend health check failed');
   }

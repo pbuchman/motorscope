@@ -60,7 +60,8 @@ export interface AuthState {
 }
 
 /**
- * Stored auth data in chrome.storage.local
+ * Stored auth data in chrome.storage.session
+ * Session storage is cleared when browser closes or user logs out.
  */
 export interface StoredAuthData {
   token: string;

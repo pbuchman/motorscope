@@ -1,7 +1,9 @@
 /**
- * Chrome Storage Utilities
+ * Chrome Session Storage Utilities
  *
- * Type-safe wrapper around chrome.storage.local for auth data.
+ * Type-safe wrapper around chrome.storage.session for auth data.
+ * Session storage is cleared when the browser is closed or user logs out.
+ * NO local/persistent storage is used.
  */
 
 import { User, StoredAuthData } from './types';
@@ -14,71 +16,69 @@ export const AUTH_STORAGE_KEYS = {
 } as const;
 
 /**
- * Check if running in Chrome extension context
+ * Check if running in Chrome extension context with session storage
  */
 export const isChromeExtension = (): boolean => {
-  return typeof chrome !== 'undefined' && !!chrome.storage?.local;
+  return typeof chrome !== 'undefined' && !!chrome.storage?.session;
 };
 
 /**
- * Get a value from chrome.storage.local
+ * Get a value from chrome.storage.session
  */
 export const getStorageItem = async <T>(key: string): Promise<T | null> => {
   if (!isChromeExtension()) {
-    // Fallback to localStorage for development
-    const item = localStorage.getItem(key);
+    // Fallback to sessionStorage for development (NOT localStorage)
+    const item = sessionStorage.getItem(key);
     return item ? JSON.parse(item) : null;
   }
 
   return new Promise((resolve) => {
-    chrome.storage.local.get(key, (result) => {
+    chrome.storage.session.get(key, (result) => {
       resolve(result[key] ?? null);
     });
   });
 };
 
 /**
- * Set a value in chrome.storage.local
+ * Set a value in chrome.storage.session
  */
 export const setStorageItem = async <T>(key: string, value: T): Promise<void> => {
   if (!isChromeExtension()) {
-    // Fallback to localStorage for development
-    localStorage.setItem(key, JSON.stringify(value));
+    // Fallback to sessionStorage for development (NOT localStorage)
+    sessionStorage.setItem(key, JSON.stringify(value));
     return;
   }
 
   return new Promise((resolve) => {
-    chrome.storage.local.set({ [key]: value }, resolve);
+    chrome.storage.session.set({ [key]: value }, resolve);
   });
 };
 
 /**
- * Remove a value from chrome.storage.local
+ * Remove a value from chrome.storage.session
  */
 export const removeStorageItem = async (key: string): Promise<void> => {
   if (!isChromeExtension()) {
-    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
     return;
   }
 
   return new Promise((resolve) => {
-    // Cast to any to work around @types/chrome missing remove() signature
-    (chrome.storage.local as any).remove([key], resolve);
+    chrome.storage.session.remove([key], resolve);
   });
 };
 
 /**
- * Remove multiple values from chrome.storage.local
+ * Remove multiple values from chrome.storage.session
  */
 export const removeStorageItems = async (keys: string[]): Promise<void> => {
   if (!isChromeExtension()) {
-    keys.forEach(key => localStorage.removeItem(key));
+    keys.forEach(key => sessionStorage.removeItem(key));
     return;
   }
 
   return new Promise((resolve) => {
-    // Cast to any to work around @types/chrome missing remove() signature
-    (chrome.storage.local as any).remove(keys, resolve);
+    chrome.storage.session.remove(keys, resolve);
   });
 };
 
@@ -87,7 +87,7 @@ export const removeStorageItems = async (keys: string[]): Promise<void> => {
 // =============================================================================
 
 /**
- * Store authentication data (JWT + user profile)
+ * Store authentication data (JWT + user profile) in session storage
  */
 export const storeAuthData = async (token: string, user: User): Promise<void> => {
   const storedAt = Date.now();
@@ -96,11 +96,11 @@ export const storeAuthData = async (token: string, user: User): Promise<void> =>
     setStorageItem(AUTH_STORAGE_KEYS.USER, user),
     setStorageItem(AUTH_STORAGE_KEYS.STORED_AT, storedAt),
   ]);
-  console.log('[Storage] Auth data stored');
+  console.log('[Storage] Auth data stored in session');
 };
 
 /**
- * Retrieve stored authentication data
+ * Retrieve stored authentication data from session storage
  */
 export const getStoredAuthData = async (): Promise<StoredAuthData | null> => {
   const [token, user, storedAt] = await Promise.all([
@@ -117,7 +117,7 @@ export const getStoredAuthData = async (): Promise<StoredAuthData | null> => {
 };
 
 /**
- * Clear all authentication data from storage
+ * Clear all authentication data from session storage
  */
 export const clearAuthData = async (): Promise<void> => {
   await removeStorageItems([
@@ -125,18 +125,18 @@ export const clearAuthData = async (): Promise<void> => {
     AUTH_STORAGE_KEYS.USER,
     AUTH_STORAGE_KEYS.STORED_AT,
   ]);
-  console.log('[Storage] Auth data cleared');
+  console.log('[Storage] Auth data cleared from session');
 };
 
 /**
- * Get the stored JWT token
+ * Get the stored JWT token from session storage
  */
 export const getStoredToken = async (): Promise<string | null> => {
   return getStorageItem<string>(AUTH_STORAGE_KEYS.TOKEN);
 };
 
 /**
- * Get the stored user profile
+ * Get the stored user profile from session storage
  */
 export const getStoredUser = async (): Promise<User | null> => {
   return getStorageItem<User>(AUTH_STORAGE_KEYS.USER);

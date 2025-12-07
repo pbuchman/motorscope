@@ -27,7 +27,6 @@ import {
   getStoredToken,
   getStoredUser,
 } from './storage';
-import { getBackendUrl } from '../services/settings/extensionSettings';
 import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH } from './config';
 
 // Re-export types for convenience
@@ -39,23 +38,11 @@ export type UserProfile = User; // Alias for backward compatibility
 // =============================================================================
 
 /**
- * Get the configured backend base URL
- */
-const getBaseUrl = async (): Promise<string> => {
-  try {
-    return await getBackendUrl();
-  } catch {
-    return DEFAULT_BACKEND_URL;
-  }
-};
-
-/**
  * Call backend /auth/google endpoint with Google access token
  * Backend verifies token and returns JWT + user profile
  */
 const authenticateWithBackend = async (googleToken: string): Promise<BackendAuthResponse> => {
-  const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
+  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
 
   console.log('[OAuth] Calling backend auth endpoint...');
 
