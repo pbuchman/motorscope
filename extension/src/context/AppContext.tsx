@@ -1,18 +1,12 @@
 /**
  * Application Context
  *
- * Manages application state with support for both local and remote storage.
- * - When logged out: uses local storage
- * - When logged in: uses remote backend API for listings and settings
+ * Manages application state using remote backend API.
+ * User must be logged in to access data - no local storage fallback.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { CarListing, ExtensionSettings, RefreshStatus, GeminiStats } from '../types';
-import {
-  getListings as getLocalListings,
-  saveListing as saveLocalListing,
-  removeListing as removeLocalListing,
-} from '../services/storageService';
+import { CarListing, ExtensionSettings, RefreshStatus } from '../types';
 import {
   getRemoteListings,
   saveRemoteListing,
@@ -28,7 +22,6 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_REFRESH_STATUS,
   getGeminiStats as getLocalGeminiStats,
-  recordGeminiCall as recordLocalGeminiCall,
 } from '../services/settingsService';
 import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '../hooks/useChromeMessaging';
 import { refreshSingleListing, RefreshResult } from '../services/refreshService';
@@ -128,21 +121,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [auth]);
 
-  // Load listings from appropriate source
+  // Load listings from remote backend
   const reloadListings = useCallback(async () => {
+    if (!isLoggedIn) {
+      setListings([]);
+      setIsLoadingListings(false);
+      return;
+    }
+
     setIsLoadingListings(true);
     clearError();
 
     try {
-      if (isLoggedIn) {
-        // Load from remote backend
-        const data = await getRemoteListings();
-        setListings(data);
-      } else {
-        // Load from local storage
-        const data = await getLocalListings();
-        setListings(data);
-      }
+      const data = await getRemoteListings();
+      setListings(data);
     } catch (err) {
       console.error('[AppContext] Failed to load listings:', err);
       handleApiError(err);
@@ -151,18 +143,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isLoggedIn, clearError, handleApiError]);
 
-  // Load settings from appropriate source
+  // Load settings from remote backend + local backend URL
   const reloadSettings = useCallback(async () => {
     setIsLoadingSettings(true);
     try {
+      const localSettings = await getLocalSettings();
+
       if (isLoggedIn) {
         // Load from remote backend (except backendUrl which is always local)
         const remoteSettings = await getRemoteSettings();
-        const localSettings = await getLocalSettings();
 
-        // IMPORTANT: Sync the remote API key to local storage
-        // This is needed because the background refresh service can't access the auth context
-        // and needs to get the API key from local storage
+        // Sync the remote API key to local storage for background refresh service
         if (remoteSettings.geminiApiKey) {
           await saveLocalSettings({
             geminiApiKey: remoteSettings.geminiApiKey,
@@ -174,12 +165,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSettings({
           geminiApiKey: remoteSettings.geminiApiKey,
           checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes,
-          backendUrl: localSettings.backendUrl, // Backend URL is always local
+          backendUrl: localSettings.backendUrl,
         });
       } else {
-        // Load from local storage
-        const data = await getLocalSettings();
-        setSettings(data);
+        // When not logged in, use local settings (only for backendUrl)
+        setSettings(localSettings);
       }
     } catch (err) {
       console.error('[AppContext] Failed to load settings:', err);
@@ -205,18 +195,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  // Add or update a listing
+  // Add or update a listing (requires login)
   const addListing = useCallback(async (listing: CarListing) => {
+    if (!isLoggedIn) {
+      setError('Please sign in to track listings');
+      throw new Error('Not authenticated');
+    }
+
     clearError();
 
     try {
-      if (isLoggedIn) {
-        // Save to remote backend
-        await saveRemoteListing(listing);
-      } else {
-        // Save to local storage
-        await saveLocalListing(listing);
-      }
+      await saveRemoteListing(listing);
       await reloadListings();
       notifyListingUpdated();
     } catch (err) {
@@ -226,18 +215,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isLoggedIn, reloadListings, notifyListingUpdated, clearError, handleApiError]);
 
-  // Remove a listing
+  // Remove a listing (requires login)
   const removeListing = useCallback(async (id: string) => {
+    if (!isLoggedIn) {
+      setError('Please sign in to manage listings');
+      throw new Error('Not authenticated');
+    }
+
     clearError();
 
     try {
-      if (isLoggedIn) {
-        // Delete from remote backend
-        await deleteRemoteListing(id);
-      } else {
-        // Remove from local storage
-        await removeLocalListing(id);
-      }
+      await deleteRemoteListing(id);
       await reloadListings();
       notifyListingUpdated();
     } catch (err) {
@@ -247,8 +235,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isLoggedIn, reloadListings, notifyListingUpdated, clearError, handleApiError]);
 
-  // Refresh a single listing
+  // Refresh a single listing (requires login)
   const refreshListing = useCallback(async (listing: CarListing): Promise<RefreshResult> => {
+    if (!isLoggedIn) {
+      setError('Please sign in to refresh listings');
+      throw new Error('Not authenticated');
+    }
+
     // Add to refreshing set
     setRefreshingIds(prev => new Set(prev).add(listing.id));
 
@@ -257,11 +250,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // Save the updated listing
       if (result.success || result.listing.lastRefreshStatus === 'error') {
-        if (isLoggedIn) {
-          await saveRemoteListing(result.listing);
-        } else {
-          await saveLocalListing(result.listing);
-        }
+        await saveRemoteListing(result.listing);
         await reloadListings();
         notifyListingUpdated();
       }
@@ -326,20 +315,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [reloadListings, reloadRefreshStatus]);
 
-  // Listen for storage changes (only relevant for local storage mode)
+  // Listen for storage changes (refresh status updates from background worker)
   useStorageListener((changes) => {
-    if (!isLoggedIn) {
-      if (changes.motorscope_listings) {
-        reloadListings();
-      }
+    if (changes.motorscope_refresh_status) {
+      reloadRefreshStatus();
     }
     if (changes.motorscope_settings || changes.motorscope_gemini_key) {
       reloadSettings();
     }
-    if (changes.motorscope_refresh_status) {
-      reloadRefreshStatus();
-    }
-  }, [isLoggedIn, reloadListings, reloadSettings, reloadRefreshStatus]);
+  }, [reloadSettings, reloadRefreshStatus]);
+
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<AppContextValue>(() => ({

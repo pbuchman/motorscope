@@ -59,7 +59,51 @@ const Dashboard: React.FC = () => {
     });
   }, [listings, searchTerm]);
 
-  // Loading state
+  // Auth loading state
+  if (isAuthLoading) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login required state
+  if (!isLoggedIn) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Car className="w-10 h-10 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Sign in to MotorScope</h2>
+          <p className="text-slate-500 mb-8">
+            Track car listings, monitor price changes, and access your watchlist from anywhere.
+          </p>
+          <button
+            onClick={handleLogin}
+            disabled={auth.isLoggingIn}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl font-medium transition-colors disabled:opacity-50 shadow-sm"
+          >
+            {auth.isLoggingIn ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <GoogleLogo className="w-5 h-5" />
+            )}
+            <span>Sign in with Google</span>
+          </button>
+          {auth.error && (
+            <p className="text-red-500 text-sm mt-4">{auth.error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Data loading state
   if (isLoading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -97,28 +141,14 @@ const Dashboard: React.FC = () => {
               />
             </div>
 
-            {/* Auth Button */}
-            {isAuthLoading ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-700 rounded-lg">
-                <Loader2 className="w-4 h-4 animate-spin" />
-              </div>
-            ) : isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
-              >
-                <span className="max-w-32 truncate">{auth.user?.email}</span>
-                <LogOut className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="flex items-center gap-2 px-3 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors"
-              >
-                <GoogleLogo className="w-4 h-4" />
-                <span>Sign in</span>
-              </button>
-            )}
+            {/* User / Logout */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
+            >
+              <span className="max-w-32 truncate">{auth.user?.email}</span>
+              <LogOut className="w-4 h-4" />
+            </button>
 
             <a
               href="index.html?view=settings"
@@ -170,3 +200,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+

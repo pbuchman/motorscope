@@ -18,92 +18,6 @@ const GoogleLogo: React.FC<{ className?: string }> = ({ className = "w-4 h-4" })
   </svg>
 );
 
-/**
- * Merge Dialog Component
- * Shows when user logs in with existing local data
- */
-const MergeDialog: React.FC<{
-  isOpen: boolean;
-  localCount: number;
-  onMerge: () => Promise<void>;
-  onDiscard: () => Promise<void>;
-}> = ({ isOpen, localCount, onMerge, onDiscard }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [action, setAction] = useState<'merge' | 'discard' | null>(null);
-
-  if (!isOpen) return null;
-
-  const handleMerge = async () => {
-    setIsProcessing(true);
-    setAction('merge');
-    try {
-      await onMerge();
-    } finally {
-      setIsProcessing(false);
-      setAction(null);
-    }
-  };
-
-  const handleDiscard = async () => {
-    setIsProcessing(true);
-    setAction('discard');
-    try {
-      await onDiscard();
-    } finally {
-      setIsProcessing(false);
-      setAction(null);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5">
-        <h3 className="font-bold text-lg text-slate-900 mb-3">Local Data Found</h3>
-        <p className="text-slate-600 text-sm mb-4">
-          You have <strong>{localCount}</strong> listing{localCount !== 1 ? 's' : ''} saved locally.
-          Would you like to merge them with your cloud data?
-        </p>
-
-        <div className="space-y-2">
-          <button
-            onClick={handleMerge}
-            disabled={isProcessing}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg flex items-center justify-center gap-2"
-          >
-            {isProcessing && action === 'merge' ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Merging...
-              </>
-            ) : (
-              'Merge Local Data'
-            )}
-          </button>
-
-          <button
-            onClick={handleDiscard}
-            disabled={isProcessing}
-            className="w-full py-2.5 border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 font-medium rounded-lg flex items-center justify-center gap-2"
-          >
-            {isProcessing && action === 'discard' ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Discarding...
-              </>
-            ) : (
-              'Discard Local Data'
-            )}
-          </button>
-        </div>
-
-        <p className="text-xs text-slate-400 mt-3 text-center">
-          Discarding will remove local data permanently.
-        </p>
-      </div>
-    </div>
-  );
-};
-
 const ExtensionPopup: React.FC = () => {
   const { listings, add, remove, error: listingsError, clearError } = useListings();
   const { settings, isLoading: settingsLoading, reload: reloadSettings } = useSettings();
@@ -272,16 +186,36 @@ const ExtensionPopup: React.FC = () => {
   const isLoggedIn = auth.status === 'logged_in';
   const isAuthLoading = auth.status === 'loading' || auth.isLoggingIn;
 
+  // Login required view
+  const LoginRequiredView = () => (
+    <div className="flex flex-col items-center py-8">
+      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+        <Car className="w-8 h-8 text-blue-600" />
+      </div>
+      <h3 className="font-bold text-slate-800 mb-2">Sign in to use MotorScope</h3>
+      <p className="text-slate-500 text-sm mb-6 text-center px-4">
+        Track car listings, monitor price changes, and sync across devices.
+      </p>
+      <button
+        onClick={handleLogin}
+        disabled={isAuthLoading}
+        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition-colors disabled:opacity-50"
+      >
+        {isAuthLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <GoogleLogo className="w-5 h-5" />
+        )}
+        <span>Sign in with Google</span>
+      </button>
+      {auth.error && (
+        <p className="text-red-500 text-xs mt-4">{auth.error}</p>
+      )}
+    </div>
+  );
+
   return (
     <div className="w-full h-full bg-white flex flex-col font-sans min-h-[500px]">
-      {/* Merge Dialog */}
-      <MergeDialog
-        isOpen={auth.mergeDialog.isOpen}
-        localCount={auth.mergeDialog.localCount}
-        onMerge={auth.mergeDialog.onMerge}
-        onDiscard={auth.mergeDialog.onDiscard}
-      />
-
       {/* Navbar */}
       <div className="bg-slate-900 text-white p-4 flex flex-col gap-2 shadow-md">
         <div className="flex items-center justify-between">
@@ -307,13 +241,8 @@ const ExtensionPopup: React.FC = () => {
         </div>
 
         {/* Auth Section */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-          {isAuthLoading ? (
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Loading...</span>
-            </div>
-          ) : isLoggedIn ? (
+        {isLoggedIn && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-700">
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1.5 rounded transition-colors w-full justify-between"
@@ -321,22 +250,22 @@ const ExtensionPopup: React.FC = () => {
               <span className="truncate max-w-[180px]">{auth.user?.email}</span>
               <LogOut className="w-3 h-3 shrink-0" />
             </button>
-          ) : (
-            <button
-              onClick={handleLogin}
-              className="flex items-center gap-2 text-xs bg-white text-slate-900 hover:bg-slate-100 px-3 py-1.5 rounded transition-colors font-medium w-full justify-center"
-            >
-              <GoogleLogo className="w-4 h-4" />
-              <span>Sign in with Google</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto">
-        {/* Preview/Confirmation Screen */}
-        {previewData ? (
+        {/* Auth Loading State */}
+        {auth.status === 'loading' ? (
+          <div className="flex flex-col items-center py-8">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+            <p className="text-slate-500 text-sm">Loading...</p>
+          </div>
+        ) : !isLoggedIn ? (
+          <LoginRequiredView />
+        ) : previewData ? (
+          /* Preview/Confirmation Screen */
           <div className="w-full">
             {/* VIN Warning */}
             {showVinWarning && (
@@ -594,29 +523,13 @@ const ExtensionPopup: React.FC = () => {
                      <div className="flex flex-col items-center text-center">
                        <Key className="w-6 h-6 text-amber-500 mb-2" />
                        <p className="text-amber-800 font-medium text-sm mb-3">API Key Required</p>
-                       <div className="flex gap-2 w-full">
-                         {!isLoggedIn && (
-                           <button
-                             onClick={handleLogin}
-                             disabled={isAuthLoading}
-                             className="flex-1 text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                           >
-                             {isAuthLoading ? (
-                               <Loader2 className="w-3 h-3 animate-spin" />
-                             ) : (
-                               <GoogleLogo className="w-3 h-3" />
-                             )}
-                             Sign in
-                           </button>
-                         )}
-                         <button
-                           onClick={openSettings}
-                           className={`${isLoggedIn ? 'w-full' : 'flex-1'} text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5`}
-                         >
-                           <Settings className="w-3 h-3" />
-                           Settings
-                         </button>
-                       </div>
+                       <button
+                         onClick={openSettings}
+                         className="w-full text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5"
+                       >
+                         <Settings className="w-3 h-3" />
+                         Configure in Settings
+                       </button>
                      </div>
                    </div>
                  ) : (
@@ -664,3 +577,4 @@ const ExtensionPopup: React.FC = () => {
 };
 
 export default ExtensionPopup;
+

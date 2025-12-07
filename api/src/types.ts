@@ -176,14 +176,22 @@ export interface GeminiCallHistoryEntry {
 }
 
 /**
- * Gemini API usage statistics
+ * Gemini history document stored in Firestore
+ * Each history entry is stored as a separate document with userId
+ */
+export interface GeminiHistoryDocument extends GeminiCallHistoryEntry {
+  /** User ID that owns this history entry */
+  userId: string;
+}
+
+/**
+ * Gemini API usage statistics (aggregate counts only)
  */
 export interface GeminiStats {
   allTimeTotalCalls: number;
   totalCalls: number;
   successCount: number;
   errorCount: number;
-  history: GeminiCallHistoryEntry[];
 }
 
 /**

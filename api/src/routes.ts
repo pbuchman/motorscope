@@ -15,8 +15,11 @@ import {
   checkFirestoreHealth,
   getUserSettings,
   saveUserSettings,
+  getGeminiHistory,
+  addGeminiHistoryEntries,
+  clearGeminiHistory,
 } from './db.js';
-import type { User, CarListing, AuthResponse, HealthResponse, UserSettings } from './types.js';
+import type { User, CarListing, AuthResponse, HealthResponse, UserSettings, GeminiCallHistoryEntry } from './types.js';
 
 const router = Router();
 
@@ -364,6 +367,112 @@ router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to save settings',
+      statusCode: 500,
+    });
+  }
+});
+
+// =============================================================================
+// Gemini History API (Protected Routes)
+// =============================================================================
+
+/**
+ * GET /api/gemini-history
+ *
+ * Get Gemini API call history for the authenticated user.
+ * Requires JWT authentication.
+ *
+ * Query params:
+ *   limit?: number (default 100, max 500)
+ *
+ * Response: GeminiCallHistoryEntry[]
+ */
+router.get('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+
+    const history = await getGeminiHistory(userId, limit);
+
+    res.status(200).json(history);
+  } catch (error) {
+    console.error('Error fetching Gemini history:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch Gemini history',
+      statusCode: 500,
+    });
+  }
+});
+
+/**
+ * POST /api/gemini-history
+ *
+ * Add Gemini history entries for the authenticated user.
+ * Requires JWT authentication.
+ *
+ * Request body: GeminiCallHistoryEntry[] or GeminiCallHistoryEntry
+ * Response: { success: true, count: number }
+ */
+router.post('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const body = req.body;
+
+    // Accept single entry or array
+    const entries: GeminiCallHistoryEntry[] = Array.isArray(body) ? body : [body];
+
+    // Validate entries
+    for (const entry of entries) {
+      if (!entry.id || typeof entry.id !== 'string') {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Each history entry must have a valid id field',
+          statusCode: 400,
+        });
+        return;
+      }
+    }
+
+    await addGeminiHistoryEntries(entries, userId);
+
+    res.status(200).json({
+      success: true,
+      count: entries.length,
+    });
+  } catch (error) {
+    console.error('Error saving Gemini history:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to save Gemini history',
+      statusCode: 500,
+    });
+  }
+});
+
+/**
+ * DELETE /api/gemini-history
+ *
+ * Clear all Gemini history for the authenticated user.
+ * Requires JWT authentication.
+ *
+ * Response: { success: true, deleted: number }
+ */
+router.delete('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const deletedCount = await clearGeminiHistory(userId);
+
+    res.status(200).json({
+      success: true,
+      deleted: deletedCount,
+    });
+  } catch (error) {
+    console.error('Error clearing Gemini history:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to clear Gemini history',
       statusCode: 500,
     });
   }

@@ -68,21 +68,34 @@ export const saveSettings = async (settings: ExtensionSettings): Promise<void> =
   });
 };
 
+// Gemini stats (aggregate counts only - history stored separately)
 export const getGeminiStats = async (): Promise<GeminiStats> => {
   const stats = await extensionStorage.get<GeminiStats>(STORAGE_KEYS.geminiStats);
-  return stats || { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] };
+  return stats || { allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0 };
+};
+
+// Gemini history stored separately
+const GEMINI_HISTORY_KEY = 'motorscope_gemini_history';
+
+export const getGeminiHistory = async (): Promise<GeminiCallHistoryEntry[]> => {
+  const history = await extensionStorage.get<GeminiCallHistoryEntry[]>(GEMINI_HISTORY_KEY);
+  return history || [];
 };
 
 export const recordGeminiCall = async (entry: GeminiCallHistoryEntry): Promise<void> => {
+  // Update stats
   const stats = await getGeminiStats();
-  const history = [entry, ...stats.history].slice(0, 200);
   await extensionStorage.set(STORAGE_KEYS.geminiStats, {
     allTimeTotalCalls: (stats.allTimeTotalCalls || 0) + 1,
     totalCalls: stats.totalCalls + 1,
     successCount: entry.status === 'success' ? stats.successCount + 1 : stats.successCount,
     errorCount: entry.status === 'error' ? stats.errorCount + 1 : stats.errorCount,
-    history,
   });
+
+  // Update history (keep last 200 entries locally)
+  const history = await getGeminiHistory();
+  const updatedHistory = [entry, ...history].slice(0, 200);
+  await extensionStorage.set(GEMINI_HISTORY_KEY, updatedHistory);
 };
 
 // Clear logs and session counts, but preserve allTimeTotalCalls
@@ -93,8 +106,9 @@ export const clearGeminiLogs = async (): Promise<void> => {
     totalCalls: 0,
     successCount: 0,
     errorCount: 0,
-    history: []
   });
+  // Clear history
+  await extensionStorage.set(GEMINI_HISTORY_KEY, []);
 };
 
 export const DEFAULT_REFRESH_STATUS: RefreshStatus = {

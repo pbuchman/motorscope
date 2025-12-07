@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { GeminiStats } from '../types';
+import { GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { useSettings, useRefreshStatus, useListings } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
-import { getGeminiStats, clearGeminiLogs } from '../services/settingsService';
+import { getGeminiStats, getGeminiHistory, clearGeminiLogs } from '../services/settingsService';
 import { BACKEND_SERVER_OPTIONS } from '../auth/config';
 import { useChromeMessaging } from '../hooks/useChromeMessaging';
 import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Car, Sparkles, LogOut, Key, ExternalLink } from 'lucide-react';
@@ -99,7 +99,7 @@ const StatusMessage: React.FC<{ message: string; type?: 'success' | 'warning'; o
 };
 
 const SettingsPage: React.FC = () => {
-  const { settings, update: updateSettings, reload: reloadSettings, isLoading: isLoadingSettings } = useSettings();
+  const { settings, update: updateSettings, reload: reloadSettings } = useSettings();
   const { status: refreshStatus } = useRefreshStatus();
   const { reload: reloadListings } = useListings();
   const auth = useAuth();
@@ -110,7 +110,8 @@ const SettingsPage: React.FC = () => {
 
   // Local form state
   const [formSettings, setFormSettings] = useState(settings);
-  const [stats, setStats] = useState<GeminiStats>({ allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0, history: [] });
+  const [stats, setStats] = useState<GeminiStats>({ allTimeTotalCalls: 0, totalCalls: 0, successCount: 0, errorCount: 0 });
+  const [history, setHistory] = useState<GeminiCallHistoryEntry[]>([]);
   const [countdown, setCountdown] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,11 +133,13 @@ const SettingsPage: React.FC = () => {
     }
   }, [auth.status, reloadSettings]);
 
-  // Load stats on mount
+  // Load stats and history on mount
   useEffect(() => {
     const load = async () => {
       const loadedStats = await getGeminiStats();
+      const loadedHistory = await getGeminiHistory();
       setStats(loadedStats);
+      setHistory(loadedHistory);
     };
     load();
   }, []);
@@ -247,7 +250,9 @@ const SettingsPage: React.FC = () => {
   const refreshStats = useCallback(async () => {
     setRefreshing(true);
     const latestStats = await getGeminiStats();
+    const latestHistory = await getGeminiHistory();
     setStats(latestStats);
+    setHistory(latestHistory);
     setTimeout(() => setRefreshing(false), 500);
   }, []);
 
@@ -259,6 +264,50 @@ const SettingsPage: React.FC = () => {
   const apiKeyChanged = formSettings.geminiApiKey !== settings.geminiApiKey;
   // Save button should be disabled if: empty form key, or currently saving/validating
   const canSave = hasFormApiKey && !saving && !validatingKey;
+
+  // Auth loading state
+  if (isAuthLoading) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login required state
+  if (!isLoggedIn) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Car className="w-10 h-10 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Sign in to MotorScope</h2>
+          <p className="text-slate-500 mb-8">
+            Sign in to configure your settings and enable background sync.
+          </p>
+          <button
+            onClick={handleLogin}
+            disabled={auth.isLoggingIn}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl font-medium transition-colors disabled:opacity-50 shadow-sm"
+          >
+            {auth.isLoggingIn ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <GoogleLogo className="w-5 h-5" />
+            )}
+            <span>Sign in with Google</span>
+          </button>
+          {auth.error && (
+            <p className="text-red-500 text-sm mt-4">{auth.error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen overflow-y-auto">
@@ -573,10 +622,12 @@ const SettingsPage: React.FC = () => {
         </section>
 
         {/* Gemini AI Stats */}
-        <GeminiUsageSection stats={stats} refreshing={refreshing} onRefresh={refreshStats} onClearLogs={async () => {
+        <GeminiUsageSection stats={stats} history={history} refreshing={refreshing} onRefresh={refreshStats} onClearLogs={async () => {
           await clearGeminiLogs();
           const latestStats = await getGeminiStats();
+          const latestHistory = await getGeminiHistory();
           setStats(latestStats);
+          setHistory(latestHistory);
         }} />
       </div>
     </div>
@@ -586,17 +637,18 @@ const SettingsPage: React.FC = () => {
 // Gemini Usage Section
 interface GeminiUsageSectionProps {
   stats: GeminiStats;
+  history: GeminiCallHistoryEntry[];
   refreshing: boolean;
   onRefresh: () => void;
   onClearLogs: () => void;
 }
 
-const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshing, onRefresh, onClearLogs }) => {
+const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history, refreshing, onRefresh, onClearLogs }) => {
   const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [clearing, setClearing] = useState(false);
 
-  const filteredHistory = stats.history.filter(entry => {
+  const filteredHistory = history.filter(entry => {
     if (filter === 'all') return true;
     return entry.status === filter;
   });
@@ -643,7 +695,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
                 setClearing(false);
               }
             }}
-            disabled={clearing || stats.history.length === 0}
+            disabled={clearing || history.length === 0}
             className="flex items-center gap-1 text-red-600 hover:text-red-700 disabled:opacity-50"
             title="Clear logs"
           >
@@ -668,7 +720,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, refreshi
           >
             {f === 'all' ? 'All' : f === 'success' ? 'Success' : 'Errors'}
             <span className="ml-1 opacity-75">
-              ({f === 'all' ? stats.history.length : stats.history.filter(e => e.status === f).length})
+              ({f === 'all' ? history.length : history.filter(e => e.status === f).length})
             </span>
           </button>
         ))}

@@ -22,8 +22,9 @@ import {
   FIRESTORE_USERS_COLLECTION,
   FIRESTORE_LISTINGS_COLLECTION,
   FIRESTORE_LISTINGS_USER_FIELD,
+  FIRESTORE_GEMINI_HISTORY_COLLECTION,
 } from './config.js';
-import type { User, ListingDocument, CarListing, UserSettings } from './types.js';
+import type { User, ListingDocument, CarListing, UserSettings, GeminiCallHistoryEntry, GeminiHistoryDocument } from './types.js';
 
 // Initialize Firestore with ADC
 // Cloud Run automatically provides credentials via the service account
@@ -226,6 +227,7 @@ export async function checkFirestoreHealth(): Promise<boolean> {
 // =============================================================================
 
 const settingsCollection = firestore.collection('settings');
+const geminiHistoryCollection = firestore.collection(FIRESTORE_GEMINI_HISTORY_COLLECTION);
 
 /** Default settings for new users */
 const DEFAULT_SETTINGS: Omit<UserSettings, 'userId' | 'updatedAt'> = {
@@ -236,7 +238,6 @@ const DEFAULT_SETTINGS: Omit<UserSettings, 'userId' | 'updatedAt'> = {
     totalCalls: 0,
     successCount: 0,
     errorCount: 0,
-    history: [],
   },
 };
 
@@ -277,6 +278,97 @@ export async function saveUserSettings(
   await settingsCollection.doc(userId).set(updatedSettings);
 
   return updatedSettings;
+}
+
+// =============================================================================
+// Gemini History Operations
+// =============================================================================
+
+/**
+ * Get Gemini call history for a user
+ * Returns the most recent entries, ordered by timestamp descending
+ */
+export async function getGeminiHistory(
+  userId: string,
+  limit: number = 100
+): Promise<GeminiCallHistoryEntry[]> {
+  const snapshot = await geminiHistoryCollection
+    .where('userId', '==', userId)
+    .orderBy('timestamp', 'desc')
+    .limit(limit)
+    .get();
+
+  const history: GeminiCallHistoryEntry[] = [];
+  snapshot.forEach((doc) => {
+    const data = doc.data() as GeminiHistoryDocument;
+    // Remove userId from returned data
+    const { userId: _uid, ...entry } = data;
+    history.push(entry);
+  });
+
+  return history;
+}
+
+/**
+ * Add a new Gemini history entry
+ */
+export async function addGeminiHistoryEntry(
+  entry: GeminiCallHistoryEntry,
+  userId: string
+): Promise<GeminiHistoryDocument> {
+  const historyDoc: GeminiHistoryDocument = {
+    ...entry,
+    userId,
+  };
+
+  // Use the entry's id as the document ID
+  await geminiHistoryCollection.doc(entry.id).set(historyDoc);
+
+  return historyDoc;
+}
+
+/**
+ * Add multiple Gemini history entries (batch operation)
+ */
+export async function addGeminiHistoryEntries(
+  entries: GeminiCallHistoryEntry[],
+  userId: string
+): Promise<void> {
+  if (entries.length === 0) return;
+
+  const batch = firestore.batch();
+
+  for (const entry of entries) {
+    const historyDoc: GeminiHistoryDocument = {
+      ...entry,
+      userId,
+    };
+    batch.set(geminiHistoryCollection.doc(entry.id), historyDoc);
+  }
+
+  await batch.commit();
+}
+
+/**
+ * Clear all Gemini history for a user
+ */
+export async function clearGeminiHistory(userId: string): Promise<number> {
+  const snapshot = await geminiHistoryCollection
+    .where('userId', '==', userId)
+    .get();
+
+  if (snapshot.empty) {
+    return 0;
+  }
+
+  const batch = firestore.batch();
+  snapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+
+  return snapshot.size;
 }
 
 // Export firestore instance for advanced use cases

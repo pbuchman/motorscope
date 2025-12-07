@@ -5,10 +5,12 @@
  * Automatically includes authentication token in requests.
  */
 
-import { CarListing, GeminiStats } from '../types';
+import { CarListing, GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { getToken } from '../auth/oauthClient';
 import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL, API_PREFIX } from '../auth/config';
 import { getBackendUrl } from '../services/settingsService';
+
+const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
 
 /**
  * API Error class for handling backend errors
@@ -173,6 +175,38 @@ export const saveRemoteSettings = async (settings: RemoteSettings): Promise<Remo
   return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
     method: 'PUT',
     body: JSON.stringify(settings),
+  });
+};
+
+// =============================================================================
+// Gemini History API
+// =============================================================================
+
+/**
+ * Get Gemini API call history from the backend
+ */
+export const getRemoteGeminiHistory = async (limit: number = 100): Promise<GeminiCallHistoryEntry[]> => {
+  return apiRequest<GeminiCallHistoryEntry[]>(`${GEMINI_HISTORY_ENDPOINT_PATH}?limit=${limit}`);
+};
+
+/**
+ * Add Gemini history entries to the backend
+ */
+export const addRemoteGeminiHistory = async (
+  entries: GeminiCallHistoryEntry | GeminiCallHistoryEntry[]
+): Promise<{ success: boolean; count: number }> => {
+  return apiRequest<{ success: boolean; count: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
+    method: 'POST',
+    body: JSON.stringify(entries),
+  });
+};
+
+/**
+ * Clear all Gemini history on the backend
+ */
+export const clearRemoteGeminiHistory = async (): Promise<{ success: boolean; deleted: number }> => {
+  return apiRequest<{ success: boolean; deleted: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
+    method: 'DELETE',
   });
 };
 

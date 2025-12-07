@@ -33,6 +33,9 @@ export const FIRESTORE_USERS_COLLECTION = 'users';
 /** Collection name for listing documents */
 export const FIRESTORE_LISTINGS_COLLECTION = 'listings';
 
+/** Collection name for Gemini API call history */
+export const FIRESTORE_GEMINI_HISTORY_COLLECTION = 'gemini_history';
+
 /** Field name in listings that stores the user ID for ownership */
 export const FIRESTORE_LISTINGS_USER_FIELD = 'userId';
 

@@ -2,9 +2,10 @@
 import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { extensionStorage } from './services/extensionStorage';
 import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
-import { STORAGE_KEYS } from './services/settingsService';
-import { initializeAuth, trySilentLogin, isTokenExpired } from './auth/oauthClient';
+import { STORAGE_KEYS, getBackendUrl } from './services/settingsService';
+import { initializeAuth, trySilentLogin, isTokenExpired, getToken } from './auth/oauthClient';
 import { getStoredToken } from './auth/storage';
+import { LISTINGS_ENDPOINT_PATH, API_PREFIX } from './auth/config';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const AUTH_CHECK_ALARM_NAME = 'motorscope_auth_check';
@@ -39,15 +40,61 @@ const getSettings = async (): Promise<Settings> => {
   };
 };
 
-// ============ Listings ============
+// ============ API Helpers for Background Worker ============
 
-const getListings = async (): Promise<CarListing[]> => {
-  const listings = await getFromStorage<CarListing[]>(STORAGE_KEYS.listings);
-  return listings || [];
+/**
+ * Make authenticated API request from background worker
+ */
+const apiRequest = async <T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> => {
+  const token = await getToken();
+
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const baseUrl = await getBackendUrl();
+  const url = `${baseUrl}${API_PREFIX}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Auth token expired');
+    }
+    const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(errorData.message || `Request failed: ${response.status}`);
+  }
+
+  return response.json();
 };
 
-const saveListings = async (listings: CarListing[]): Promise<void> => {
-  await setInStorage(STORAGE_KEYS.listings, listings);
+// ============ Listings via API ============
+
+const getListings = async (): Promise<CarListing[]> => {
+  try {
+    const listings = await apiRequest<CarListing[]>(LISTINGS_ENDPOINT_PATH);
+    return listings || [];
+  } catch (error) {
+    console.error('[BG] Failed to fetch listings from API:', error);
+    return [];
+  }
+};
+
+const saveListing = async (listing: CarListing): Promise<void> => {
+  await apiRequest<CarListing>(LISTINGS_ENDPOINT_PATH, {
+    method: 'POST',
+    body: JSON.stringify(listing),
+  });
 };
 
 // ============ Refresh Status ============
@@ -91,13 +138,10 @@ const formatTimeText = (minutes: number): string => {
 };
 
 // Chrome alarms have a minimum delay of ~1 minute in production
-// For shorter intervals, we still use alarms but with minimum delay
 const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promise<void> => {
   await chrome.alarms.clear(CHECK_ALARM_NAME);
 
-  // Chrome MV3 alarms have a minimum of about 0.5 minutes (30 seconds) in dev mode
-  // Use the actual value but it will be clamped by Chrome if too low
-  const delayMinutes = Math.max(0.1, minutes); // Minimum ~6 seconds for testing
+  const delayMinutes = Math.max(0.1, minutes);
   chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: delayMinutes });
 
   const nextRefreshTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
@@ -109,7 +153,6 @@ const scheduleAlarm = async (minutes: number = DEFAULT_FREQUENCY_MINUTES): Promi
 // Helper to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-
 // ============ Background Refresh All ============
 
 const runBackgroundRefresh = async (): Promise<void> => {
@@ -117,6 +160,15 @@ const runBackgroundRefresh = async (): Promise<void> => {
   const currentStatus = await getRefreshStatus();
   if (currentStatus.isRefreshing) {
     console.log('Refresh already in progress, skipping');
+    return;
+  }
+
+  // Check if user is authenticated
+  const token = await getToken();
+  if (!token) {
+    console.log('Not authenticated, skipping background refresh');
+    const settings = await getSettings();
+    await scheduleAlarm(settings.checkFrequencyMinutes);
     return;
   }
 
@@ -157,7 +209,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     recentlyRefreshed: [],
   });
 
-  // Show notification when refresh starts (use unique ID to ensure visibility)
+  // Show notification when refresh starts
   chrome.notifications.create(`refresh-start-${Date.now()}`, {
     type: 'basic',
     iconUrl: 'icon.png',
@@ -169,7 +221,6 @@ const runBackgroundRefresh = async (): Promise<void> => {
   let refreshedCount = 0;
   let errorCount = 0;
   let rateLimitHit = false;
-  const listingsMap = new Map(allListings.map(l => [l.id, l]));
   const recentlyRefreshed: RefreshedListingInfo[] = [];
 
   for (let i = 0; i < sortedListings.length; i++) {
@@ -188,8 +239,14 @@ const runBackgroundRefresh = async (): Promise<void> => {
 
     const result = await refreshSingleListing(listing);
 
-    // Update the listing in the map
-    listingsMap.set(listing.id, result.listing);
+    // Save the updated listing to the API
+    if (result.success || result.listing.lastRefreshStatus === 'error') {
+      try {
+        await saveListing(result.listing);
+      } catch (err) {
+        console.error('[BG] Failed to save updated listing:', err);
+      }
+    }
 
     if (result.success) {
       refreshedCount++;
@@ -233,9 +290,6 @@ const runBackgroundRefresh = async (): Promise<void> => {
       await delay(2000);
     }
   }
-
-  // Save all updated listings
-  await saveListings(Array.from(listingsMap.values()));
 
   const now = new Date().toISOString();
 
@@ -288,7 +342,6 @@ const runBackgroundRefresh = async (): Promise<void> => {
 
 /**
  * Check and refresh auth token if expired
- * This runs periodically to ensure API calls don't fail due to expired JWT
  */
 const checkAndRefreshAuth = async (): Promise<void> => {
   try {
@@ -309,7 +362,6 @@ const checkAndRefreshAuth = async (): Promise<void> => {
 
     if (result) {
       console.log('[BG Auth] Silent refresh successful');
-      // Notify UI that auth state may have changed
       chrome.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED', status: 'logged_in' }).catch(() => {});
     } else {
       console.log('[BG Auth] Silent refresh failed, user needs to re-login');
@@ -343,20 +395,17 @@ const initializeAlarm = async (): Promise<void> => {
     const now = new Date();
 
     if (nextRefreshDate > now) {
-      // Calculate remaining minutes until the scheduled refresh
       const remainingMs = nextRefreshDate.getTime() - now.getTime();
       const remainingMinutes = remainingMs / (1000 * 60);
 
       console.log(`Restoring scheduled refresh in ${Math.round(remainingMinutes)} minutes`);
 
-      // Schedule alarm for the remaining time (don't update nextRefreshTime since it's already correct)
       await chrome.alarms.clear(CHECK_ALARM_NAME);
       chrome.alarms.create(CHECK_ALARM_NAME, { delayInMinutes: Math.max(0.1, remainingMinutes) });
       return;
     }
   }
 
-  // No valid stored time or it's in the past - schedule new alarm with default interval
   console.log(`No valid stored refresh time, scheduling for ${settings.checkFrequencyMinutes} minutes`);
   await scheduleAlarm(settings.checkFrequencyMinutes);
 };
@@ -365,7 +414,6 @@ const initializeAlarm = async (): Promise<void> => {
 chrome.runtime.onInstalled.addListener(async () => {
   await initializeAlarm();
   await scheduleAuthCheck();
-  // Initialize auth state
   await initializeAuth().catch(err => console.error('[BG] Auth init failed:', err));
 });
 
@@ -373,7 +421,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.runtime.onStartup.addListener(async () => {
   await initializeAlarm();
   await scheduleAuthCheck();
-  // Check and refresh auth on startup
   await checkAndRefreshAuth().catch(err => console.error('[BG] Auth check failed:', err));
 });
 
@@ -389,17 +436,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 // Listen for settings changes to update alarm schedule
 chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace === 'local') {
-    if (changes[STORAGE_KEYS.listings]) {
-      chrome.runtime.sendMessage({ type: 'LISTING_UPDATED' }).catch(() => {});
-    }
-    // Check if settings changed - reschedule alarm
     if (changes[STORAGE_KEYS.settings]?.newValue) {
       const newFrequency = changes[STORAGE_KEYS.settings].newValue.checkFrequencyMinutes;
       if (typeof newFrequency === 'number' && newFrequency > 0) {
         console.log(`Settings changed, rescheduling alarm for ${newFrequency} minutes`);
         await scheduleAlarm(newFrequency);
 
-        // Show notification about schedule change (use unique ID to ensure visibility)
         chrome.notifications.create(`settings-changed-${Date.now()}`, {
           type: 'basic',
           iconUrl: 'icon.png',
@@ -421,7 +463,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         console.error('Manual refresh failed:', error);
         sendResponse({ success: false, error: String(error) });
       });
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (request.type === 'RESCHEDULE_ALARM') {
@@ -439,7 +481,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
-  // Handle auth-related messages
   if (request.type === 'CHECK_AUTH') {
     checkAndRefreshAuth()
       .then(() => sendResponse({ success: true }))
@@ -449,7 +490,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   if (request.type === 'TRY_SILENT_LOGIN') {
     trySilentLogin()
-      .then((result) => sendResponse({ success: !!result, user: result?.user }))
+      .then((result) => sendResponse({ success: !!result, result }))
       .catch((error) => sendResponse({ success: false, error: String(error) }));
     return true;
   }

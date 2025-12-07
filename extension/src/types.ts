@@ -141,7 +141,6 @@ export interface GeminiStats {
   totalCalls: number; // Resets with clear
   successCount: number; // Resets with clear
   errorCount: number; // Resets with clear
-  history: GeminiCallHistoryEntry[];
 }
 
 export interface ExtensionSettings {
