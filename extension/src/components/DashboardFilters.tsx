@@ -231,11 +231,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           <MultiSelect
             label="Source"
             options={availableSources.map(s => s.name)}
-            selected={filters.sources.map(id => availableSources.find(s => s.id === id)?.name || id)}
-            onChange={(names) => onFiltersChange({
-              ...filters,
-              sources: names.map(name => availableSources.find(s => s.name === name)?.id || name)
-            })}
+            selected={filters.sources}
+            onChange={(sources) => onFiltersChange({ ...filters, sources })}
             placeholder="All sources"
           />
         )}
@@ -316,7 +313,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">
               <Globe className="w-3 h-3" />
               {filters.sources.length === 1
-                ? availableSources.find(s => s.id === filters.sources[0])?.name || filters.sources[0]
+                ? filters.sources[0]
                 : `${filters.sources.length} sources`}
               <button onClick={() => onFiltersChange({ ...filters, sources: [] })} className="hover:text-cyan-900">
                 <X className="w-3 h-3" />

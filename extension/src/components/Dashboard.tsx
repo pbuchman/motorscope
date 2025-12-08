@@ -8,7 +8,7 @@ import ListingDetailModal from '@/components/ListingDetailModal';
 import DashboardFilters, { FilterState, SortOption, MakeModelOption, DEFAULT_FILTERS, DEFAULT_SORT } from '@/components/DashboardFilters';
 import { GoogleLogo } from '@/components/ui/GoogleLogo';
 import { Search, Car, Settings, Loader2, LogOut, ExternalLink, LayoutGrid, List } from 'lucide-react';
-import { getEnabledMarketplaces } from '@/config/marketplaces';
+import { getEnabledMarketplaces, getMarketplaceDisplayName } from '@/config/marketplaces';
 import { patchRemoteSettings } from '@/api/client';
 
 export type ViewMode = 'grid' | 'compact';
@@ -161,23 +161,16 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => a.make.localeCompare(b.make));
   }, [listings]);
 
-  // Get available sources (marketplaces) from config and filter to only those present in listings
+  // Get available sources (marketplaces) - use display names from actual listings
   const availableSources = useMemo(() => {
-    const marketplaces = getEnabledMarketplaces();
-    const sourcesInListings = new Set(listings.map(l => l.source.platform.toLowerCase().replace('www.', '')));
+    // Get unique display names from listings
+    const sourceNames = new Set(
+      listings.map(l => getMarketplaceDisplayName(l.source.platform))
+    );
 
-    return marketplaces
-      .filter(m => {
-        const marketplaceId = m.id.toLowerCase();
-        const marketplaceName = m.name.toLowerCase();
-        // Check if any listing source contains or matches the marketplace
-        return Array.from(sourcesInListings).some(source =>
-          source.includes(marketplaceId) ||
-          source.includes(marketplaceName) ||
-          marketplaceId.includes(source.replace('.pl', '').replace('.de', ''))
-        );
-      })
-      .map(m => ({ id: m.id, name: m.name }));
+    return Array.from(sourceNames)
+      .sort()
+      .map(name => ({ id: name, name }));
   }, [listings]);
 
   // Count active filters
@@ -236,14 +229,11 @@ const Dashboard: React.FC = () => {
       result = result.filter(l => l.vehicle?.model && filters.models.includes(l.vehicle.model));
     }
 
-    // Apply sources filter (multi-select)
+    // Apply sources filter (multi-select) - compare display names
     if (filters.sources.length > 0) {
       result = result.filter(l => {
-        const platform = l.source.platform.toLowerCase();
-        return filters.sources.some(sourceId =>
-          sourceId.toLowerCase() === platform ||
-          availableSources.find(s => s.id === sourceId)?.name.toLowerCase() === platform
-        );
+        const displayName = getMarketplaceDisplayName(l.source.platform);
+        return filters.sources.includes(displayName);
       });
     }
 
