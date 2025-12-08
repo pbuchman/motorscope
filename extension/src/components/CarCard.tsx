@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { CarListing, ListingStatus } from '@/types';
 import PriceChart from '@/components/PriceChart';
-import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe, Archive, ArchiveRestore } from 'lucide-react';
+import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe, Archive, ArchiveRestore, Info } from 'lucide-react';
 import { formatEuropeanDateTime } from '@/utils/formatters';
 
 interface CarCardProps {
@@ -9,6 +9,7 @@ interface CarCardProps {
   onRemove: (id: string) => void;
   onRefresh: (listing: CarListing) => void;
   onArchive: (listing: CarListing) => void;
+  onShowDetails: (listing: CarListing) => void;
   isRefreshing: boolean;
 }
 
@@ -52,7 +53,7 @@ const getLocationString = (listing: CarListing): string | null => {
 };
 
 
-const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchive, isRefreshing }) => {
+const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchive, onShowDetails, isRefreshing }) => {
   // Get normalized vehicle data
   const vehicleData = getVehicleData(listing);
   const locationStr = getLocationString(listing);
@@ -110,18 +111,23 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
             </p>
           </div>
         )}
-        <img
-          src={listing.thumbnailUrl} 
-          alt={listing.title} 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute top-3 right-3 flex gap-2">
+        <a href={listing.source.url} target="_blank" rel="noreferrer" className="block w-full h-full">
+          <img
+            src={listing.thumbnailUrl}
+            alt={listing.title}
+            className="w-full h-full object-cover"
+          />
+        </a>
+        <div className={`absolute right-3 flex gap-2 ${listing.isArchived ? 'top-10' : 'top-3'}`}>
            <span className={`px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md ${
             listing.status === ListingStatus.ACTIVE ? 'bg-green-500/20 text-green-900 bg-white/80' : 
             listing.status === ListingStatus.SOLD ? 'bg-orange-500/20 text-orange-900 bg-white/80' :
             'bg-red-500/20 text-red-900 bg-white/80'
           }`}>
             {listing.status}
+          </span>
+          <span className="px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md bg-cyan-500/20 text-cyan-900 bg-white/80">
+            {listing.source.platform}
           </span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
@@ -277,6 +283,13 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
             Open Listing <ExternalLink className="w-3.5 h-3.5" />
           </a>
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => onShowDetails(listing)}
+              className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+              title="View details"
+            >
+              <Info className="w-4 h-4" />
+            </button>
             <button
               onClick={() => onRefresh(listing)}
               disabled={isRefreshing}

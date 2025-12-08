@@ -4,6 +4,7 @@ import { useListings, useSettings } from '@/context/AppContext';
 import { useAuth } from '@/auth/AuthContext';
 import CarCard from '@/components/CarCard';
 import CarCardCompact from '@/components/CarCardCompact';
+import ListingDetailModal from '@/components/ListingDetailModal';
 import DashboardFilters, { FilterState, SortOption, MakeModelOption, DEFAULT_FILTERS, DEFAULT_SORT } from '@/components/DashboardFilters';
 import { GoogleLogo } from '@/components/ui/GoogleLogo';
 import { Search, Car, Settings, Loader2, LogOut, ExternalLink, LayoutGrid, List } from 'lucide-react';
@@ -22,6 +23,7 @@ const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [sortBy, setSortBy] = useState<SortOption>(DEFAULT_SORT);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isLoggedIn = auth.status === 'logged_in';
@@ -122,6 +124,16 @@ const Dashboard: React.FC = () => {
     };
     await update(updatedListing);
   }, [update]);
+
+  // Show details handler
+  const handleShowDetails = useCallback((listing: CarListing) => {
+    setSelectedListing(listing);
+  }, []);
+
+  // Close details modal
+  const handleCloseDetails = useCallback(() => {
+    setSelectedListing(null);
+  }, []);
 
   // Get available makes and models for filter dropdowns
   const availableMakeModels = useMemo((): MakeModelOption[] => {
@@ -432,6 +444,7 @@ const Dashboard: React.FC = () => {
                     onRemove={handleRemove}
                     onRefresh={handleRefresh}
                     onArchive={handleArchive}
+                    onShowDetails={handleShowDetails}
                     isRefreshing={refreshingIds.has(listing.id)}
                   />
                 ))}
@@ -445,6 +458,7 @@ const Dashboard: React.FC = () => {
                     onRemove={handleRemove}
                     onRefresh={handleRefresh}
                     onArchive={handleArchive}
+                    onShowDetails={handleShowDetails}
                     isRefreshing={refreshingIds.has(listing.id)}
                   />
                 ))}
@@ -453,6 +467,14 @@ const Dashboard: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {selectedListing && (
+        <ListingDetailModal
+          listing={selectedListing}
+          onClose={handleCloseDetails}
+        />
+      )}
     </div>
   );
 };

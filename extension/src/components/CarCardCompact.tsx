@@ -20,7 +20,8 @@ import {
   ArchiveRestore,
   TrendingDown,
   TrendingUp,
-  Minus
+  Minus,
+  Info
 } from 'lucide-react';
 import { formatEuropeanDateShort } from '@/utils/formatters';
 
@@ -29,6 +30,7 @@ interface CarCardCompactProps {
   onRemove: (id: string) => void;
   onRefresh: (listing: CarListing) => void;
   onArchive: (listing: CarListing) => void;
+  onShowDetails: (listing: CarListing) => void;
   isRefreshing: boolean;
 }
 
@@ -37,19 +39,20 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
   onRemove,
   onRefresh,
   onArchive,
+  onShowDetails,
   isRefreshing
 }) => {
   const v = listing.vehicle;
 
-  // Get previous price for comparison
+  // Get first price for comparison (compare with first recorded, not previous)
   const hasPriceHistory = listing.priceHistory && listing.priceHistory.length > 1;
-  const previousPrice = hasPriceHistory
-    ? listing.priceHistory[listing.priceHistory.length - 2].price
+  const firstPrice = hasPriceHistory
+    ? listing.priceHistory[0].price
     : null;
 
-  const priceDiff = previousPrice ? listing.currentPrice - previousPrice : 0;
-  const priceChangePercent = previousPrice
-    ? Math.abs(Math.round((priceDiff / previousPrice) * 100))
+  const priceDiff = firstPrice ? listing.currentPrice - firstPrice : 0;
+  const priceChangePercent = firstPrice
+    ? Math.abs(Math.round((priceDiff / firstPrice) * 100))
     : 0;
 
   // Status colors
@@ -82,7 +85,12 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
 
       <div className="flex items-stretch">
         {/* Thumbnail */}
-        <div className="w-32 h-24 flex-shrink-0 relative">
+        <a
+          href={listing.source.url}
+          target="_blank"
+          rel="noreferrer"
+          className="w-32 h-24 flex-shrink-0 relative block"
+        >
           <img
             src={listing.thumbnailUrl}
             alt={listing.title}
@@ -93,7 +101,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
               <AlertTriangle className="w-4 h-4 text-red-500" />
             </div>
           )}
-        </div>
+        </a>
 
         {/* Content */}
         <div className="flex-1 p-3 min-w-0">
@@ -127,10 +135,15 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
               </div>
             </div>
 
-            {/* Status badge */}
-            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${getStatusColor()}`}>
-              {getStatusText()}
-            </span>
+            {/* Status and Source badges */}
+            <div className="flex items-center gap-1">
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${getStatusColor()}`}>
+                {getStatusText()}
+              </span>
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-100 text-cyan-700">
+                {listing.source.platform}
+              </span>
+            </div>
           </div>
 
           {/* Price section */}
@@ -141,8 +154,8 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                 {listing.currentPrice.toLocaleString()} {listing.currency}
               </span>
 
-              {/* Price change indicator */}
-              {previousPrice && priceDiff !== 0 && (
+              {/* Price change indicator (compared to first recorded price) */}
+              {firstPrice && priceDiff !== 0 && (
                 <span className={`flex items-center gap-0.5 text-xs ${priceDiff < 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {priceDiff < 0 ? (
                     <TrendingDown className="w-3 h-3" />
@@ -152,16 +165,16 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                   {priceChangePercent}%
                 </span>
               )}
-              {previousPrice && priceDiff === 0 && (
+              {firstPrice && priceDiff === 0 && (
                 <span className="flex items-center gap-0.5 text-xs text-slate-400">
                   <Minus className="w-3 h-3" />
                 </span>
               )}
 
-              {/* Previous price */}
-              {previousPrice && previousPrice !== listing.currentPrice && (
+              {/* First price (if different) */}
+              {firstPrice && firstPrice !== listing.currentPrice && (
                 <span className="text-xs text-slate-400 line-through">
-                  {previousPrice.toLocaleString()}
+                  {firstPrice.toLocaleString()}
                 </span>
               )}
             </div>
@@ -189,6 +202,13 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
           >
             <ExternalLink className="w-4 h-4" />
           </a>
+          <button
+            onClick={() => onShowDetails(listing)}
+            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+            title="View details"
+          >
+            <Info className="w-4 h-4" />
+          </button>
           <button
             onClick={() => onRefresh(listing)}
             disabled={isRefreshing}

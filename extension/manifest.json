@@ -13,7 +13,7 @@
     "identity"
   ],
   "oauth2": {
-    "client_id": "663051224718-nj03sld1761g1oicnngk1umj0ob717qe.apps.googleusercontent.com",
+    "client_id": "663051224718-09r9kev3ubbtdkasigdjfvr581vkvlvd.apps.googleusercontent.com",
     "scopes": ["openid", "email", "profile"]
   },
   "icons": {
