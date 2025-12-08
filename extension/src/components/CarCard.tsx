@@ -3,6 +3,7 @@ import { CarListing, ListingStatus } from '@/types';
 import PriceChart from '@/components/PriceChart';
 import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe, Archive, ArchiveRestore, Info } from 'lucide-react';
 import { formatEuropeanDateTime } from '@/utils/formatters';
+import { getMarketplaceDisplayName } from '@/config/marketplaces';
 
 interface CarCardProps {
   listing: CarListing;
@@ -127,7 +128,7 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
             {listing.status}
           </span>
           <span className="px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md bg-cyan-500/20 text-cyan-900 bg-white/80">
-            {listing.source.platform}
+            {getMarketplaceDisplayName(listing.source.platform)}
           </span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">

@@ -24,6 +24,7 @@ import {
   Info
 } from 'lucide-react';
 import { formatEuropeanDateShort } from '@/utils/formatters';
+import { getMarketplaceDisplayName } from '@/config/marketplaces';
 
 interface CarCardCompactProps {
   listing: CarListing;
@@ -141,7 +142,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                 {getStatusText()}
               </span>
               <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-100 text-cyan-700">
-                {listing.source.platform}
+                {getMarketplaceDisplayName(listing.source.platform)}
               </span>
             </div>
           </div>

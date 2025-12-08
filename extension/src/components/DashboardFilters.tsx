@@ -227,7 +227,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
         )}
 
         {/* Source/Marketplace filter (multi-select) */}
-        {availableSources.length > 1 && (
+        {availableSources.length > 0 && (
           <MultiSelect
             label="Source"
             options={availableSources.map(s => s.name)}

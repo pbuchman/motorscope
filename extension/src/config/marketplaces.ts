@@ -101,6 +101,21 @@ export const getSupportedDomains = (): string[] => {
 };
 
 /**
+ * Get marketplace display name from platform string
+ * Converts platform identifiers like "www.otomoto.pl" or "otomoto.pl" to friendly names like "OTOMOTO"
+ */
+export const getMarketplaceDisplayName = (platform: string): string => {
+  const normalizedPlatform = platform.toLowerCase().replace('www.', '');
+
+  const marketplace = SUPPORTED_MARKETPLACES.find(m =>
+    m.domains.some(d => d.toLowerCase().replace('www.', '') === normalizedPlatform) ||
+    m.id.toLowerCase() === normalizedPlatform.replace('.pl', '').replace('.de', '')
+  );
+
+  return marketplace?.name || platform;
+};
+
+/**
  * Check if a URL belongs to a supported marketplace domain
  * (Does not check if it's an offer page - use isOfferPage for that)
  *

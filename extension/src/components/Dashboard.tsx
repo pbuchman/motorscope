@@ -164,10 +164,19 @@ const Dashboard: React.FC = () => {
   // Get available sources (marketplaces) from config and filter to only those present in listings
   const availableSources = useMemo(() => {
     const marketplaces = getEnabledMarketplaces();
-    const sourcesInListings = new Set(listings.map(l => l.source.platform));
+    const sourcesInListings = new Set(listings.map(l => l.source.platform.toLowerCase().replace('www.', '')));
 
     return marketplaces
-      .filter(m => sourcesInListings.has(m.id) || sourcesInListings.has(m.name.toLowerCase()))
+      .filter(m => {
+        const marketplaceId = m.id.toLowerCase();
+        const marketplaceName = m.name.toLowerCase();
+        // Check if any listing source contains or matches the marketplace
+        return Array.from(sourcesInListings).some(source =>
+          source.includes(marketplaceId) ||
+          source.includes(marketplaceName) ||
+          marketplaceId.includes(source.replace('.pl', '').replace('.de', ''))
+        );
+      })
       .map(m => ({ id: m.id, name: m.name }));
   }, [listings]);
 

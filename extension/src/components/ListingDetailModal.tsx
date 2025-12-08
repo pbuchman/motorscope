@@ -32,6 +32,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { formatEuropeanDateTime } from '@/utils/formatters';
+import { getMarketplaceDisplayName } from '@/config/marketplaces';
 
 interface ListingDetailModalProps {
   listing: CarListing;
@@ -126,7 +127,7 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
                 {listing.status}
               </span>
               <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cyan-100 text-cyan-700">
-                {listing.source.platform}
+                {getMarketplaceDisplayName(listing.source.platform)}
               </span>
             </div>
 
