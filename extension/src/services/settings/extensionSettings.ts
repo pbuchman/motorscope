@@ -11,7 +11,7 @@
 
 import { ExtensionSettings } from '../../types';
 import { DEFAULT_BACKEND_URL } from '../../auth/config';
-import { getRemoteSettings, saveRemoteSettings } from '../../api/client';
+import { getRemoteSettings, patchRemoteSettings } from '../../api/client';
 
 // ============================================================================
 // Defaults & Validation
@@ -58,7 +58,7 @@ export async function getSettings(): Promise<ExtensionSettings> {
  */
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   try {
-    await saveRemoteSettings({
+    await patchRemoteSettings({
       geminiApiKey: settings.geminiApiKey,
       checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
     });
@@ -84,7 +84,7 @@ export async function getGeminiApiKey(): Promise<string> {
  * Save Gemini API key to the API.
  */
 export async function saveGeminiApiKey(key: string): Promise<void> {
-  await saveRemoteSettings({ geminiApiKey: key.trim() });
+  await patchRemoteSettings({ geminiApiKey: key.trim() });
 }
 
 /**

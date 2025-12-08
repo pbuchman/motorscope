@@ -1,15 +1,25 @@
-// filepath: /Users/p.buchman/personal/car-listings-watcher/utils/formatters.ts
+// filepath: /Users/p.buchman/personal/motorscope/extension/src/utils/formatters.ts
+
+/**
+ * Helper function to get common date parts
+ */
+const getDateParts = (date: string | number) => {
+  const d = new Date(date);
+  return {
+    day: d.getDate().toString().padStart(2, '0'),
+    month: (d.getMonth() + 1).toString().padStart(2, '0'),
+    year: d.getFullYear(),
+    hours: d.getHours().toString().padStart(2, '0'),
+    minutes: d.getMinutes().toString().padStart(2, '0'),
+    seconds: d.getSeconds().toString().padStart(2, '0'),
+  };
+};
 
 /**
  * Format date in European format: DD/MM/YYYY HH:mm
  */
 export const formatEuropeanDateTime = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const { day, month, year, hours, minutes } = getDateParts(date);
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
@@ -17,13 +27,7 @@ export const formatEuropeanDateTime = (date: string | number): string => {
  * Format date in European format with seconds: DD/MM/YYYY HH:mm:ss
  */
 export const formatEuropeanDateTimeWithSeconds = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  const seconds = d.getSeconds().toString().padStart(2, '0');
+  const { day, month, year, hours, minutes, seconds } = getDateParts(date);
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
@@ -31,9 +35,7 @@ export const formatEuropeanDateTimeWithSeconds = (date: string | number): string
  * Format date in short European format: DD/MM
  */
 export const formatEuropeanDateShort = (date: string | number): string => {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const { day, month } = getDateParts(date);
   return `${day}/${month}`;
 };
 

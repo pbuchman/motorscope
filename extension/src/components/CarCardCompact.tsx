@@ -6,7 +6,7 @@
  */
 
 import React, { memo } from 'react';
-import { CarListing, ListingStatus } from '../types';
+import { CarListing, ListingStatus } from '@/types';
 import {
   Trash2,
   ExternalLink,
@@ -22,7 +22,7 @@ import {
   TrendingUp,
   Minus
 } from 'lucide-react';
-import { formatEuropeanDateShort } from '../utils/formatters';
+import { formatEuropeanDateShort } from '@/utils/formatters';
 
 interface CarCardCompactProps {
   listing: CarListing;

@@ -31,6 +31,15 @@ const createMockJwt = (payload: Partial<JwtPayload>, expiresInSeconds: number = 
 };
 
 describe('JWT Utilities', () => {
+  // Suppress expected console.warn for invalid token tests
+  const originalWarn = console.warn;
+  beforeAll(() => {
+    console.warn = jest.fn();
+  });
+  afterAll(() => {
+    console.warn = originalWarn;
+  });
+
   describe('decodeJwt', () => {
     it('should decode a valid JWT', () => {
       const token = createMockJwt({ userId: 'test_user', email: 'test@test.com' });

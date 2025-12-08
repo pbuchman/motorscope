@@ -42,8 +42,9 @@ export async function parseCarDataWithGemini(
   const ai = await createGeminiClient();
   const prompt = buildParsePrompt(pageTitle, url, pageText);
 
+  let response;
   try {
-    const response = await ai.models.generateContent({
+    response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -51,33 +52,34 @@ export async function parseCarDataWithGemini(
         responseSchema: carListingSchema,
       },
     });
-
-    if (!response.text) {
-      throw new Error("No response from AI");
-    }
-
-    const data = JSON.parse(response.text);
-
-    // Build response object for logging
-    const fullResponse = {
-      text: response.text,
-      parsedData: data,
-      // @ts-ignore - SDK may expose these properties
-      usageMetadata: response.usageMetadata || null,
-      // @ts-ignore
-      modelVersion: response.modelVersion || "gemini-2.5-flash",
-    };
-
-    await recordSuccess(url, prompt, fullResponse);
-
-    // Validate and map response
-    validateParseResponse(data);
-    return mapToCarListing(data, url, pageTitle, scrapedImageUrl);
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     await recordError(url, prompt, errorMessage);
     throw error;
   }
+
+  if (!response.text) {
+    const errorMessage = "No response from AI";
+    await recordError(url, prompt, errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const data = JSON.parse(response.text);
+
+  // Build response object for logging
+  const fullResponse = {
+    text: response.text,
+    parsedData: data,
+    // @ts-ignore - SDK may expose these properties
+    usageMetadata: response.usageMetadata || null,
+    // @ts-ignore
+    modelVersion: response.modelVersion || "gemini-2.5-flash",
+  };
+
+  await recordSuccess(url, prompt, fullResponse);
+
+  // Validate and map response
+  validateParseResponse(data);
+  return mapToCarListing(data, url, pageTitle, scrapedImageUrl);
 }
 

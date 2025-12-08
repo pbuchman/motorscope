@@ -171,12 +171,28 @@ export const getRemoteSettings = async (): Promise<RemoteSettings> => {
 };
 
 /**
- * Save user settings to the backend
+ * Partially update user settings on the backend (PATCH)
+ * Only updates the fields that are provided - uses REST PATCH semantics
+ *
+ * @param settings - Partial settings to update
+ * @returns Full settings after update
+ */
+export const patchRemoteSettings = async (settings: Partial<RemoteSettings>): Promise<RemoteSettings> => {
+  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
+  });
+};
+
+/**
+ * Save user settings to the backend (PUT)
  * Accepts partial settings - backend will merge with existing
+ *
+ * @deprecated Prefer patchRemoteSettings() for partial updates
  */
 export const saveRemoteSettings = async (settings: Partial<RemoteSettings>): Promise<RemoteSettings> => {
   return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
-    method: 'PUT',
+    method: 'PATCH', // Use PATCH even for this legacy function
     body: JSON.stringify(settings),
   });
 };

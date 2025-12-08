@@ -1,14 +1,16 @@
 /**
  * API Route Handlers
  *
- * Defines all API endpoints for the MotorScope backend.
+ * REST API endpoints for the MotorScope backend.
+ * All routes are mounted under /api prefix.
  */
 
 import { Router, Request, Response } from 'express';
-import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt, getTokenExpiration } from './auth.js';
+import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt } from './auth.js';
 import {
   upsertUser,
   getListingsByUserId,
+  getListingById,
   saveAllListings,
   saveListing,
   deleteListing,
@@ -21,6 +23,7 @@ import {
   blacklistToken,
   cleanupExpiredBlacklistedTokens,
 } from './db.js';
+import { sendError, sendSuccess, sendOperationSuccess, handleError } from './utils/response.js';
 import type { User, CarListing, AuthResponse, HealthResponse, UserSettings, GeminiCallHistoryEntry } from './types.js';
 
 const router = Router();
@@ -30,19 +33,34 @@ const router = Router();
 // =============================================================================
 
 /**
- * GET /api/healthz
- *
- * Health check endpoint for Cloud Run and monitoring.
- * Verifies Firestore connectivity.
- *
- * Also triggers opportunistic cleanup of expired blacklisted tokens
- * (non-blocking, runs in background).
+ * @openapi
+ * /api/healthz:
+ *   get:
+ *     summary: Health check
+ *     description: |
+ *       Health check endpoint for Cloud Run and monitoring.
+ *       Verifies Firestore connectivity.
+ *       Also triggers opportunistic cleanup of expired blacklisted tokens.
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
+ *       503:
+ *         description: Service is unhealthy (Firestore connectivity issue)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
  */
 router.get('/healthz', async (_req: Request, res: Response) => {
   const firestoreOk = await checkFirestoreHealth();
 
-  // Opportunistic cleanup of expired tokens (non-blocking)
-  // This runs ~10% of the time to avoid overhead on every health check
+  // Opportunistic cleanup of expired tokens (~10% of requests)
   if (Math.random() < 0.1) {
     cleanupExpiredBlacklistedTokens()
       .then(count => {
@@ -59,8 +77,7 @@ router.get('/healthz', async (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   };
 
-  const statusCode = firestoreOk ? 200 : 503;
-  res.status(statusCode).json(response);
+  sendSuccess(res, response, firestoreOk ? 200 : 503);
 });
 
 // =============================================================================
@@ -68,37 +85,52 @@ router.get('/healthz', async (_req: Request, res: Response) => {
 // =============================================================================
 
 /**
- * POST /api/auth/google
+ * @openapi
+ * /api/auth/google:
+ *   post:
+ *     summary: Authenticate with Google
+ *     description: |
+ *       Authenticate with a Google token from the Chrome extension.
  *
- * Authenticate with a Google token from the Chrome extension.
+ *       Supports two token types:
+ *       - **accessToken**: From chrome.identity.getAuthToken() (Chrome extension OAuth) - Preferred
+ *       - **idToken**: From launchWebAuthFlow (Web application OAuth) - Legacy support
  *
- * Supports two token types:
- * - accessToken: From chrome.identity.getAuthToken() (Chrome extension OAuth)
- * - idToken: From launchWebAuthFlow (Web application OAuth) - legacy support
- *
- * Request body:
- * {
- *   "accessToken": "<google-access-token>"  // Preferred
- *   // OR
- *   "idToken": "<google-id-token>"  // Legacy support
- * }
- *
- * Response:
- * {
- *   "token": "<jwt-token>",
- *   "user": { "id": "...", "email": "...", "displayName": "..." }
- * }
+ *       Returns a JWT token for subsequent API calls.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/GoogleAuthRequest'
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Bad request - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Authentication failed - invalid Google token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/auth/google', async (req: Request, res: Response) => {
   try {
     const { accessToken, idToken } = req.body;
 
     if (!accessToken && !idToken) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'accessToken or idToken is required in request body',
-        statusCode: 400,
-      });
+      sendError(res, 400, 'accessToken or idToken is required in request body');
       return;
     }
 
@@ -109,17 +141,12 @@ router.post('/auth/google', async (req: Request, res: Response) => {
     } else if (idToken && typeof idToken === 'string') {
       googlePayload = await verifyGoogleToken(idToken);
     } else {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Token must be a string',
-        statusCode: 400,
-      });
+      sendError(res, 400, 'Token must be a string');
       return;
     }
 
 
-    // Create internal user ID from Google sub
-    // Prefix with 'google_' to support potential future auth providers
+    // Create internal user ID from Google sub (prefixed for future auth provider support)
     const userId = `google_${googlePayload.sub}`;
 
     // Upsert user in Firestore
@@ -128,13 +155,11 @@ router.post('/auth/google', async (req: Request, res: Response) => {
       id: userId,
       email: googlePayload.email,
       displayName: googlePayload.name,
-      createdAt: now, // Will be preserved if user exists
+      createdAt: now,
       lastLoginAt: now,
     };
 
     const savedUser = await upsertUser(user);
-
-    // Generate JWT
     const token = generateJwt(savedUser.id, savedUser.email);
 
     const response: AuthResponse = {
@@ -146,98 +171,110 @@ router.post('/auth/google', async (req: Request, res: Response) => {
       },
     };
 
-    res.status(200).json(response);
+    sendSuccess(res, response);
   } catch (error) {
     console.error('Authentication error:', error);
     const message = error instanceof Error ? error.message : 'Authentication failed';
-    res.status(401).json({
-      error: 'Unauthorized',
-      message,
-      statusCode: 401,
-    });
+    sendError(res, 401, message);
   }
 });
 
 /**
- * GET /api/auth/me
- *
- * Get current authenticated user information.
- * Used to validate that a session is still valid.
- * Requires JWT authentication.
- *
- * Response:
- * {
- *   "user": { "id": "...", "email": "...", "displayName": "..." }
- * }
+ * @openapi
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user
+ *     description: |
+ *       Get current authenticated user information.
+ *       Used to validate that a session is still valid.
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/UserInfo'
+ *       401:
+ *         description: Unauthorized - invalid or missing JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/auth/me', authMiddleware, async (req: Request, res: Response) => {
   try {
-    // User info is already attached by authMiddleware
     const { userId, email } = req.user!;
-
-    res.status(200).json({
-      user: {
-        id: userId,
-        email: email,
-      },
-    });
+    sendSuccess(res, { user: { id: userId, email } });
   } catch (error) {
-    console.error('Error getting user info:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to get user info',
-      statusCode: 500,
-    });
+    handleError(res, error, 'getting user info');
   }
 });
 
 /**
- * POST /api/auth/logout
- *
- * Logout and invalidate the current JWT token.
- * The token will be blacklisted and can no longer be used for authentication.
- * Requires JWT authentication.
- *
- * Response:
- * {
- *   "success": true,
- *   "message": "Logged out successfully"
- * }
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout
+ *     description: |
+ *       Logout and invalidate the current JWT token.
+ *       The token will be blacklisted and can no longer be used for authentication.
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out successfully"
+ *       401:
+ *         description: Unauthorized - invalid or missing JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/auth/logout', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { userId, jti, exp } = req.user!;
 
     if (!jti) {
-      // Token doesn't have a jti - it's an old token format
-      // Just return success (client will clear it anyway)
+      // Token doesn't have a jti (old format) - client will clear it anyway
       console.log(`[Auth] Logout for user ${userId} - token has no jti (old format)`);
-      res.status(200).json({
-        success: true,
-        message: 'Logged out successfully',
-      });
+      sendOperationSuccess(res, 'Logged out successfully');
       return;
     }
 
-    // Calculate token expiration
+    // Calculate token expiration (default to 24h if not set)
     const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    // Add token to blacklist
     await blacklistToken(jti, userId, expiresAt);
 
     console.log(`[Auth] User ${userId} logged out, token blacklisted`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Logged out successfully',
-    });
+    sendOperationSuccess(res, 'Logged out successfully');
   } catch (error) {
-    console.error('Error during logout:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to logout',
-      statusCode: 500,
-    });
+    handleError(res, error, 'logging out');
   }
 });
 
@@ -246,12 +283,36 @@ router.post('/auth/logout', authMiddleware, async (req: Request, res: Response) 
 // =============================================================================
 
 /**
- * GET /api/listings
- *
- * Get all listings for the authenticated user.
- * Requires JWT authentication.
- *
- * Response: CarListing[]
+ * @openapi
+ * /api/listings:
+ *   get:
+ *     summary: Get all listings
+ *     description: Get all car listings for the authenticated user.
+ *     tags:
+ *       - Listings
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of car listings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/CarListing'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/listings', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -260,119 +321,267 @@ router.get('/listings', authMiddleware, async (req: Request, res: Response) => {
 
     // Remove internal fields before sending to client
     const clientListings = listings.map(({ userId: _uid, docId: _docId, ...listing }) => listing);
-
-    res.status(200).json(clientListings);
+    sendSuccess(res, clientListings);
   } catch (error) {
-    console.error('Error fetching listings:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch listings',
-      statusCode: 500,
-    });
+    handleError(res, error, 'fetching listings');
   }
 });
 
 /**
- * PUT /api/listings
- *
- * Replace all listings for the authenticated user.
- * This performs a full sync - existing listings not in the payload are deleted.
- * Requires JWT authentication.
- *
- * Request body: CarListing[]
- * Response: { success: true, count: number }
+ * @openapi
+ * /api/listings/{id}:
+ *   get:
+ *     summary: Get a listing by ID
+ *     description: Get a specific car listing for the authenticated user.
+ *     tags:
+ *       - Listings
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Listing ID
+ *         example: "vin_WBAPH5C55BA123456"
+ *     responses:
+ *       200:
+ *         description: Listing found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CarListing'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Listing not found or not owned by user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/listings/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const listingId = req.params.id;
+
+    const listing = await getListingById(listingId, userId);
+
+    if (!listing) {
+      sendError(res, 404, 'Listing not found or not owned by user');
+      return;
+    }
+
+    // Remove internal fields before sending to client
+    const { userId: _uid, docId: _docId, ...clientListing } = listing;
+    sendSuccess(res, clientListing);
+  } catch (error) {
+    handleError(res, error, 'fetching listing');
+  }
+});
+
+/**
+ * @openapi
+ * /api/listings:
+ *   put:
+ *     summary: Replace all listings
+ *     description: |
+ *       Replace all listings for the authenticated user.
+ *       This performs a full sync - existing listings not in the payload are deleted.
+ *     tags:
+ *       - Listings
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/CarListing'
+ *     responses:
+ *       200:
+ *         description: Listings replaced successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                   description: Number of listings saved
+ *                   example: 5
+ *       400:
+ *         description: Bad request - invalid payload
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put('/listings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const listings: CarListing[] = req.body;
+    const listings = req.body as unknown[];
 
-    // Validate input
     if (!Array.isArray(listings)) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Request body must be an array of listings',
-        statusCode: 400,
-      });
+      sendError(res, 400, 'Request body must be an array of listings');
       return;
     }
 
-    // Validate each listing has required fields
+    // Validate each listing has required id field
     for (const listing of listings) {
-      if (!listing.id || typeof listing.id !== 'string') {
-        res.status(400).json({
-          error: 'Bad Request',
-          message: 'Each listing must have a valid id field',
-          statusCode: 400,
-        });
+      const item = listing as Record<string, unknown>;
+      if (!item.id || typeof item.id !== 'string') {
+        sendError(res, 400, 'Each listing must have a valid id field');
         return;
       }
     }
 
-    // Save all listings (this replaces existing ones)
-    const savedListings = await saveAllListings(listings, userId);
-
-    res.status(200).json({
-      success: true,
-      count: savedListings.length,
-    });
+    const savedListings = await saveAllListings(listings as CarListing[], userId);
+    sendOperationSuccess(res, undefined, { count: savedListings.length });
   } catch (error) {
-    console.error('Error saving listings:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to save listings',
-      statusCode: 500,
-    });
+    handleError(res, error, 'saving listings');
   }
 });
 
 /**
- * POST /api/listings
- *
- * Add or update a single listing for the authenticated user.
- * Requires JWT authentication.
- *
- * Request body: CarListing
- * Response: CarListing
+ * @openapi
+ * /api/listings:
+ *   post:
+ *     summary: Create or update a listing
+ *     description: |
+ *       Create a new listing or update an existing one (upsert).
+ *       If a listing with the same ID exists, it will be updated.
+ *     tags:
+ *       - Listings
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CarListing'
+ *     responses:
+ *       200:
+ *         description: Listing saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CarListing'
+ *       400:
+ *         description: Bad request - invalid listing data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/listings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const listing: CarListing = req.body;
+    const listing = req.body as unknown as Record<string, unknown>;
 
-    // Validate input
     if (!listing.id || typeof listing.id !== 'string') {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Listing must have a valid id field',
-        statusCode: 400,
-      });
+      sendError(res, 400, 'Listing must have a valid id field');
       return;
     }
 
-    const savedListing = await saveListing(listing, userId);
+    const savedListing = await saveListing(req.body as CarListing, userId);
 
     // Remove internal fields before sending to client
     const { userId: _uid, docId: _docId, ...clientListing } = savedListing;
-
-    res.status(200).json(clientListing);
+    sendSuccess(res, clientListing);
   } catch (error) {
-    console.error('Error saving listing:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to save listing',
-      statusCode: 500,
-    });
+    handleError(res, error, 'saving listing');
   }
 });
 
 /**
- * DELETE /api/listings/:id
- *
- * Delete a specific listing for the authenticated user.
- * Requires JWT authentication.
- *
- * Response: { success: true }
+ * @openapi
+ * /api/listings/{id}:
+ *   delete:
+ *     summary: Delete a listing
+ *     description: Delete a specific car listing for the authenticated user.
+ *     tags:
+ *       - Listings
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Listing ID to delete
+ *         example: "vin_WBAPH5C55BA123456"
+ *     responses:
+ *       200:
+ *         description: Listing deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Listing not found or not owned by user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/listings/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -382,22 +591,13 @@ router.delete('/listings/:id', authMiddleware, async (req: Request, res: Respons
     const deleted = await deleteListing(listingId, userId);
 
     if (!deleted) {
-      res.status(404).json({
-        error: 'Not Found',
-        message: 'Listing not found or not owned by user',
-        statusCode: 404,
-      });
+      sendError(res, 404, 'Listing not found or not owned by user');
       return;
     }
 
-    res.status(200).json({ success: true });
+    sendOperationSuccess(res);
   } catch (error) {
-    console.error('Error deleting listing:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to delete listing',
-      statusCode: 500,
-    });
+    handleError(res, error, 'deleting listing');
   }
 });
 
@@ -406,78 +606,198 @@ router.delete('/listings/:id', authMiddleware, async (req: Request, res: Respons
 // =============================================================================
 
 /**
- * GET /api/settings
- *
- * Get settings for the authenticated user.
- * Requires JWT authentication.
- *
- * Response: { geminiApiKey, checkFrequencyMinutes, geminiStats }
+ * @openapi
+ * /api/settings:
+ *   get:
+ *     summary: Get user settings
+ *     description: Get settings for the authenticated user including Gemini configuration and dashboard preferences.
+ *     tags:
+ *       - Settings
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserSettings'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
+/**
+ * Settings response type for API (differs from stored UserSettings by using null instead of undefined)
+ */
+interface SettingsResponse {
+  geminiApiKey: string;
+  checkFrequencyMinutes: number;
+  geminiStats: UserSettings['geminiStats'];
+  lastRefreshTime: string | null;
+  nextRefreshTime: string | null;
+  lastRefreshCount: number;
+  dashboardFilters: UserSettings['dashboardFilters'] | null;
+  dashboardSort: string | null;
+  dashboardViewMode: string | null;
+}
+
+/**
+ * Format settings for client response (removes internal fields, converts undefined to null)
+ */
+function formatSettingsResponse(settings: UserSettings): SettingsResponse {
+  return {
+    geminiApiKey: settings.geminiApiKey,
+    checkFrequencyMinutes: settings.checkFrequencyMinutes,
+    geminiStats: settings.geminiStats,
+    lastRefreshTime: settings.lastRefreshTime ?? null,
+    nextRefreshTime: settings.nextRefreshTime ?? null,
+    lastRefreshCount: settings.lastRefreshCount ?? 0,
+    dashboardFilters: settings.dashboardFilters ?? null,
+    dashboardSort: settings.dashboardSort ?? null,
+    dashboardViewMode: settings.dashboardViewMode ?? null,
+  };
+}
+
+/**
+ * Extract update fields from request body
+ */
+function extractSettingsUpdate(body: Record<string, unknown>): Partial<UserSettings> {
+  const fields = [
+    'geminiApiKey',
+    'checkFrequencyMinutes',
+    'geminiStats',
+    'lastRefreshTime',
+    'nextRefreshTime',
+    'lastRefreshCount',
+    'dashboardFilters',
+    'dashboardSort',
+    'dashboardViewMode',
+  ] as const;
+
+  const updateData: Partial<UserSettings> = {};
+  for (const field of fields) {
+    if (body[field] !== undefined) {
+      (updateData as Record<string, unknown>)[field] = body[field];
+    }
+  }
+  return updateData;
+}
+
 router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const settings = await getUserSettings(userId);
-
-    // Return settings without internal fields
-    res.status(200).json({
-      geminiApiKey: settings.geminiApiKey,
-      checkFrequencyMinutes: settings.checkFrequencyMinutes,
-      geminiStats: settings.geminiStats,
-      lastRefreshTime: settings.lastRefreshTime || null,
-      nextRefreshTime: settings.nextRefreshTime || null,
-      lastRefreshCount: settings.lastRefreshCount || 0,
-    });
+    sendSuccess(res, formatSettingsResponse(settings));
   } catch (error) {
-    console.error('Error fetching settings:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch settings',
-      statusCode: 500,
-    });
+    handleError(res, error, 'fetching settings');
   }
 });
 
 /**
- * PUT /api/settings
- *
- * Update settings for the authenticated user.
- * Requires JWT authentication.
- *
- * Request body: { geminiApiKey?, checkFrequencyMinutes?, geminiStats? }
- * Response: { geminiApiKey, checkFrequencyMinutes, geminiStats }
+ * @openapi
+ * /api/settings:
+ *   patch:
+ *     summary: Update settings (partial)
+ *     description: |
+ *       Partially update settings for the authenticated user.
+ *       Only updates the fields that are provided in the request body.
+ *       This is the preferred method for updating settings.
+ *     tags:
+ *       - Settings
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserSettingsUpdate'
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserSettings'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.patch('/settings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const updateData = extractSettingsUpdate(req.body);
+    const savedSettings = await saveUserSettings(userId, updateData);
+    sendSuccess(res, formatSettingsResponse(savedSettings));
+  } catch (error) {
+    handleError(res, error, 'updating settings');
+  }
+});
+
+/**
+ * @openapi
+ * /api/settings:
+ *   put:
+ *     summary: Update settings (full)
+ *     description: |
+ *       Full update of settings for the authenticated user.
+ *       Note: For partial updates, prefer PATCH /api/settings.
+ *     tags:
+ *       - Settings
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserSettingsUpdate'
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserSettings'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const { geminiApiKey, checkFrequencyMinutes, geminiStats, lastRefreshTime, nextRefreshTime, lastRefreshCount } = req.body;
-
-    // Build update object with only provided fields
-    const updateData: Partial<UserSettings> = {};
-    if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey;
-    if (checkFrequencyMinutes !== undefined) updateData.checkFrequencyMinutes = checkFrequencyMinutes;
-    if (geminiStats !== undefined) updateData.geminiStats = geminiStats;
-    if (lastRefreshTime !== undefined) updateData.lastRefreshTime = lastRefreshTime;
-    if (nextRefreshTime !== undefined) updateData.nextRefreshTime = nextRefreshTime;
-    if (lastRefreshCount !== undefined) updateData.lastRefreshCount = lastRefreshCount;
-
+    const updateData = extractSettingsUpdate(req.body);
     const savedSettings = await saveUserSettings(userId, updateData);
-
-    // Return settings without internal fields
-    res.status(200).json({
-      geminiApiKey: savedSettings.geminiApiKey,
-      checkFrequencyMinutes: savedSettings.checkFrequencyMinutes,
-      geminiStats: savedSettings.geminiStats,
-      lastRefreshTime: savedSettings.lastRefreshTime || null,
-      nextRefreshTime: savedSettings.nextRefreshTime || null,
-      lastRefreshCount: savedSettings.lastRefreshCount || 0,
-    });
+    sendSuccess(res, formatSettingsResponse(savedSettings));
   } catch (error) {
-    console.error('Error saving settings:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to save settings',
-      statusCode: 500,
-    });
+    handleError(res, error, 'saving settings');
   }
 });
 
@@ -486,104 +806,179 @@ router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
 // =============================================================================
 
 /**
- * GET /api/gemini-history
- *
- * Get Gemini API call history for the authenticated user.
- * Requires JWT authentication.
- *
- * Query params:
- *   limit?: number (default 100, max 500)
- *
- * Response: GeminiCallHistoryEntry[]
+ * @openapi
+ * /api/gemini-history:
+ *   get:
+ *     summary: Get Gemini call history
+ *     description: Get Gemini API call history for the authenticated user.
+ *     tags:
+ *       - Gemini History
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *           maximum: 500
+ *         description: Maximum number of entries to return
+ *     responses:
+ *       200:
+ *         description: List of Gemini call history entries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/GeminiCallHistoryEntry'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
-
     const history = await getGeminiHistory(userId, limit);
-
-    res.status(200).json(history);
+    sendSuccess(res, history);
   } catch (error) {
-    console.error('Error fetching Gemini history:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch Gemini history',
-      statusCode: 500,
-    });
+    handleError(res, error, 'fetching Gemini history');
   }
 });
 
 /**
- * POST /api/gemini-history
- *
- * Add Gemini history entries for the authenticated user.
- * Requires JWT authentication.
- *
- * Request body: GeminiCallHistoryEntry[] or GeminiCallHistoryEntry
- * Response: { success: true, count: number }
+ * @openapi
+ * /api/gemini-history:
+ *   post:
+ *     summary: Add Gemini history entries
+ *     description: Add Gemini history entries for the authenticated user. Accepts single entry or array.
+ *     tags:
+ *       - Gemini History
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             oneOf:
+ *               - $ref: '#/components/schemas/GeminiCallHistoryEntry'
+ *               - type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/GeminiCallHistoryEntry'
+ *     responses:
+ *       200:
+ *         description: History entries added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                   description: Number of entries added
+ *                   example: 1
+ *       400:
+ *         description: Bad request - invalid entry data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const body = req.body;
+    const body = req.body as unknown;
 
     // Accept single entry or array
-    const entries: GeminiCallHistoryEntry[] = Array.isArray(body) ? body : [body];
+    const rawEntries = Array.isArray(body) ? body : [body];
 
-    // Validate entries
-    for (const entry of entries) {
-      if (!entry.id || typeof entry.id !== 'string') {
-        res.status(400).json({
-          error: 'Bad Request',
-          message: 'Each history entry must have a valid id field',
-          statusCode: 400,
-        });
+    for (const entry of rawEntries) {
+      const item = entry as Record<string, unknown>;
+      if (!item.id || typeof item.id !== 'string') {
+        sendError(res, 400, 'Each history entry must have a valid id field');
         return;
       }
     }
 
+    const entries = rawEntries as GeminiCallHistoryEntry[];
     await addGeminiHistoryEntries(entries, userId);
-
-    res.status(200).json({
-      success: true,
-      count: entries.length,
-    });
+    sendOperationSuccess(res, undefined, { count: entries.length });
   } catch (error) {
-    console.error('Error saving Gemini history:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to save Gemini history',
-      statusCode: 500,
-    });
+    handleError(res, error, 'saving Gemini history');
   }
 });
 
 /**
- * DELETE /api/gemini-history
- *
- * Clear all Gemini history for the authenticated user.
- * Requires JWT authentication.
- *
- * Response: { success: true, deleted: number }
+ * @openapi
+ * /api/gemini-history:
+ *   delete:
+ *     summary: Clear Gemini history
+ *     description: Clear all Gemini history for the authenticated user.
+ *     tags:
+ *       - Gemini History
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: History cleared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 deleted:
+ *                   type: integer
+ *                   description: Number of entries deleted
+ *                   example: 25
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-
     const deletedCount = await clearGeminiHistory(userId);
-
-    res.status(200).json({
-      success: true,
-      deleted: deletedCount,
-    });
+    sendOperationSuccess(res, undefined, { deleted: deletedCount });
   } catch (error) {
-    console.error('Error clearing Gemini history:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to clear Gemini history',
-      statusCode: 500,
-    });
+    handleError(res, error, 'clearing Gemini history');
   }
 });
 

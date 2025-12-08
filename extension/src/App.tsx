@@ -1,13 +1,13 @@
 import React, { Suspense, lazy, useMemo } from 'react';
-import { AuthProvider } from './auth/AuthContext';
-import { AppProvider } from './context/AppContext';
-import ErrorBoundary from './components/ErrorBoundary';
-import { Loader2 } from 'lucide-react';
+import { AuthProvider } from '@/auth/AuthContext';
+import { AppProvider } from '@/context/AppContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 // Lazy load views for better code splitting
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const ExtensionPopup = lazy(() => import('./components/ExtensionPopup'));
-const SettingsPage = lazy(() => import('./components/SettingsPage'));
+const Dashboard = lazy(() => import('@/components/Dashboard'));
+const ExtensionPopup = lazy(() => import('@/components/ExtensionPopup'));
+const SettingsPage = lazy(() => import('@/components/SettingsPage'));
 
 type AppView = 'dashboard' | 'popup' | 'settings';
 
@@ -28,15 +28,6 @@ const getViewFromUrl = (): AppView => {
   return 'dashboard';
 };
 
-/**
- * Loading spinner for Suspense fallback
- */
-const LoadingSpinner: React.FC<{ message?: string }> = ({ message = 'Loading...' }) => (
-  <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-8">
-    <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-    <p className="text-sm text-slate-500">{message}</p>
-  </div>
-);
 
 /**
  * View container with appropriate styling based on view type
@@ -89,7 +80,7 @@ const App: React.FC = () => {
       <AuthProvider>
         <AppProvider>
           <ViewContainer view={currentView}>
-            <Suspense fallback={<LoadingSpinner />}>
+            <Suspense fallback={<LoadingSpinner className="h-full min-h-[200px] p-8" />}>
               <ViewRouter view={currentView} />
             </Suspense>
           </ViewContainer>

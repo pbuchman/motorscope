@@ -1,99 +1,98 @@
+/**
+ * ExtensionPopup Component
+ *
+ * Main popup UI for the Chrome extension.
+ * Handles analyzing car listings and displaying tracked items.
+ *
+ * Architecture:
+ * - Uses sub-components for different views (Login, Preview, SavedItem, etc.)
+ * - Uses hooks for Chrome API interactions
+ * - Manages local state for UI flow (preview, warnings, etc.)
+ */
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useListings, useSettings } from '../context/AppContext';
-import { useAuth } from '../auth/AuthContext';
-import { parseCarDataWithGemini } from '../services/geminiService';
-import { CarListing, PageContentResult } from '../types';
-import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTriangle, Car, Calendar, Gauge, Fuel, Eye, RefreshCw, LogOut, X, Key } from 'lucide-react';
-import PriceChart from './PriceChart';
-import { formatEuropeanDateTime, normalizeUrl } from '../utils/formatters';
-import { isChromeExtension } from '../hooks/useChromeMessaging';
+import { Loader2, AlertCircle, X } from 'lucide-react';
+
+// Hooks
+import { useListings, useSettings } from '@/context/AppContext';
+import { useAuth } from '@/auth/AuthContext';
+import { usePageContent, useCurrentTab, useExtensionNavigation } from '@/hooks';
+
+// Services
+import { parseCarDataWithGemini } from '@/services/gemini';
+
+// Components
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import {
+  LoginView,
+  NoListingView,
+  PreviewCard,
+  SavedItemView,
+  AnalyzePrompt,
+  PopupHeader,
+} from '@/components/popup';
+
+// Config & Utils
 import {
   isSupportedMarketplace,
   isTrackableOfferPage,
-  getMarketplaceExamples,
   getEnabledMarketplaces,
-  getMarketplaceForUrl
-} from '../config/marketplaces';
+  getMarketplaceForUrl,
+} from '@/config/marketplaces';
+import { normalizeUrl } from '@/utils/formatters';
 
-// Google logo SVG component
-const GoogleLogo: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg className={className} viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-  </svg>
-);
+// Types
+import { CarListing } from '@/types';
 
+/**
+ * Main popup component
+ */
 const ExtensionPopup: React.FC = () => {
+  // Context hooks
   const { listings, add, remove, error: listingsError, clearError } = useListings();
   const { settings, isLoading: settingsLoading, reload: reloadSettings } = useSettings();
   const auth = useAuth();
 
-  // API key is available if settings are loaded and key exists
-  // While loading, assume we have the key to prevent flash
-  const hasApiKey = settingsLoading || !!settings.geminiApiKey;
+  // Custom hooks
+  const { tab } = useCurrentTab();
+  const { content: pageData, refresh: refreshPageContent } = usePageContent();
+  const { openDashboard, openSettings } = useExtensionNavigation();
 
-  const [currentUrl, setCurrentUrl] = useState<string>('');
+  // Local state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageData, setPageData] = useState<PageContentResult | null>(null);
-
-  // Preview state for confirmation flow
   const [previewData, setPreviewData] = useState<CarListing | null>(null);
   const [showVinWarning, setShowVinWarning] = useState(false);
   const [showDateWarning, setShowDateWarning] = useState(false);
 
-  // Combine errors from listings context and local error state
+  // Derived state
+  const currentUrl = tab?.url || '';
+  const isLoggedIn = auth.status === 'logged_in';
+  const isAuthLoading = auth.status === 'loading' || auth.isLoggingIn;
   const displayError = error || listingsError || auth.error;
 
-  // Reload settings when auth status changes (e.g., after login)
-  useEffect(() => {
-    if (auth.status === 'logged_in' || auth.status === 'logged_out') {
-      reloadSettings();
-    }
-  }, [auth.status, reloadSettings]);
+  // API key check - assume available while loading to prevent flash
+  const hasApiKey = settingsLoading || !!settings.geminiApiKey;
+
+  // Check if current URL is a trackable offer page
+  const isOfferPage = useMemo(() => isTrackableOfferPage(currentUrl), [currentUrl]);
+  const isOnMarketplace = useMemo(() => isSupportedMarketplace(currentUrl), [currentUrl]);
+  const detectedMarketplace = useMemo(() => getMarketplaceForUrl(currentUrl), [currentUrl]);
+  const enabledMarketplaces = useMemo(() => getEnabledMarketplaces(), []);
 
   // Find existing saved item based on URL
   const savedItem = useMemo(() => {
     if (!currentUrl) return null;
     const normalizedUrl = normalizeUrl(currentUrl);
-    return listings.find(l => normalizeUrl(l.source.url) === normalizedUrl) || null;
+    return listings.find((l) => normalizeUrl(l.source.url) === normalizedUrl) || null;
   }, [listings, currentUrl]);
 
+  // Reload settings when auth status changes
   useEffect(() => {
-    // Get Active Tab
-    if (isChromeExtension() && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
-        const activeTab = tabs[0];
-        if (activeTab?.url) {
-          setCurrentUrl(activeTab.url);
-
-          // Execute script to get page content
-          if (activeTab.id && !activeTab.url.startsWith('chrome://')) {
-            chrome.scripting.executeScript({
-              target: { tabId: activeTab.id },
-              func: (): PageContentResult => {
-                return {
-                  title: document.title,
-                  content: document.body.innerText.substring(0, 20000),
-                  image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
-                };
-              }
-            }, (results: chrome.scripting.InjectionResult[]) => {
-              if (results && results[0] && results[0].result) {
-                setPageData(results[0].result as PageContentResult);
-              }
-            });
-          }
-        }
-      });
-    } else {
-      // Fallback for non-extension environment
-      setCurrentUrl(window.location.href);
-      setError("Extension context not found. Cannot scrape page.");
+    if (auth.status === 'logged_in' || auth.status === 'logged_out') {
+      reloadSettings();
     }
-  }, []);
+  }, [auth.status, reloadSettings]);
 
   // Clear all errors
   const handleClearError = useCallback(() => {
@@ -102,6 +101,7 @@ const ExtensionPopup: React.FC = () => {
     auth.clearError();
   }, [clearError, auth]);
 
+  // Auth handlers
   const handleLogin = useCallback(async () => {
     await auth.login();
   }, [auth]);
@@ -110,91 +110,40 @@ const ExtensionPopup: React.FC = () => {
     await auth.logout();
   }, [auth]);
 
+  // Analyze handler
   const handleAnalyze = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Re-fetch page content to capture any dynamically loaded data (like VIN)
-      let contentToAnalyze = pageData;
-
-      if (isChromeExtension() && chrome.tabs && chrome.scripting) {
-        try {
-          // Use callback-based API wrapped in Promise for better type compatibility
-          const freshContent = await new Promise<PageContentResult | null>((resolve) => {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-              const activeTab = tabs[0];
-              if (activeTab?.id && !activeTab.url?.startsWith('chrome://')) {
-                chrome.scripting.executeScript(
-                  {
-                    target: { tabId: activeTab.id },
-                    func: (): PageContentResult => {
-                      return {
-                        title: document.title,
-                        content: document.body.innerText.substring(0, 20000),
-                        image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
-                      };
-                    }
-                  },
-                  (results) => {
-                    if (results?.[0]?.result) {
-                      resolve(results[0].result as PageContentResult);
-                    } else {
-                      resolve(null);
-                    }
-                  }
-                );
-              } else {
-                resolve(null);
-              }
-            });
-          });
-
-          if (freshContent) {
-            contentToAnalyze = freshContent;
-            setPageData(freshContent);
-          }
-        } catch (err) {
-          console.warn('[Popup] Failed to re-fetch page content:', err);
-          // Fall back to initially loaded content
-        }
-      }
+      // Re-fetch page content to capture dynamically loaded data
+      const freshContent = await refreshPageContent();
+      const contentToAnalyze = freshContent || pageData;
 
       if (!contentToAnalyze) {
-        setError("Could not read page content. Refresh the page and try again.");
+        setError('Could not read page content. Refresh the page and try again.');
         return;
       }
 
       const listingData = await parseCarDataWithGemini(
-        currentUrl, 
+        currentUrl,
         contentToAnalyze.content,
         contentToAnalyze.title,
         contentToAnalyze.image
       );
-      
+
       setPreviewData(listingData as CarListing);
-
-      // Check if VIN is missing
-      if (!listingData.vehicle?.vin) {
-        setShowVinWarning(true);
-      }
-
-      // Check if posted date is missing
-      if (!listingData.postedDate) {
-        setShowDateWarning(true);
-      }
-
+      setShowVinWarning(!listingData.vehicle?.vin);
+      setShowDateWarning(!listingData.postedDate);
     } catch (e: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error(e);
-      }
-      const errorMessage = e instanceof Error ? e.message : "Failed to extract car data.";
+      const errorMessage = e instanceof Error ? e.message : 'Failed to extract car data.';
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [pageData, currentUrl]);
+  }, [pageData, currentUrl, refreshPageContent]);
 
+  // Save confirmation handler
   const handleConfirmSave = useCallback(async () => {
     if (!previewData) return;
 
@@ -204,411 +153,104 @@ const ExtensionPopup: React.FC = () => {
       setShowVinWarning(false);
       setShowDateWarning(false);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Failed to save listing.";
+      const errorMessage = e instanceof Error ? e.message : 'Failed to save listing.';
       setError(errorMessage);
     }
   }, [previewData, add]);
 
+  // Cancel preview handler
   const handleCancelPreview = useCallback(() => {
     setPreviewData(null);
     setShowVinWarning(false);
     setShowDateWarning(false);
   }, []);
 
+  // Untrack handler
   const handleUnbookmark = useCallback(async () => {
     if (savedItem) {
       await remove(savedItem.id);
     }
   }, [savedItem, remove]);
 
-  const openDashboard = useCallback(() => {
-    if (isChromeExtension() && chrome.tabs) {
-      chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=dashboard') });
+  // Render content based on state
+  const renderContent = () => {
+    // Auth loading
+    if (auth.status === 'loading') {
+      return <LoadingSpinner message="Loading..." className="py-8" />;
     }
-  }, []);
 
-  const openSettings = useCallback(() => {
-    if (isChromeExtension() && chrome.tabs) {
-      chrome.tabs.create({ url: chrome.runtime.getURL('index.html?view=settings') });
+    // Not logged in
+    if (!isLoggedIn) {
+      return <LoginView onLogin={handleLogin} isLoading={isAuthLoading} error={auth.error} />;
     }
-  }, []);
 
-  // Check if current URL is a trackable offer page (specific listing, not main/search page)
-  const isOfferPage = useMemo(() => isTrackableOfferPage(currentUrl), [currentUrl]);
+    // Preview mode
+    if (previewData) {
+      return (
+        <PreviewCard
+          listing={previewData}
+          showVinWarning={showVinWarning}
+          showDateWarning={showDateWarning}
+          onConfirm={handleConfirmSave}
+          onCancel={handleCancelPreview}
+        />
+      );
+    }
 
-  // Check if we're on a supported marketplace at all (for showing different messages)
-  const isOnMarketplace = useMemo(() => isSupportedMarketplace(currentUrl), [currentUrl]);
+    // Not on a trackable page and no saved item
+    if (!isOfferPage && !savedItem) {
+      return (
+        <NoListingView
+          isOnMarketplace={isOnMarketplace}
+          detectedMarketplace={detectedMarketplace}
+          enabledMarketplaces={enabledMarketplaces}
+        />
+      );
+    }
 
-  // Get the detected marketplace info for potential display
-  const detectedMarketplace = useMemo(() => getMarketplaceForUrl(currentUrl), [currentUrl]);
+    // Analyzing
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center animate-pulse">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+          <p className="text-slate-600 font-medium">Analyzing Page...</p>
+          <p className="text-slate-400 text-xs mt-2">AI is extracting vehicle specs</p>
+        </div>
+      );
+    }
 
-  const isLoggedIn = auth.status === 'logged_in';
-  const isAuthLoading = auth.status === 'loading' || auth.isLoggingIn;
+    // Already tracked
+    if (savedItem) {
+      return <SavedItemView listing={savedItem} onUntrack={handleUnbookmark} />;
+    }
 
-  // Login required view
-  const LoginRequiredView = () => (
-    <div className="flex flex-col items-center py-8">
-      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-        <Car className="w-8 h-8 text-blue-600" />
-      </div>
-      <h3 className="font-bold text-slate-800 mb-2">Sign in to use MotorScope</h3>
-      <p className="text-slate-500 text-sm mb-6 text-center px-4">
-        Track car listings, monitor price changes, and sync across devices.
-      </p>
-      <button
-        onClick={handleLogin}
-        disabled={isAuthLoading}
-        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition-colors disabled:opacity-50"
-      >
-        {isAuthLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <GoogleLogo className="w-5 h-5" />
-        )}
-        <span>Sign in with Google</span>
-      </button>
-      {auth.error && (
-        <p className="text-red-500 text-xs mt-4">{auth.error}</p>
-      )}
-    </div>
-  );
+    // Ready to analyze
+    return (
+      <AnalyzePrompt
+        hasApiKey={hasApiKey}
+        isLoading={loading}
+        hasPageData={!!pageData}
+        error={error}
+        onAnalyze={handleAnalyze}
+        onOpenSettings={openSettings}
+      />
+    );
+  };
 
   return (
     <div className="w-full h-full bg-white flex flex-col font-sans min-h-[500px]">
-      {/* Navbar */}
-      <div className="bg-slate-900 text-white p-4 flex flex-col gap-2 shadow-md">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg flex items-center gap-2">
-            <Car className="w-5 h-5 text-blue-400" />
-            MotorScope
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openDashboard}
-              className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={openSettings}
-              className="bg-slate-700 hover:bg-slate-600 p-1.5 rounded transition-colors"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Auth Section */}
-        {isLoggedIn && (
-          <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1.5 rounded transition-colors w-full justify-between"
-            >
-              <span className="truncate max-w-[180px]">{auth.user?.email}</span>
-              <LogOut className="w-3 h-3 shrink-0" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Header */}
+      <PopupHeader
+        isLoggedIn={isLoggedIn}
+        userEmail={auth.user?.email}
+        onOpenDashboard={openDashboard}
+        onOpenSettings={openSettings}
+        onLogout={handleLogout}
+      />
 
       {/* Main Content */}
       <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto">
-        {/* Auth Loading State */}
-        {auth.status === 'loading' ? (
-          <div className="flex flex-col items-center py-8">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-            <p className="text-slate-500 text-sm">Loading...</p>
-          </div>
-        ) : !isLoggedIn ? (
-          <LoginRequiredView />
-        ) : previewData ? (
-          /* Preview/Confirmation Screen - Compact */
-          <div className="w-full">
-            {/* Warnings - more compact */}
-            {(showVinWarning || showDateWarning) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-left">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div className="text-xs">
-                    {showVinWarning && (
-                      <p className="text-amber-700">
-                        <span className="font-medium">No VIN detected</span> - car will be identified by URL only
-                      </p>
-                    )}
-                    {showDateWarning && (
-                      <p className="text-amber-700 mt-1">
-                        <span className="font-medium">No posted date</span> - listing date unknown
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <h3 className="font-bold text-slate-800 mb-2 text-left text-sm">Confirm Details</h3>
-
-            {/* Preview Card - Compact */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left mb-3">
-              {previewData.thumbnailUrl && (
-                <img
-                  src={previewData.thumbnailUrl}
-                  alt={previewData.title}
-                  className="w-full h-24 object-cover rounded mb-2"
-                />
-              )}
-              <p className="font-bold text-slate-900 text-sm mb-1 truncate">{previewData.title}</p>
-              <p className="text-blue-600 font-mono font-bold mb-2">
-                {previewData.currentPrice?.toLocaleString()} {previewData.currency}
-              </p>
-
-              <div className="grid grid-cols-2 gap-1 text-xs">
-                <div className="flex items-center gap-1 text-slate-600">
-                  <Car className="w-3 h-3" />
-                  <span className="truncate">{previewData.vehicle?.make} {previewData.vehicle?.model}</span>
-                </div>
-                <div className="flex items-center gap-1 text-slate-600">
-                  <Calendar className="w-3 h-3" />
-                  <span>{previewData.vehicle?.productionYear}</span>
-                </div>
-                <div className="flex items-center gap-1 text-slate-600">
-                  <Gauge className="w-3 h-3" />
-                  <span>{previewData.vehicle?.mileage?.value?.toLocaleString()} {previewData.vehicle?.mileage?.unit || 'km'}</span>
-                </div>
-                <div className="flex items-center gap-1 text-slate-600">
-                  <Fuel className="w-3 h-3" />
-                  <span className="truncate">{previewData.vehicle?.engine?.fuelType}</span>
-                </div>
-              </div>
-
-              {/* VIN, Phone, Date - inline compact badges */}
-              <div className="flex flex-wrap gap-1 mt-2">
-                {previewData.vehicle?.vin ? (
-                  <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 font-mono">
-                    VIN: {previewData.vehicle.vin}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-                    No VIN
-                  </span>
-                )}
-                {previewData.seller?.phone && (
-                  <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 font-mono">
-                    📞 {previewData.seller.phone}
-                  </span>
-                )}
-                {previewData.postedDate && (
-                  <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
-                    📅 {formatEuropeanDateTime(previewData.postedDate)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Action Buttons - Fixed at bottom */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancelPreview}
-                className="flex-1 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSave}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        ) : !isOfferPage && !savedItem ? (
-          <div className="flex flex-col items-center py-8 text-slate-400">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <ExternalLink className="w-8 h-8 text-slate-400" />
-            </div>
-            {isOnMarketplace ? (
-              // On a supported marketplace but not on a specific offer page
-              <>
-                <p className="font-medium text-slate-700 mb-2">Navigate to a listing</p>
-                <p className="text-sm text-center px-4">
-                  Open a specific car listing on {detectedMarketplace?.name || 'this marketplace'} to track it.
-                </p>
-                <p className="text-xs text-slate-400 mt-2 text-center px-4">
-                  Search results and category pages are not trackable.
-                </p>
-              </>
-            ) : (
-              // Not on any supported marketplace
-              <>
-                <p className="font-medium text-slate-700 mb-2">No listing detected</p>
-                <p className="text-sm text-center px-4">
-                  Navigate to a supported car marketplace to track listings.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 justify-center">
-                  {getEnabledMarketplaces().slice(0, 3).map(marketplace => (
-                    <a
-                      key={marketplace.id}
-                      href={marketplace.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-blue-600 hover:underline"
-                    >
-                      {marketplace.name}
-                    </a>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <>
-             {loading ? (
-               <div className="flex flex-col items-center animate-pulse">
-                 <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-                 <p className="text-slate-600 font-medium">Analyzing Page...</p>
-                 <p className="text-slate-400 text-xs mt-2">AI is extracting vehicle specs</p>
-               </div>
-             ) : savedItem ? (
-               <div className="w-full">
-                 <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
-                   <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                       <Check className="w-4 h-4 text-green-600" />
-                     </div>
-                     <div className="text-left">
-                       <h3 className="text-green-800 font-bold text-sm">Tracked!</h3>
-                       <p className="text-green-700 text-xs">Monitoring this listing</p>
-                     </div>
-                   </div>
-                 </div>
-                 
-                 {/* Full Details Card */}
-                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left mb-4">
-                   {savedItem.thumbnailUrl && (
-                     <img
-                       src={savedItem.thumbnailUrl}
-                       alt={savedItem.title}
-                       className="w-full h-28 object-cover rounded mb-2"
-                     />
-                   )}
-                   <p className="font-bold text-slate-900 text-sm mb-1 truncate">{savedItem.title}</p>
-                   <p className="text-blue-600 font-mono font-bold mb-2">
-                     {savedItem.currentPrice?.toLocaleString()} {savedItem.currency}
-                   </p>
-
-                   <div className="grid grid-cols-2 gap-1 text-xs mb-2">
-                     <div className="flex items-center gap-1 text-slate-600">
-                       <Car className="w-3 h-3" />
-                       <span className="truncate">{savedItem.vehicle?.make} {savedItem.vehicle?.model}</span>
-                     </div>
-                     <div className="flex items-center gap-1 text-slate-600">
-                       <Calendar className="w-3 h-3" />
-                       <span>{savedItem.vehicle?.productionYear}</span>
-                     </div>
-                     <div className="flex items-center gap-1 text-slate-600">
-                       <Gauge className="w-3 h-3" />
-                       <span>{savedItem.vehicle?.mileage?.value?.toLocaleString()} {savedItem.vehicle?.mileage?.unit || 'km'}</span>
-                     </div>
-                     <div className="flex items-center gap-1 text-slate-600">
-                       <Fuel className="w-3 h-3" />
-                       <span className="truncate">{savedItem.vehicle?.engine?.fuelType}</span>
-                     </div>
-                   </div>
-
-                   {savedItem.vehicle?.vin && (
-                     <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
-                       <span className="text-[10px] text-green-700 font-mono">VIN: {savedItem.vehicle.vin}</span>
-                     </div>
-                   )}
-
-                   {savedItem.seller?.phone && (
-                     <div className="bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mb-2">
-                       <a href={`tel:${savedItem.seller.phone}`} className="text-[10px] text-blue-700 font-mono hover:underline">
-                         📞 {savedItem.seller.phone}
-                       </a>
-                     </div>
-                   )}
-
-                   {savedItem.postedDate && (
-                     <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
-                       <span className="text-[10px] text-green-700">📅 Posted: {formatEuropeanDateTime(savedItem.postedDate)}</span>
-                     </div>
-                   )}
-
-                   {/* Tracking Info */}
-                   <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
-                     <span className="inline-flex items-center gap-1">
-                       <Eye className="w-3 h-3" />
-                       Tracked since {formatEuropeanDateTime(savedItem.firstSeenAt)}
-                     </span>
-                     <span className="inline-flex items-center gap-1">
-                       <RefreshCw className="w-3 h-3" />
-                       Last checked {formatEuropeanDateTime(savedItem.lastSeenAt)}
-                     </span>
-                   </div>
-
-                   {/* Price History Chart - only show when there's actual history (2+ points) */}
-                   {savedItem.priceHistory && savedItem.priceHistory.length >= 2 && (
-                     <div className="mt-2">
-                       <p className="text-[10px] font-semibold text-slate-400 mb-1 uppercase tracking-wider">Price History</p>
-                       <PriceChart history={savedItem.priceHistory} currency={savedItem.currency} />
-                     </div>
-                   )}
-                 </div>
-
-                 <button 
-                   onClick={handleUnbookmark}
-                   className="text-red-500 text-sm hover:underline w-full py-2"
-                 >
-                   Stop Tracking
-                 </button>
-               </div>
-             ) : (
-               <div className="w-full">
-                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-6">
-                   <Bookmark className="w-10 h-10 text-blue-600 mx-auto mb-3" />
-                   <h3 className="text-slate-800 font-bold mb-2">Track this Car?</h3>
-                   <p className="text-slate-500 text-sm">
-                     Save VIN, mileage, specs and track price history.
-                   </p>
-                 </div>
-
-                 {/* API Key Missing Warning */}
-                 {!hasApiKey ? (
-                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                     <div className="flex flex-col items-center text-center">
-                       <Key className="w-6 h-6 text-amber-500 mb-2" />
-                       <p className="text-amber-800 font-medium text-sm mb-3">API Key Required</p>
-                       <button
-                         onClick={openSettings}
-                         className="w-full text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-1.5"
-                       >
-                         <Settings className="w-3 h-3" />
-                         Configure in Settings
-                       </button>
-                     </div>
-                   </div>
-                 ) : (
-                   <button
-                     onClick={handleAnalyze}
-                     disabled={!pageData}
-                     className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                   >
-                     Analyze & Add to Watchlist
-                   </button>
-                 )}
-
-                 {error && (
-                   <div className="flex items-start gap-2 text-left text-red-600 text-xs mt-4 bg-red-50 p-3 rounded border border-red-100">
-                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                     {error}
-                   </div>
-                 )}
-               </div>
-             )}
-          </>
-        )}
+        {renderContent()}
 
         {/* Global Error Display */}
         {displayError && !error && (
@@ -621,12 +263,14 @@ const ExtensionPopup: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       {/* Footer */}
       <div className="p-2 border-t border-gray-100 flex items-center justify-between gap-2">
         <span className="text-[10px] text-slate-400 truncate flex-1">{currentUrl}</span>
         {isLoggedIn && (
-          <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">☁️ Cloud Sync</span>
+          <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">
+            ☁️ Cloud Sync
+          </span>
         )}
       </div>
     </div>

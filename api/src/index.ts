@@ -24,6 +24,7 @@ import {
   FIRESTORE_DATABASE_ID,
 } from './config.js';
 import routes from './routes.js';
+import { setupSwagger } from './swagger.js';
 
 // Validate configuration on startup
 try {
@@ -88,13 +89,22 @@ app.use((req, _res, next) => {
 // Mount API routes under /api prefix
 app.use('/api', routes);
 
-// Root endpoint - basic info
+// =============================================================================
+// Swagger/OpenAPI Documentation
+// =============================================================================
+
+// Setup Swagger UI at /docs and OpenAPI spec at /openapi.json
+setupSwagger(app);
+
+// Root endpoint - basic info with link to docs
 app.get('/', (_req, res) => {
   res.json({
     service: 'motorscope-api',
     version: '1.0.0',
     status: 'running',
-    docs: '/api/healthz',
+    docs: '/docs',
+    openapi: '/openapi.json',
+    health: '/api/healthz',
   });
 });
 
@@ -132,7 +142,9 @@ app.listen(PORT, () => {
   console.log(`CORS Origin: ${IS_PRODUCTION ? ALLOWED_ORIGIN_EXTENSION : 'all (development)'}`);
   console.log('='.repeat(60));
   console.log(`Server listening on http://localhost:${PORT}`);
-  console.log('Health check: GET /api/healthz');
+  console.log(`API Docs: http://localhost:${PORT}/docs`);
+  console.log(`OpenAPI Spec: http://localhost:${PORT}/openapi.json`);
+  console.log(`Health check: GET /api/healthz`);
   console.log('='.repeat(60));
 });
 

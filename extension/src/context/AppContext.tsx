@@ -13,7 +13,7 @@ import {
   saveRemoteListing,
   deleteRemoteListing,
   getRemoteSettings,
-  saveRemoteSettings,
+  patchRemoteSettings,
   ApiError,
 } from '../api/client';
 import { DEFAULT_SETTINGS } from '../services/settings/extensionSettings';
@@ -21,9 +21,8 @@ import {
   getRefreshStatus,
   DEFAULT_REFRESH_STATUS,
 } from '../services/settings/refreshStatus';
-import { getGeminiStats } from '../services/settings/geminiStats';
 import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '../hooks/useChromeMessaging';
-import { refreshSingleListing, RefreshResult } from '../services/refreshService';
+import { refreshSingleListing, RefreshResult } from '../services/refresh';
 import { useAuth } from '../auth/AuthContext';
 
 /**
@@ -285,7 +284,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     try {
       // Save to API
-      await saveRemoteSettings({
+      await patchRemoteSettings({
         geminiApiKey: newSettings.geminiApiKey,
         checkFrequencyMinutes: newSettings.checkFrequencyMinutes,
       });

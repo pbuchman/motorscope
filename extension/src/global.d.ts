@@ -28,6 +28,7 @@ declare namespace chrome {
     export interface Tab {
       id?: number;
       url?: string;
+      title?: string;
       active?: boolean;
     }
     export function query(

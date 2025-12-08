@@ -29,6 +29,11 @@ const copyExtensionFiles = () => {
 export default defineConfig({
     plugins: [react(), copyExtensionFiles()],
     base: './',
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, 'src'),
+        },
+    },
     build: {
         outDir: 'dist',
         emptyOutDir: true,

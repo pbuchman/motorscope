@@ -11,7 +11,7 @@
 import { GeminiCallHistoryEntry, GeminiStats } from '../../types';
 import {
   getRemoteSettings,
-  saveRemoteSettings,
+  patchRemoteSettings,
   getRemoteGeminiHistory,
   addRemoteGeminiHistory,
   clearRemoteGeminiHistory,
@@ -51,7 +51,7 @@ export async function getGeminiStats(): Promise<GeminiStats> {
  */
 async function saveGeminiStats(stats: GeminiStats): Promise<void> {
   try {
-    await saveRemoteSettings({ geminiStats: stats });
+    await patchRemoteSettings({ geminiStats: stats });
   } catch (error) {
     console.warn('Failed to save Gemini stats to API:', error);
     throw error;
@@ -125,7 +125,7 @@ export async function clearGeminiLogs(): Promise<void> {
     };
 
     await Promise.all([
-      saveRemoteSettings({ geminiStats: clearedStats }),
+      patchRemoteSettings({ geminiStats: clearedStats }),
       clearRemoteGeminiHistory(),
     ]);
   } catch (error) {

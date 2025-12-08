@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
-import { CarListing, ListingStatus } from '../types';
-import PriceChart from './PriceChart';
+import { CarListing, ListingStatus } from '@/types';
+import PriceChart from '@/components/PriceChart';
 import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe, Archive, ArchiveRestore } from 'lucide-react';
-import { formatEuropeanDateTime } from '../utils/formatters';
+import { formatEuropeanDateTime } from '@/utils/formatters';
 
 interface CarCardProps {
   listing: CarListing;

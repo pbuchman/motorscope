@@ -1,7 +1,7 @@
 // Background service worker for MotorScope (ES Module)
 import { CarListing, RefreshStatus, RefreshedListingInfo, RefreshPendingItem } from './types';
 import { extensionStorage } from './services/extensionStorage';
-import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refreshService';
+import { refreshSingleListing, sortListingsByRefreshPriority } from './services/refresh';
 import { STORAGE_KEYS } from './services/settings/storageKeys';
 import { DEFAULT_REFRESH_STATUS } from './services/settings/refreshStatus';
 import { initializeAuth, trySilentLogin, isTokenExpired, getToken } from './auth/oauthClient';
@@ -33,13 +33,14 @@ interface Settings {
 }
 
 const getSettings = async (): Promise<Settings> => {
-  try {
-    const token = await getToken();
-    if (!token) {
-      return { checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: '' };
-    }
+  const token = await getToken();
+  if (!token) {
+    return { checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: '' };
+  }
 
-    const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+
+  try {
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -48,7 +49,8 @@ const getSettings = async (): Promise<Settings> => {
     });
 
     if (!response.ok) {
-      throw new Error(`Settings fetch failed: ${response.status}`);
+      console.warn(`[BG] Settings fetch failed with status: ${response.status}`);
+      return { checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: '' };
     }
 
     const settings = await response.json();
