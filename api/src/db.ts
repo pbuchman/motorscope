@@ -371,6 +371,112 @@ export async function clearGeminiHistory(userId: string): Promise<number> {
   return snapshot.size;
 }
 
+// =============================================================================
+// Token Blacklist Operations (for logout/token invalidation)
+// =============================================================================
+
+import { FIRESTORE_TOKEN_BLACKLIST_COLLECTION } from './config.js';
+import { Timestamp } from '@google-cloud/firestore';
+
+const tokenBlacklistCollection = firestore.collection(FIRESTORE_TOKEN_BLACKLIST_COLLECTION);
+
+/**
+ * Token blacklist entry stored in Firestore
+ *
+ * IMPORTANT: The `expireAt` field is a Firestore Timestamp used for automatic
+ * TTL (Time-To-Live) deletion. You MUST configure TTL in Firebase Console:
+ *
+ * 1. Go to Firebase Console > Firestore Database
+ * 2. Click on "Time-to-live" in the left sidebar
+ * 3. Click "Create policy"
+ * 4. Collection group: "token_blacklist"
+ * 5. Timestamp field: "expireAt"
+ * 6. Click "Create"
+ *
+ * Once configured, Firestore will automatically delete documents
+ * when their `expireAt` timestamp is reached (within 24-72 hours typically).
+ */
+interface BlacklistedToken {
+  /** JWT ID or hash - unique identifier for the token */
+  tokenId: string;
+  /** User ID who owned the token */
+  userId: string;
+  /** When the token was blacklisted (ISO string for readability) */
+  blacklistedAt: string;
+  /** When the token expires - Firestore Timestamp for TTL auto-deletion */
+  expireAt: Timestamp;
+}
+
+/**
+ * Add a token to the blacklist (called on logout)
+ *
+ * The token will be automatically deleted by Firestore TTL after it expires.
+ *
+ * @param tokenId - Unique identifier for the token (jti claim or hash)
+ * @param userId - User ID who owned the token
+ * @param expiresAt - Token expiration timestamp
+ */
+export async function blacklistToken(
+  tokenId: string,
+  userId: string,
+  expiresAt: Date
+): Promise<void> {
+  const entry: BlacklistedToken = {
+    tokenId,
+    userId,
+    blacklistedAt: new Date().toISOString(),
+    expireAt: Timestamp.fromDate(expiresAt),
+  };
+
+  await tokenBlacklistCollection.doc(tokenId).set(entry);
+  console.log(`[DB] Token blacklisted for user ${userId}, expires at ${expiresAt.toISOString()}`);
+}
+
+/**
+ * Check if a token is blacklisted
+ *
+ * @param tokenId - Unique identifier for the token
+ * @returns true if token is blacklisted (invalid)
+ */
+export async function isTokenBlacklisted(tokenId: string): Promise<boolean> {
+  const doc = await tokenBlacklistCollection.doc(tokenId).get();
+  return doc.exists;
+}
+
+/**
+ * Clean up expired tokens from the blacklist
+ *
+ * NOTE: If Firestore TTL is configured, this is not strictly necessary
+ * as documents will be auto-deleted. However, this can be used for:
+ * - Immediate cleanup before TTL kicks in
+ * - Testing/development environments
+ * - Backup cleanup if TTL is not configured
+ *
+ * @returns Number of tokens cleaned up
+ */
+export async function cleanupExpiredBlacklistedTokens(): Promise<number> {
+  const now = Timestamp.now();
+
+  const snapshot = await tokenBlacklistCollection
+    .where('expireAt', '<', now)
+    .limit(500) // Process in batches
+    .get();
+
+  if (snapshot.empty) {
+    return 0;
+  }
+
+  const batch = firestore.batch();
+  snapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+  console.log(`[DB] Cleaned up ${snapshot.size} expired blacklisted tokens`);
+
+  return snapshot.size;
+}
+
 // Export firestore instance for advanced use cases
 export { firestore };
 

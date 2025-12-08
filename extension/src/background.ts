@@ -128,6 +128,11 @@ const getRefreshStatus = async (): Promise<RefreshStatus> => {
 const updateRefreshStatus = async (update: Partial<RefreshStatus>): Promise<void> => {
   const current = await getRefreshStatus();
   await setInSessionStorage(STORAGE_KEYS.refreshStatus, { ...current, ...update });
+
+  // Notify UI of status change (backup to storage events which may not fire in all contexts)
+  chrome.runtime.sendMessage({ type: 'REFRESH_STATUS_CHANGED' }).catch(() => {
+    // Ignore errors - UI might not be open
+  });
 };
 
 /**
@@ -237,8 +242,17 @@ const runBackgroundRefresh = async (): Promise<void> => {
     return;
   }
 
+  // Filter out archived listings - they should only be refreshed manually
+  const activeListings = allListings.filter(l => !l.isArchived);
+
+  if (activeListings.length === 0) {
+    console.log('All listings are archived, skipping background refresh');
+    await scheduleAlarm(settings.checkFrequencyMinutes);
+    return;
+  }
+
   // Sort listings by refresh priority
-  const sortedListings = sortListingsByRefreshPriority(allListings);
+  const sortedListings = sortListingsByRefreshPriority(activeListings);
 
   // Build initial pending items list
   const pendingItems: RefreshPendingItem[] = sortedListings.map(l => ({

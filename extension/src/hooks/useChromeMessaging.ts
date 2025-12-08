@@ -7,6 +7,7 @@ export const MessageTypes = {
   LISTING_UPDATED: 'LISTING_UPDATED',
   TRIGGER_MANUAL_REFRESH: 'TRIGGER_MANUAL_REFRESH',
   RESCHEDULE_ALARM: 'RESCHEDULE_ALARM',
+  REFRESH_STATUS_CHANGED: 'REFRESH_STATUS_CHANGED',
 } as const;
 
 export type MessageType = typeof MessageTypes[keyof typeof MessageTypes];
@@ -97,10 +98,15 @@ export const useMessageListener = (
 
 /**
  * Hook to listen for Chrome storage changes
+ *
+ * @param handler - Callback for storage changes
+ * @param deps - React dependency list
+ * @param namespace - Storage namespace to listen to ('session', 'local', or 'all')
  */
 export const useStorageListener = (
   handler: (changes: { [key: string]: StorageChange }) => void,
-  deps: React.DependencyList = []
+  deps: React.DependencyList = [],
+  namespace: 'session' | 'local' | 'all' = 'session'
 ): void => {
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
@@ -112,9 +118,10 @@ export const useStorageListener = (
 
     const listener = (
       changes: { [key: string]: StorageChange },
-      namespace: string
+      changedNamespace: string
     ) => {
-      if (namespace === 'local') {
+      // Filter by namespace
+      if (namespace === 'all' || changedNamespace === namespace) {
         handlerRef.current(changes);
       }
     };

@@ -14,3 +14,12 @@ export { fetchPageContent, checkListingExpired } from './fetcher';
 // Sorting utilities
 export { sortListingsByRefreshPriority } from './sorter';
 
+// Price history utilities
+export {
+  updateDailyPriceHistory,
+  hasPriceChangedFromPreviousDay,
+  consolidateDailyPriceHistory,
+  getDateKey,
+  getTodayKey,
+} from './priceHistory';
+

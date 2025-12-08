@@ -5,7 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt } from './auth.js';
+import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt, getTokenExpiration } from './auth.js';
 import {
   upsertUser,
   getListingsByUserId,
@@ -18,6 +18,8 @@ import {
   getGeminiHistory,
   addGeminiHistoryEntries,
   clearGeminiHistory,
+  blacklistToken,
+  cleanupExpiredBlacklistedTokens,
 } from './db.js';
 import type { User, CarListing, AuthResponse, HealthResponse, UserSettings, GeminiCallHistoryEntry } from './types.js';
 
@@ -32,9 +34,24 @@ const router = Router();
  *
  * Health check endpoint for Cloud Run and monitoring.
  * Verifies Firestore connectivity.
+ *
+ * Also triggers opportunistic cleanup of expired blacklisted tokens
+ * (non-blocking, runs in background).
  */
 router.get('/healthz', async (_req: Request, res: Response) => {
   const firestoreOk = await checkFirestoreHealth();
+
+  // Opportunistic cleanup of expired tokens (non-blocking)
+  // This runs ~10% of the time to avoid overhead on every health check
+  if (Math.random() < 0.1) {
+    cleanupExpiredBlacklistedTokens()
+      .then(count => {
+        if (count > 0) {
+          console.log(`[Healthz] Cleaned up ${count} expired blacklisted tokens`);
+        }
+      })
+      .catch(err => console.error('[Healthz] Token cleanup error:', err));
+  }
 
   const response: HealthResponse = {
     status: firestoreOk ? 'ok' : 'error',
@@ -169,6 +186,56 @@ router.get('/auth/me', authMiddleware, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get user info',
+      statusCode: 500,
+    });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ *
+ * Logout and invalidate the current JWT token.
+ * The token will be blacklisted and can no longer be used for authentication.
+ * Requires JWT authentication.
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Logged out successfully"
+ * }
+ */
+router.post('/auth/logout', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { userId, jti, exp } = req.user!;
+
+    if (!jti) {
+      // Token doesn't have a jti - it's an old token format
+      // Just return success (client will clear it anyway)
+      console.log(`[Auth] Logout for user ${userId} - token has no jti (old format)`);
+      res.status(200).json({
+        success: true,
+        message: 'Logged out successfully',
+      });
+      return;
+    }
+
+    // Calculate token expiration
+    const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Add token to blacklist
+    await blacklistToken(jti, userId, expiresAt);
+
+    console.log(`[Auth] User ${userId} logged out, token blacklisted`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to logout',
       statusCode: 500,
     });
   }

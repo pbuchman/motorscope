@@ -7,6 +7,7 @@
 import { CarListing, ListingStatus } from '../../types';
 import { refreshListingWithGemini, RateLimitError } from '../gemini';
 import { fetchPageContent, checkListingExpired } from './fetcher';
+import { updateDailyPriceHistory, hasPriceChangedFromPreviousDay } from './priceHistory';
 
 /**
  * Result of a listing refresh operation
@@ -22,6 +23,11 @@ export interface RefreshResult {
 /**
  * Refresh a single listing with AI analysis.
  * Shared logic used by both Dashboard and background service worker.
+ *
+ * Price history behavior:
+ * - Always records a price point for each day (even if price unchanged)
+ * - Only keeps one price point per day (the most recent)
+ * - priceChanged flag indicates if price changed from previous day
  */
 export async function refreshSingleListing(listing: CarListing): Promise<RefreshResult> {
   try {
@@ -65,23 +71,31 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
     );
 
     const updatedListing = { ...listing };
-    let priceChanged = false;
 
-    // Update price if changed
-    if (result.price > 0 && result.price !== listing.currentPrice) {
-      priceChanged = true;
-      updatedListing.priceHistory = [
-        ...listing.priceHistory,
-        {
-          date: new Date().toISOString(),
-          price: result.price,
-          currency: result.currency,
-        },
-      ];
+    // Determine the price to record (use result price if valid, otherwise keep current)
+    const priceToRecord = result.price > 0 ? result.price : listing.currentPrice;
+    const currencyToUse = result.currency || listing.currency;
+
+    // Check if price changed from previous day (for UI notification purposes)
+    const priceChanged = hasPriceChangedFromPreviousDay(
+      listing.priceHistory,
+      priceToRecord
+    );
+
+    // Always update price history with today's price point
+    // This ensures one price point per day (updates existing or adds new)
+    updatedListing.priceHistory = updateDailyPriceHistory(
+      listing.priceHistory,
+      priceToRecord,
+      currencyToUse
+    );
+
+    // Update current price if we got a valid new price
+    if (result.price > 0) {
       updatedListing.currentPrice = result.price;
     }
 
-    updatedListing.currency = result.currency || listing.currency;
+    updatedListing.currency = currencyToUse;
     updatedListing.status = result.status;
     updatedListing.lastSeenAt = new Date().toISOString();
     updatedListing.lastRefreshStatus = 'success';

@@ -29,7 +29,7 @@ import {
   getStoredToken,
   getStoredUser,
 } from './storage';
-import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH } from './config';
+import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH } from './config';
 
 // Re-export types for convenience
 export type { User, AuthState } from './types';
@@ -38,6 +38,38 @@ export type UserProfile = User; // Alias for backward compatibility
 // =============================================================================
 // Backend API Communication
 // =============================================================================
+
+/**
+ * Call backend /auth/logout endpoint to invalidate the token
+ * Returns true if successful, false otherwise (we still clear local state either way)
+ */
+const invalidateTokenOnBackend = async (token: string): Promise<boolean> => {
+  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_LOGOUT_ENDPOINT_PATH}`;
+
+  try {
+    console.log('[OAuth] Calling backend logout endpoint...');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log('[OAuth] Token invalidated on backend');
+      return true;
+    }
+
+    console.log('[OAuth] Backend logout returned:', response.status);
+    return false;
+  } catch (error) {
+    // Network error - still proceed with local logout
+    console.log('[OAuth] Backend logout failed (network error):', error);
+    return false;
+  }
+};
 
 /**
  * Call backend /auth/google endpoint with Google access token
@@ -159,6 +191,9 @@ export const isTokenExpired = async (): Promise<boolean> => {
  * This should be called when:
  * - JWT is expired but we want to try re-auth without user interaction
  *
+ * IMPORTANT: If the backend rejects the token, we clear it from Chrome's cache
+ * so that subsequent interactive login can get a fresh token.
+ *
  * @returns Auth result with user and token, or null if silent login fails
  */
 export const trySilentLogin = async (): Promise<{ user: User; token: string } | null> => {
@@ -181,18 +216,36 @@ export const trySilentLogin = async (): Promise<{ user: User; token: string } | 
     };
   } catch (error) {
     console.error('[OAuth] Silent backend auth failed:', error);
+
+    // CRITICAL: Clear the bad token from Chrome's cache so that
+    // subsequent interactive login can get a fresh token instead of
+    // Chrome returning the same invalid cached token
+    console.log('[OAuth] Clearing invalid token from Chrome cache...');
+    try {
+      await removeCachedGoogleToken(googleToken);
+      console.log('[OAuth] Cleared invalid token');
+    } catch (clearError) {
+      console.log('[OAuth] Could not clear token:', clearError);
+    }
+
     return null;
   }
 };
+
+/**
+ * Helper to delay execution
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Perform interactive login (shows Google consent screen if needed)
  *
  * Flow:
  * 1. Get Google token interactively
- * 2. Send to backend for verification
- * 3. If backend rejects token (stale cache), clear cache and retry once
- * 4. Store returned JWT + user profile
+ * 2. Wait a moment for token propagation (important for first-time users)
+ * 3. Send to backend for verification
+ * 4. If backend rejects, clear Chrome's token cache and retry
+ * 5. Store returned JWT + user profile
  *
  * @returns User profile and backend JWT
  * @throws Error if login fails
@@ -200,56 +253,73 @@ export const trySilentLogin = async (): Promise<{ user: User; token: string } | 
 export const loginWithProvider = async (): Promise<{ user: User; token: string }> => {
   console.log('[OAuth] Starting interactive login...');
 
-  // Get Google token (may show consent screen)
-  let googleToken = await getGoogleTokenInteractive();
-  console.log('[OAuth] Got Google token');
+  const maxAttempts = 5;
+  const initialDelayMs = 1000;
+  let lastError: Error | null = null;
 
-  try {
-    // Authenticate with backend
-    const authResponse = await authenticateWithBackend(googleToken);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Get Google token (may show consent screen on first attempt)
+      const googleToken = await getGoogleTokenInteractive();
+      console.log(`[OAuth] Attempt ${attempt}: Got Google token, length: ${googleToken.length}`);
 
-    // Store auth data
-    await storeAuthData(authResponse.token, authResponse.user);
+      // Wait for token propagation (especially important for fresh tokens)
+      const waitMs = attempt === 1 ? initialDelayMs : initialDelayMs * 0.5;
+      console.log(`[OAuth] Waiting ${waitMs}ms for token propagation...`);
+      await delay(waitMs);
 
-    console.log('[OAuth] Interactive login successful:', authResponse.user.email);
+      // Try to authenticate with backend
+      const authResponse = await authenticateWithBackend(googleToken);
 
-    return {
-      user: authResponse.user,
-      token: authResponse.token,
-    };
-  } catch (error) {
-    // If authentication failed, the cached token might be stale/revoked
-    // Clear it from Chrome's cache and try once more with a fresh token
-    console.log('[OAuth] Backend auth failed, clearing cached token and retrying...');
+      // Success! Store auth data
+      await storeAuthData(authResponse.token, authResponse.user);
+      console.log('[OAuth] Interactive login successful:', authResponse.user.email);
 
-    await removeCachedGoogleToken(googleToken);
+      return {
+        user: authResponse.user,
+        token: authResponse.token,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.log(`[OAuth] Attempt ${attempt}/${maxAttempts} failed:`, lastError.message);
 
-    // Get a fresh token (this will force Chrome to get a new one)
-    googleToken = await getGoogleTokenInteractive();
-    console.log('[OAuth] Got fresh Google token after cache clear');
+      // Don't retry on network errors
+      if (lastError.message.includes('network') || lastError.message.includes('fetch failed')) {
+        throw lastError;
+      }
 
-    // Try again with the fresh token
-    const authResponse = await authenticateWithBackend(googleToken);
+      // If not the last attempt, clear the token cache and try again
+      if (attempt < maxAttempts) {
+        console.log('[OAuth] Clearing cached token before retry...');
+        try {
+          // Get the current token silently and clear it
+          const cachedToken = await getGoogleTokenSilent();
+          if (cachedToken) {
+            await removeCachedGoogleToken(cachedToken);
+            console.log('[OAuth] Cleared cached token');
+          }
+        } catch (clearError) {
+          console.log('[OAuth] Could not clear cached token:', clearError);
+        }
 
-    // Store auth data
-    await storeAuthData(authResponse.token, authResponse.user);
-
-    console.log('[OAuth] Interactive login successful (after retry):', authResponse.user.email);
-
-    return {
-      user: authResponse.user,
-      token: authResponse.token,
-    };
+        // Wait before retrying
+        const retryDelayMs = 800 * Math.pow(1.5, attempt - 1);
+        console.log(`[OAuth] Waiting ${Math.round(retryDelayMs)}ms before retry...`);
+        await delay(retryDelayMs);
+      }
+    }
   }
+
+  throw lastError || new Error('Login failed after multiple attempts');
 };
 
 /**
- * Logout - clears local auth state
+ * Logout - invalidates token and clears local auth state
  *
- * Clears:
- * - Backend JWT from storage
- * - User profile from storage
- * - Cached Google token from Chrome's cache
+ * This function:
+ * 1. Calls the backend to blacklist/invalidate the current JWT token
+ * 2. Clears the cached Google token from Chrome's cache
+ * 3. Clears stored auth data (JWT + user profile)
  *
  * IMPORTANT: Does NOT revoke Google consent.
  * User will see account picker (not consent screen) on next login.
@@ -257,6 +327,12 @@ export const loginWithProvider = async (): Promise<{ user: User; token: string }
  */
 export const logout = async (): Promise<void> => {
   console.log('[OAuth] Logging out...');
+
+  // First, try to invalidate the token on the backend
+  const token = await getStoredToken();
+  if (token) {
+    await invalidateTokenOnBackend(token);
+  }
 
   // Clear Google auth from Chrome's cache (does NOT revoke consent)
   await clearGoogleAuth();

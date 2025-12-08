@@ -151,6 +151,16 @@ export interface RemoteSettings {
   lastRefreshTime?: string | null;
   nextRefreshTime?: string | null;
   lastRefreshCount?: number;
+  // Dashboard preferences
+  dashboardFilters?: {
+    status: string;
+    archived: string;
+    makes: string[];
+    models: string[];
+    sources: string[];
+  };
+  dashboardSort?: string;
+  dashboardViewMode?: string;
 }
 
 /**

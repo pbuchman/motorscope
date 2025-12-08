@@ -220,6 +220,21 @@ export interface UserSettings {
   /** Number of listings refreshed in last run */
   lastRefreshCount?: number;
 
+  /** Dashboard filters - persisted user preferences */
+  dashboardFilters?: {
+    status: string;
+    archived: string;
+    makes: string[];
+    models: string[];
+    sources: string[];
+  };
+
+  /** Dashboard sort preference */
+  dashboardSort?: string;
+
+  /** Dashboard view mode */
+  dashboardViewMode?: string;
+
   /** Last updated timestamp */
   updatedAt: string;
 }
@@ -245,6 +260,9 @@ export interface JwtPayload {
 
   /** User email */
   email: string;
+
+  /** JWT ID - unique identifier for this token (used for blacklisting) */
+  jti?: string;
 
   /** Issued at timestamp */
   iat?: number;

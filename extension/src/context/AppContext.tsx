@@ -153,6 +153,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           geminiApiKey: remoteSettings.geminiApiKey || '',
           checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes || DEFAULT_SETTINGS.checkFrequencyMinutes,
           backendUrl: DEFAULT_SETTINGS.backendUrl,
+          dashboardPreferences: remoteSettings.dashboardFilters ? {
+            filters: remoteSettings.dashboardFilters,
+            sortBy: remoteSettings.dashboardSort || 'newest',
+            viewMode: remoteSettings.dashboardViewMode || 'grid',
+          } : undefined,
         });
       } else {
         // Not logged in - use defaults
@@ -313,17 +318,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       reloadListings();
       reloadRefreshStatus();
     }
+    if (message.type === MessageTypes.REFRESH_STATUS_CHANGED) {
+      reloadRefreshStatus();
+    }
   }, [reloadListings, reloadRefreshStatus]);
 
   // Listen for storage changes (refresh status updates from background worker)
+  // Using 'session' namespace since refresh status is stored in chrome.storage.session
   useStorageListener((changes) => {
     if (changes.motorscope_refresh_status) {
       reloadRefreshStatus();
     }
+  }, [reloadRefreshStatus], 'session');
+
+  // Listen for settings changes in local storage (if any)
+  useStorageListener((changes) => {
     if (changes.motorscope_settings || changes.motorscope_gemini_key) {
       reloadSettings();
     }
-  }, [reloadSettings, reloadRefreshStatus]);
+  }, [reloadSettings], 'local');
 
 
   // Memoize context value to prevent unnecessary re-renders
@@ -394,6 +407,7 @@ export const useListings = () => {
     refreshingIds,
     reload: reloadListings,
     add: addListing,
+    update: addListing, // addListing also handles updates (upsert)
     remove: removeListing,
     refresh: refreshListing,
     error,

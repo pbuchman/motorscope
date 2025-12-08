@@ -118,6 +118,9 @@ export interface CarListing {
   firstSeenAt: string; // When we first saw this listing (ISO string)
   lastSeenAt: string; // When we last checked this listing (ISO string)
 
+  // Archive status - archived listings are excluded from auto-refresh
+  isArchived?: boolean;
+
   // Refresh status tracking
   lastRefreshStatus?: 'success' | 'error' | 'pending';
   lastRefreshError?: string;
@@ -143,10 +146,23 @@ export interface GeminiStats {
   errorCount: number; // Resets with clear
 }
 
+export interface DashboardPreferences {
+  filters: {
+    status: string;
+    archived: string;
+    makes: string[];
+    models: string[];
+    sources: string[];
+  };
+  sortBy: string;
+  viewMode: string;
+}
+
 export interface ExtensionSettings {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
   backendUrl: string;
+  dashboardPreferences?: DashboardPreferences;
 }
 
 export interface RefreshStatus {

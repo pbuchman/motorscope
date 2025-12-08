@@ -36,6 +36,9 @@ export const FIRESTORE_LISTINGS_COLLECTION = 'listings';
 /** Collection name for Gemini API call history */
 export const FIRESTORE_GEMINI_HISTORY_COLLECTION = 'gemini_history';
 
+/** Collection name for invalidated/blacklisted tokens */
+export const FIRESTORE_TOKEN_BLACKLIST_COLLECTION = 'token_blacklist';
+
 /** Field name in listings that stores the user ID for ownership */
 export const FIRESTORE_LISTINGS_USER_FIELD = 'userId';
 

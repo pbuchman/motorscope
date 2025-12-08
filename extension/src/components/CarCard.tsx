@@ -1,13 +1,14 @@
 import React, { memo } from 'react';
 import { CarListing, ListingStatus } from '../types';
 import PriceChart from './PriceChart';
-import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe } from 'lucide-react';
+import { Trash2, ExternalLink, Fuel, Calendar, Gauge, Clock, Eye, RefreshCw, Loader2, AlertTriangle, MapPin, Settings2, Car, Globe, Archive, ArchiveRestore } from 'lucide-react';
 import { formatEuropeanDateTime } from '../utils/formatters';
 
 interface CarCardProps {
   listing: CarListing;
   onRemove: (id: string) => void;
   onRefresh: (listing: CarListing) => void;
+  onArchive: (listing: CarListing) => void;
   isRefreshing: boolean;
 }
 
@@ -51,10 +52,13 @@ const getLocationString = (listing: CarListing): string | null => {
 };
 
 
-const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefreshing }) => {
+const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchive, isRefreshing }) => {
   // Get normalized vehicle data
   const vehicleData = getVehicleData(listing);
   const locationStr = getLocationString(listing);
+
+  // Check if listing is inactive (expired or sold)
+  const isInactive = listing.status === ListingStatus.EXPIRED || listing.status === ListingStatus.SOLD;
 
   // Compare current price with the previous price (if exists)
   // Ensure priceHistory has at least one entry before accessing
@@ -75,7 +79,17 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
   const lastRefreshFailed = listing.lastRefreshStatus === 'error';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 relative">
+    <div className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all duration-200 relative ${
+      listing.isArchived ? 'border-amber-200 opacity-80' : 'border-gray-200'
+    }`}>
+      {/* Archived badge */}
+      {listing.isArchived && (
+        <div className="absolute top-0 left-0 right-0 z-20 bg-amber-50 border-b border-amber-200 px-3 py-1 flex items-center gap-2">
+          <Archive className="w-3 h-3 text-amber-600" />
+          <span className="text-[10px] font-medium text-amber-700">Archived - Excluded from auto-refresh</span>
+        </div>
+      )}
+
       {/* Loading Overlay */}
       {isRefreshing && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
@@ -103,7 +117,9 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
         />
         <div className="absolute top-3 right-3 flex gap-2">
            <span className={`px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md ${
-            listing.status === ListingStatus.ACTIVE ? 'bg-green-500/20 text-green-900 bg-white/80' : 'bg-red-500/20 text-red-900 bg-white/80'
+            listing.status === ListingStatus.ACTIVE ? 'bg-green-500/20 text-green-900 bg-white/80' : 
+            listing.status === ListingStatus.SOLD ? 'bg-orange-500/20 text-orange-900 bg-white/80' :
+            'bg-red-500/20 text-red-900 bg-white/80'
           }`}>
             {listing.status}
           </span>
@@ -114,7 +130,10 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
              <span className="text-xl font-bold">
                {listing.currentPrice.toLocaleString()} {listing.currency}
              </span>
-             {hasDiscount && (
+             {isInactive && (
+               <span className="text-xs bg-slate-500 text-white px-1.5 rounded">Final Price</span>
+             )}
+             {hasDiscount && !isInactive && (
                <>
                  <span className="text-sm line-through text-white/60">
                    {listing.originalPrice!.toLocaleString()}
@@ -122,9 +141,9 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
                  <span className="text-xs bg-green-500 text-white px-1.5 rounded">-{discountPercent}%</span>
                </>
              )}
-             {isLowerPrice && !hasDiscount && <span className="text-xs bg-green-500 text-white px-1.5 rounded">↓ Drop</span>}
-             {isHigherPrice && <span className="text-xs bg-red-500 text-white px-1.5 rounded">↑ Rise</span>}
-             {listing.negotiable && <span className="text-xs bg-yellow-500 text-white px-1.5 rounded">Negotiable</span>}
+             {isLowerPrice && !hasDiscount && !isInactive && <span className="text-xs bg-green-500 text-white px-1.5 rounded">↓ Drop</span>}
+             {isHigherPrice && !isInactive && <span className="text-xs bg-red-500 text-white px-1.5 rounded">↑ Rise</span>}
+             {listing.negotiable && !isInactive && <span className="text-xs bg-yellow-500 text-white px-1.5 rounded">Negotiable</span>}
            </div>
         </div>
       </div>
@@ -267,6 +286,21 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, isRefre
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <button
+              onClick={() => onArchive(listing)}
+              className={`p-2 rounded-full transition-colors ${
+                listing.isArchived 
+                  ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' 
+                  : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+              }`}
+              title={listing.isArchived ? 'Unarchive - Include in auto-refresh' : 'Archive - Exclude from auto-refresh'}
+            >
+              {listing.isArchived ? (
+                <ArchiveRestore className="w-4 h-4" />
+              ) : (
+                <Archive className="w-4 h-4" />
+              )}
+            </button>
+            <button
               onClick={() => onRemove(listing.id)}
               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
               title="Stop Tracking"
@@ -287,6 +321,7 @@ export default memo(CarCard, (prevProps, nextProps) => {
     prevProps.listing.id === nextProps.listing.id &&
     prevProps.listing.currentPrice === nextProps.listing.currentPrice &&
     prevProps.listing.status === nextProps.listing.status &&
+    prevProps.listing.isArchived === nextProps.listing.isArchived &&
     prevProps.listing.lastSeenAt === nextProps.listing.lastSeenAt &&
     prevProps.listing.lastRefreshStatus === nextProps.listing.lastRefreshStatus &&
     prevProps.listing.priceHistory.length === nextProps.listing.priceHistory.length &&

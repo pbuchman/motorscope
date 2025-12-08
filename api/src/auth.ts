@@ -125,6 +125,16 @@ export async function verifyGoogleAccessToken(accessToken: string): Promise<Goog
 // JWT Token Operations
 // =============================================================================
 
+import crypto from 'crypto';
+import { isTokenBlacklisted } from './db.js';
+
+/**
+ * Generate a unique JWT ID (jti)
+ */
+function generateJti(): string {
+  return crypto.randomUUID();
+}
+
 /**
  * Generate a JWT token for a user
  *
@@ -137,9 +147,12 @@ export function generateJwt(userId: string, email: string): string {
     throw new Error('JWT_SECRET is not configured');
   }
 
+  const jti = generateJti();
+
   const payload: JwtPayload = {
     userId,
     email,
+    jti,
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -171,6 +184,38 @@ export function verifyJwt(token: string): JwtPayload {
     }
     throw error;
   }
+}
+
+/**
+ * Verify a JWT token and check if it's blacklisted
+ *
+ * @param token - JWT token string
+ * @returns Decoded payload
+ * @throws Error if token is invalid, expired, or blacklisted
+ */
+export async function verifyJwtWithBlacklistCheck(token: string): Promise<JwtPayload> {
+  const payload = verifyJwt(token);
+
+  // Check if token is blacklisted (only if it has a jti)
+  if (payload.jti) {
+    const blacklisted = await isTokenBlacklisted(payload.jti);
+    if (blacklisted) {
+      throw new Error('Token has been revoked');
+    }
+  }
+
+  return payload;
+}
+
+/**
+ * Extract expiration date from a JWT payload
+ */
+export function getTokenExpiration(payload: JwtPayload): Date {
+  if (payload.exp) {
+    return new Date(payload.exp * 1000);
+  }
+  // Default to 24 hours from now if no exp
+  return new Date(Date.now() + 24 * 60 * 60 * 1000);
 }
 
 // =============================================================================
@@ -214,17 +259,19 @@ export function authMiddleware(
 
   const token = parts[1];
 
-  try {
-    const payload = verifyJwt(token);
-    req.user = payload;
-    next();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Authentication failed';
-    res.status(401).json({
-      error: 'Unauthorized',
-      message,
-      statusCode: 401,
+  // Use async verification with blacklist check
+  verifyJwtWithBlacklistCheck(token)
+    .then((payload) => {
+      req.user = payload;
+      next();
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : 'Authentication failed';
+      res.status(401).json({
+        error: 'Unauthorized',
+        message,
+        statusCode: 401,
+      });
     });
-  }
 }
 

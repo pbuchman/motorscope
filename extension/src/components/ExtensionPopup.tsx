@@ -7,6 +7,13 @@ import { Bookmark, Check, Loader2, ExternalLink, AlertCircle, Settings, AlertTri
 import PriceChart from './PriceChart';
 import { formatEuropeanDateTime, normalizeUrl } from '../utils/formatters';
 import { isChromeExtension } from '../hooks/useChromeMessaging';
+import {
+  isSupportedMarketplace,
+  isTrackableOfferPage,
+  getMarketplaceExamples,
+  getEnabledMarketplaces,
+  getMarketplaceForUrl
+} from '../config/marketplaces';
 
 // Google logo SVG component
 const GoogleLogo: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
@@ -24,7 +31,8 @@ const ExtensionPopup: React.FC = () => {
   const auth = useAuth();
 
   // API key is available if settings are loaded and key exists
-  const hasApiKey = !settingsLoading && !!settings.geminiApiKey;
+  // While loading, assume we have the key to prevent flash
+  const hasApiKey = settingsLoading || !!settings.geminiApiKey;
 
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -103,20 +111,65 @@ const ExtensionPopup: React.FC = () => {
   }, [auth]);
 
   const handleAnalyze = useCallback(async () => {
-    if (!pageData) {
-      setError("Could not read page content. Refresh the page and try again.");
-      return;
-    }
-    
     setLoading(true);
     setError(null);
 
     try {
+      // Re-fetch page content to capture any dynamically loaded data (like VIN)
+      let contentToAnalyze = pageData;
+
+      if (isChromeExtension() && chrome.tabs && chrome.scripting) {
+        try {
+          // Use callback-based API wrapped in Promise for better type compatibility
+          const freshContent = await new Promise<PageContentResult | null>((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+              const activeTab = tabs[0];
+              if (activeTab?.id && !activeTab.url?.startsWith('chrome://')) {
+                chrome.scripting.executeScript(
+                  {
+                    target: { tabId: activeTab.id },
+                    func: (): PageContentResult => {
+                      return {
+                        title: document.title,
+                        content: document.body.innerText.substring(0, 20000),
+                        image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
+                      };
+                    }
+                  },
+                  (results) => {
+                    if (results?.[0]?.result) {
+                      resolve(results[0].result as PageContentResult);
+                    } else {
+                      resolve(null);
+                    }
+                  }
+                );
+              } else {
+                resolve(null);
+              }
+            });
+          });
+
+          if (freshContent) {
+            contentToAnalyze = freshContent;
+            setPageData(freshContent);
+          }
+        } catch (err) {
+          console.warn('[Popup] Failed to re-fetch page content:', err);
+          // Fall back to initially loaded content
+        }
+      }
+
+      if (!contentToAnalyze) {
+        setError("Could not read page content. Refresh the page and try again.");
+        return;
+      }
+
       const listingData = await parseCarDataWithGemini(
         currentUrl, 
-        pageData.content,
-        pageData.title,
-        pageData.image
+        contentToAnalyze.content,
+        contentToAnalyze.title,
+        contentToAnalyze.image
       );
       
       setPreviewData(listingData as CarListing);
@@ -180,8 +233,14 @@ const ExtensionPopup: React.FC = () => {
     }
   }, []);
 
-  // Simple heuristic for supported sites
-  const isMarketplace = currentUrl.includes('otomoto') || currentUrl.includes('mobile.de') || currentUrl.includes('autoscout') || currentUrl.includes('olx') || currentUrl.includes('allegro');
+  // Check if current URL is a trackable offer page (specific listing, not main/search page)
+  const isOfferPage = useMemo(() => isTrackableOfferPage(currentUrl), [currentUrl]);
+
+  // Check if we're on a supported marketplace at all (for showing different messages)
+  const isOnMarketplace = useMemo(() => isSupportedMarketplace(currentUrl), [currentUrl]);
+
+  // Get the detected marketplace info for potential display
+  const detectedMarketplace = useMemo(() => getMarketplaceForUrl(currentUrl), [currentUrl]);
 
   const isLoggedIn = auth.status === 'logged_in';
   const isAuthLoading = auth.status === 'loading' || auth.isLoggingIn;
@@ -265,56 +324,49 @@ const ExtensionPopup: React.FC = () => {
         ) : !isLoggedIn ? (
           <LoginRequiredView />
         ) : previewData ? (
-          /* Preview/Confirmation Screen */
+          /* Preview/Confirmation Screen - Compact */
           <div className="w-full">
-            {/* VIN Warning */}
-            {showVinWarning && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2 text-left">
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-amber-800 font-medium text-sm">VIN not detected</p>
-                  <p className="text-amber-600 text-xs mt-1">
-                    Without VIN, this car will be identified by URL only.
-                    The same car on different URLs will be treated as separate listings.
-                  </p>
+            {/* Warnings - more compact */}
+            {(showVinWarning || showDateWarning) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-left">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    {showVinWarning && (
+                      <p className="text-amber-700">
+                        <span className="font-medium">No VIN detected</span> - car will be identified by URL only
+                      </p>
+                    )}
+                    {showDateWarning && (
+                      <p className="text-amber-700 mt-1">
+                        <span className="font-medium">No posted date</span> - listing date unknown
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Posted Date Warning */}
-            {showDateWarning && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2 text-left">
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-amber-800 font-medium text-sm">Posted date not detected</p>
-                  <p className="text-amber-600 text-xs mt-1">
-                    The listing date helps track how long a car has been on the market.
-                    This is useful for price negotiation insights.
-                  </p>
-                </div>
-              </div>
-            )}
+            <h3 className="font-bold text-slate-800 mb-2 text-left text-sm">Confirm Details</h3>
 
-            <h3 className="font-bold text-slate-800 mb-3 text-left">Confirm Details</h3>
-
-            {/* Preview Card */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-left mb-4">
+            {/* Preview Card - Compact */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left mb-3">
               {previewData.thumbnailUrl && (
                 <img
                   src={previewData.thumbnailUrl}
                   alt={previewData.title}
-                  className="w-full h-32 object-cover rounded mb-3"
+                  className="w-full h-24 object-cover rounded mb-2"
                 />
               )}
-              <p className="font-bold text-slate-900 mb-2">{previewData.title}</p>
-              <p className="text-blue-600 font-mono font-bold text-lg mb-3">
+              <p className="font-bold text-slate-900 text-sm mb-1 truncate">{previewData.title}</p>
+              <p className="text-blue-600 font-mono font-bold mb-2">
                 {previewData.currentPrice?.toLocaleString()} {previewData.currency}
               </p>
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-1 text-xs">
                 <div className="flex items-center gap-1 text-slate-600">
                   <Car className="w-3 h-3" />
-                  <span>{previewData.vehicle?.make} {previewData.vehicle?.model}</span>
+                  <span className="truncate">{previewData.vehicle?.make} {previewData.vehicle?.model}</span>
                 </div>
                 <div className="flex items-center gap-1 text-slate-600">
                   <Calendar className="w-3 h-3" />
@@ -326,50 +378,35 @@ const ExtensionPopup: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1 text-slate-600">
                   <Fuel className="w-3 h-3" />
-                  <span>{previewData.vehicle?.engine?.fuelType}</span>
+                  <span className="truncate">{previewData.vehicle?.engine?.fuelType}</span>
                 </div>
               </div>
 
-              {previewData.vehicle?.vin ? (
-                <div className="mt-3 bg-green-50 border border-green-200 rounded px-2 py-1">
-                  <span className="text-xs text-green-700 font-mono">VIN: {previewData.vehicle.vin}</span>
-                </div>
-              ) : (
-                <div className="mt-3 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                  <span className="text-xs text-amber-700">No VIN detected</span>
-                </div>
-              )}
-
-              {previewData.seller?.phone && (
-                <div className="mt-2 bg-blue-50 border border-blue-200 rounded px-2 py-1">
-                  <a href={`tel:${previewData.seller.phone}`} className="text-xs text-blue-700 font-mono hover:underline">
+              {/* VIN, Phone, Date - inline compact badges */}
+              <div className="flex flex-wrap gap-1 mt-2">
+                {previewData.vehicle?.vin ? (
+                  <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 font-mono">
+                    VIN: {previewData.vehicle.vin}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                    No VIN
+                  </span>
+                )}
+                {previewData.seller?.phone && (
+                  <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 font-mono">
                     📞 {previewData.seller.phone}
-                  </a>
-                </div>
-              )}
-
-              {previewData.postedDate ? (
-                <div className="mt-2 bg-green-50 border border-green-200 rounded px-2 py-1">
-                  <span className="text-xs text-green-700">📅 Posted: {formatEuropeanDateTime(previewData.postedDate)}</span>
-                </div>
-              ) : (
-                <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                  <span className="text-xs text-amber-700">📅 Posted date not detected</span>
-                </div>
-              )}
-
-              {previewData.vehicle?.engine?.capacityCc && (
-                <p className="text-xs text-slate-500 mt-2">Engine: {(previewData.vehicle.engine.capacityCc / 1000).toFixed(1)}L</p>
-              )}
-              {previewData.vehicle?.drivetrain?.transmissionType && (
-                <p className="text-xs text-slate-500">Transmission: {previewData.vehicle.drivetrain.transmissionType}</p>
-              )}
-              {previewData.location?.city && (
-                <p className="text-xs text-slate-500">Location: {previewData.location.city}{previewData.location.region ? `, ${previewData.location.region}` : ''}</p>
-              )}
+                  </span>
+                )}
+                {previewData.postedDate && (
+                  <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+                    📅 {formatEuropeanDateTime(previewData.postedDate)}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Fixed at bottom */}
             <div className="flex gap-2">
               <button
                 onClick={handleCancelPreview}
@@ -381,28 +418,48 @@ const ExtensionPopup: React.FC = () => {
                 onClick={handleConfirmSave}
                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
               >
-                {(showVinWarning || showDateWarning) ? 'Save Anyway' : 'Save'}
+                Save
               </button>
             </div>
           </div>
-        ) : !isMarketplace && !savedItem ? (
+        ) : !isOfferPage && !savedItem ? (
           <div className="flex flex-col items-center py-8 text-slate-400">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
               <ExternalLink className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="font-medium text-slate-700 mb-2">No listing detected</p>
-            <p className="text-sm">
-              Navigate to a supported car marketplace (e.g.{' '}
-              <a
-                href="https://otomoto.pl"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                otomoto.pl
-              </a>
-              ) to track it.
-            </p>
+            {isOnMarketplace ? (
+              // On a supported marketplace but not on a specific offer page
+              <>
+                <p className="font-medium text-slate-700 mb-2">Navigate to a listing</p>
+                <p className="text-sm text-center px-4">
+                  Open a specific car listing on {detectedMarketplace?.name || 'this marketplace'} to track it.
+                </p>
+                <p className="text-xs text-slate-400 mt-2 text-center px-4">
+                  Search results and category pages are not trackable.
+                </p>
+              </>
+            ) : (
+              // Not on any supported marketplace
+              <>
+                <p className="font-medium text-slate-700 mb-2">No listing detected</p>
+                <p className="text-sm text-center px-4">
+                  Navigate to a supported car marketplace to track listings.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                  {getEnabledMarketplaces().slice(0, 3).map(marketplace => (
+                    <a
+                      key={marketplace.id}
+                      href={marketplace.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-blue-600 hover:underline"
+                    >
+                      {marketplace.name}
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <>
