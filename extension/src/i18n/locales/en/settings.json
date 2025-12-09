@@ -1,30 +1,75 @@
 {
   "title": "Settings",
+  "pageTitle": "MotorScope Settings",
+  "pageSubtitle": "Configure API keys and background sync",
   "geminiApi": {
     "title": "Gemini API Key",
     "description": "Required for AI-powered data extraction from car listings.",
     "placeholder": "Enter your Gemini API key",
     "getKey": "Get your free API key",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "required": "API key is required to analyze and track car listings",
+    "clickToSave": "Click \"Save Settings\" to validate and save your API key",
+    "configured": "API key configured",
+    "getFrom": "Get your API key from"
   },
   "refreshFrequency": {
     "title": "Auto-Refresh Frequency",
     "description": "How often to check for price updates on tracked listings.",
     "descriptionAlt": "How often listings are automatically refreshed in the background",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "rangeMin": "10 sec",
+    "rangeMax": "1 month"
   },
   "backendServer": {
-    "description": "Server where your data is stored"
+    "title": "Backend Server",
+    "description": "Server where your data is stored",
+    "changeDescription": "Select which API server to connect to. Changing the server will log you out."
+  },
+  "apiServer": {
+    "title": "API Server"
   },
   "signIn": "Sign in",
   "syncStatus": {
+    "title": "Background Sync",
+    "lastSync": "Last Sync",
+    "nextSync": "Next Sync",
+    "timeRemaining": "Time Remaining",
+    "notScheduled": "Not scheduled",
+    "refreshingSoon": "Refreshing soon...",
+    "never": "Never",
+    "listingsUpdated": "{{count}} listing updated",
+    "listingsUpdated_plural": "{{count}} listings updated",
+    "recentActivity": "Recent Activity",
+    "syncing": "Syncing",
+    "syncNow": "Sync Now",
+    "configureApiKeyFirst": "Configure API key first",
     "noRecentActivity": "No recent sync activity"
   },
   "save": {
     "button": "Save Settings",
     "saving": "Saving...",
-    "success": "Settings saved successfully!"
+    "validating": "Validating...",
+    "success": "Settings saved successfully!",
+    "successWithWarning": "Settings saved. Add an API key to enable listing analysis.",
+    "failed": "Failed to save settings. Please try again."
+  },
+  "validation": {
+    "apiKeyRequired": "API key is required",
+    "invalidApiKey": "Invalid API key",
+    "noGeminiAccess": "API key does not have access to Gemini API",
+    "failedToValidate": "Failed to validate API key",
+    "networkError": "Network error while validating API key"
+  },
+  "serverChange": {
+    "title": "Change API Server?",
+    "description": "Are you sure you want to change the API server? You will be logged out and will need to sign in again to the new server.",
+    "confirm": "Change Server",
+    "changing": "Changing..."
+  },
+  "backgroundRefresh": {
+    "started": "Background refresh started"
   },
   "geminiStats": {
     "title": "Gemini AI Analysis Stats",
@@ -36,7 +81,9 @@
     "filterAll": "All",
     "filterSuccess": "Success",
     "filterErrors": "Errors",
-    "noApiCalls": "No API calls recorded yet"
+    "noApiCalls": "No API calls recorded yet",
+    "prompt": "Prompt",
+    "response": "Response"
   }
 }
 

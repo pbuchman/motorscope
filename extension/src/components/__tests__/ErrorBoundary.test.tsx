@@ -5,9 +5,10 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { renderWithProviders } from '@/test-utils/renderHelpers';
 
 // Component that throws an error
 const ThrowError: React.FC<{ shouldThrow: boolean }> = ({ shouldThrow }) => {
@@ -33,7 +34,7 @@ describe('ErrorBoundary', () => {
 
   describe('normal rendering', () => {
     it('renders children when no error occurs', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <div>Child content</div>
         </ErrorBoundary>
@@ -43,7 +44,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('renders multiple children correctly', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <div>First child</div>
           <div>Second child</div>
@@ -57,7 +58,7 @@ describe('ErrorBoundary', () => {
 
   describe('error handling', () => {
     it('displays error UI when child throws', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -67,7 +68,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('shows reload button', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -77,7 +78,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('shows try again button', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -87,7 +88,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('displays helpful message to user', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -101,7 +102,7 @@ describe('ErrorBoundary', () => {
     it('resets error state when try again is clicked', async () => {
       const user = userEvent.setup();
 
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -129,7 +130,7 @@ describe('ErrorBoundary', () => {
 
   describe('custom fallback', () => {
     it('renders custom fallback when provided', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary fallback={<div>Custom error UI</div>}>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -142,7 +143,7 @@ describe('ErrorBoundary', () => {
 
   describe('error logging', () => {
     it('logs error to console', () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -154,7 +155,7 @@ describe('ErrorBoundary', () => {
 
   describe('styling', () => {
     it('renders with proper layout', () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -166,7 +167,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('renders alert icon', () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>

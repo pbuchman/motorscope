@@ -9,14 +9,22 @@
  * - Idempotent: Safe to call on every startup
  * - Distributed-safe: Uses Firestore transactions to prevent race conditions
  * - Ordered: Migrations run in order by their ID
+ *
+ * Migration files are located in ./migrations/ directory.
  */
 
 import { Firestore, Timestamp } from '@google-cloud/firestore';
 import {
   GCP_PROJECT_ID,
   FIRESTORE_DATABASE_ID,
-  FIRESTORE_LISTINGS_COLLECTION,
 } from './config.js';
+
+// Import migration registry and types
+import { migrations } from './migrations/index.js';
+import type { Migration, MigrationRecord } from './migrations/types.js';
+
+// Re-export types for external use
+export type { Migration } from './migrations/types.js';
 
 // Initialize Firestore
 const firestore = new Firestore({
@@ -27,78 +35,6 @@ const firestore = new Firestore({
 // Collection for tracking applied migrations
 const MIGRATIONS_COLLECTION = '_migrations';
 const migrationsCollection = firestore.collection(MIGRATIONS_COLLECTION);
-
-// Firestore batch limit
-const BATCH_SIZE = 500;
-
-/**
- * Migration definition
- */
-export interface Migration {
-  /** Unique migration ID (use format: YYYYMMDD_description) */
-  id: string;
-  /** Human-readable description */
-  description: string;
-  /** Migration function to execute */
-  up: (db: Firestore) => Promise<void>;
-}
-
-/**
- * Migration record stored in Firestore
- */
-interface MigrationRecord {
-  id: string;
-  description: string;
-  appliedAt: Timestamp;
-  durationMs: number;
-}
-
-// =============================================================================
-// Migration Definitions
-// =============================================================================
-
-const migrations: Migration[] = [
-  {
-    id: '20241209_status_sold_expired_to_ended',
-    description: 'Migrate listing statuses from sold/expired to ENDED',
-    up: async (db: Firestore) => {
-      const listingsCollection = db.collection(FIRESTORE_LISTINGS_COLLECTION);
-      const oldStatuses = ['sold', 'expired', 'SOLD', 'EXPIRED'];
-      const newStatus = 'ENDED';
-
-      let totalUpdated = 0;
-
-      for (const oldStatus of oldStatuses) {
-        const snapshot = await listingsCollection
-          .where('status', '==', oldStatus)
-          .get();
-
-        if (snapshot.empty) {
-          continue;
-        }
-
-        console.log(`  Found ${snapshot.size} document(s) with status "${oldStatus}"`);
-
-        // Process in batches
-        const docs = snapshot.docs;
-        for (let i = 0; i < docs.length; i += BATCH_SIZE) {
-          const batch = db.batch();
-          const batchDocs = docs.slice(i, i + BATCH_SIZE);
-
-          for (const doc of batchDocs) {
-            batch.update(doc.ref, { status: newStatus });
-          }
-
-          await batch.commit();
-        }
-
-        totalUpdated += snapshot.size;
-      }
-
-      console.log(`  Updated ${totalUpdated} document(s) to status "${newStatus}"`);
-    }
-  },
-];
 
 // =============================================================================
 // Migration Runner
@@ -281,4 +217,3 @@ export async function getMigrationStatus(): Promise<
 
   return status;
 }
-

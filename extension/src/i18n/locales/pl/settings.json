@@ -1,30 +1,75 @@
 {
   "title": "Ustawienia",
+  "pageTitle": "Ustawienia MotorScope",
+  "pageSubtitle": "Skonfiguruj klucze API i synchronizację w tle",
   "geminiApi": {
     "title": "Klucz API Gemini",
     "description": "Wymagany do wyodrębniania danych z ogłoszeń przy użyciu AI.",
     "placeholder": "Wprowadź klucz API Gemini",
     "getKey": "Pobierz darmowy klucz API",
     "show": "Pokaż",
-    "hide": "Ukryj"
+    "hide": "Ukryj",
+    "required": "Klucz API jest wymagany do analizy i śledzenia ogłoszeń",
+    "clickToSave": "Kliknij \"Zapisz ustawienia\" aby zweryfikować i zapisać klucz API",
+    "configured": "Klucz API skonfigurowany",
+    "getFrom": "Pobierz klucz API z"
   },
   "refreshFrequency": {
     "title": "Częstotliwość automatycznego odświeżania",
     "description": "Jak często sprawdzać aktualizacje cen śledzonych ogłoszeń.",
     "descriptionAlt": "Jak często ogłoszenia są automatycznie odświeżane w tle",
-    "minutes": "minut"
+    "minutes": "minut",
+    "rangeMin": "10 sek",
+    "rangeMax": "1 miesiąc"
   },
   "backendServer": {
-    "description": "Serwer, na którym przechowywane są Twoje dane"
+    "title": "Serwer backendu",
+    "description": "Serwer, na którym przechowywane są Twoje dane",
+    "changeDescription": "Wybierz serwer API do połączenia. Zmiana serwera spowoduje wylogowanie."
+  },
+  "apiServer": {
+    "title": "Serwer API"
   },
   "signIn": "Zaloguj się",
   "syncStatus": {
+    "title": "Synchronizacja w tle",
+    "lastSync": "Ostatnia synchronizacja",
+    "nextSync": "Następna synchronizacja",
+    "timeRemaining": "Pozostały czas",
+    "notScheduled": "Nie zaplanowano",
+    "refreshingSoon": "Wkrótce odświeżanie...",
+    "never": "Nigdy",
+    "listingsUpdated": "{{count}} ogłoszenie zaktualizowane",
+    "listingsUpdated_plural": "{{count}} ogłoszenia zaktualizowane",
+    "recentActivity": "Ostatnia aktywność",
+    "syncing": "Synchronizacja",
+    "syncNow": "Synchronizuj teraz",
+    "configureApiKeyFirst": "Najpierw skonfiguruj klucz API",
     "noRecentActivity": "Brak ostatniej aktywności synchronizacji"
   },
   "save": {
     "button": "Zapisz ustawienia",
     "saving": "Zapisywanie...",
-    "success": "Ustawienia zostały zapisane!"
+    "validating": "Weryfikacja...",
+    "success": "Ustawienia zostały zapisane!",
+    "successWithWarning": "Ustawienia zapisane. Dodaj klucz API, aby włączyć analizę ogłoszeń.",
+    "failed": "Nie udało się zapisać ustawień. Spróbuj ponownie."
+  },
+  "validation": {
+    "apiKeyRequired": "Klucz API jest wymagany",
+    "invalidApiKey": "Nieprawidłowy klucz API",
+    "noGeminiAccess": "Klucz API nie ma dostępu do API Gemini",
+    "failedToValidate": "Nie udało się zweryfikować klucza API",
+    "networkError": "Błąd sieci podczas weryfikacji klucza API"
+  },
+  "serverChange": {
+    "title": "Zmienić serwer API?",
+    "description": "Czy na pewno chcesz zmienić serwer API? Zostaniesz wylogowany i będziesz musiał zalogować się ponownie na nowy serwer.",
+    "confirm": "Zmień serwer",
+    "changing": "Zmienianie..."
+  },
+  "backgroundRefresh": {
+    "started": "Rozpoczęto odświeżanie w tle"
   },
   "geminiStats": {
     "title": "Statystyki analizy Gemini AI",
@@ -36,7 +81,9 @@
     "filterAll": "Wszystkie",
     "filterSuccess": "Sukces",
     "filterErrors": "Błędy",
-    "noApiCalls": "Brak zarejestrowanych wywołań API"
+    "noApiCalls": "Brak zarejestrowanych wywołań API",
+    "prompt": "Zapytanie",
+    "response": "Odpowiedź"
   }
 }
 

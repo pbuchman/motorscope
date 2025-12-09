@@ -31,9 +31,9 @@ const formatFrequency = (minutes: number): string => {
 };
 
 // Validate Gemini API key by making a test request
-const validateGeminiApiKey = async (apiKey: string): Promise<{ valid: boolean; error?: string }> => {
+const validateGeminiApiKey = async (apiKey: string, t: (key: string) => string): Promise<{ valid: boolean; error?: string }> => {
   if (!apiKey.trim()) {
-    return { valid: false, error: 'API key is required' };
+    return { valid: false, error: t('settings:validation.apiKeyRequired') };
   }
 
   try {
@@ -55,14 +55,14 @@ const validateGeminiApiKey = async (apiKey: string): Promise<{ valid: boolean; e
 
     const data = await response.json();
     if (response.status === 400 && data.error?.message?.includes('API key')) {
-      return { valid: false, error: 'Invalid API key' };
+      return { valid: false, error: t('settings:validation.invalidApiKey') };
     }
     if (response.status === 403) {
-      return { valid: false, error: 'API key does not have access to Gemini API' };
+      return { valid: false, error: t('settings:validation.noGeminiAccess') };
     }
-    return { valid: false, error: data.error?.message || 'Failed to validate API key' };
+    return { valid: false, error: data.error?.message || t('settings:validation.failedToValidate') };
   } catch (error) {
-    return { valid: false, error: 'Network error while validating API key' };
+    return { valid: false, error: t('settings:validation.networkError') };
   }
 };
 
@@ -156,14 +156,14 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     const updateCountdown = () => {
       if (!refreshStatus.nextRefreshTime) {
-        setCountdown('Not scheduled');
+        setCountdown(t('settings:syncStatus.notScheduled'));
         return;
       }
       const next = new Date(refreshStatus.nextRefreshTime).getTime();
       const now = Date.now();
       const diff = next - now;
       if (diff <= 0) {
-        setCountdown('Refreshing soon...');
+        setCountdown(t('settings:syncStatus.refreshingSoon'));
         return;
       }
       const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -180,7 +180,7 @@ const SettingsPage: React.FC = () => {
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [refreshStatus.nextRefreshTime]);
+  }, [refreshStatus.nextRefreshTime, t]);
 
   const handleLogin = useCallback(async () => {
     await auth.login();
@@ -238,14 +238,14 @@ const SettingsPage: React.FC = () => {
     try {
       const response = await triggerManualRefresh();
       if (response?.success) {
-        setSuccessMessage('Background refresh started');
+        setSuccessMessage(t('settings:backgroundRefresh.started'));
       }
     } catch (e) {
       console.error('Failed to trigger refresh:', e);
     } finally {
       setTimeout(() => setTriggeringRefresh(false), 1000);
     }
-  }, [triggerManualRefresh, settings.geminiApiKey]);
+  }, [triggerManualRefresh, settings.geminiApiKey, t]);
 
   const handleSave = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -258,11 +258,11 @@ const SettingsPage: React.FC = () => {
       const keyChanged = formSettings.geminiApiKey !== settings.geminiApiKey;
       if (keyChanged) {
         setValidatingKey(true);
-        const validation = await validateGeminiApiKey(formSettings.geminiApiKey);
+        const validation = await validateGeminiApiKey(formSettings.geminiApiKey, t);
         setValidatingKey(false);
 
         if (!validation.valid) {
-          setApiKeyError(validation.error || 'Invalid API key');
+          setApiKeyError(validation.error || t('settings:validation.invalidApiKey'));
           return;
         }
       }
@@ -272,13 +272,13 @@ const SettingsPage: React.FC = () => {
     try {
       await updateSettings(formSettings);
 
-      setSuccessMessage(formSettings.geminiApiKey ? 'Settings saved successfully' : 'Settings saved. Add an API key to enable listing analysis.');
+      setSuccessMessage(formSettings.geminiApiKey ? t('settings:save.success') : t('settings:save.successWithWarning'));
     } catch (error) {
-      setApiKeyError('Failed to save settings. Please try again.');
+      setApiKeyError(t('settings:save.failed'));
     } finally {
       setSaving(false);
     }
-  }, [formSettings, updateSettings]);
+  }, [formSettings, updateSettings, t, settings.geminiApiKey]);
 
   const refreshStats = useCallback(async () => {
     setRefreshing(true);
@@ -350,8 +350,8 @@ const SettingsPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <Car className="w-8 h-8 text-blue-400" />
             <div>
-              <h1 className="text-xl font-bold">MotorScope Settings</h1>
-              <p className="text-slate-400 text-sm">Configure API keys and background sync</p>
+              <h1 className="text-xl font-bold">{t('settings:pageTitle')}</h1>
+              <p className="text-slate-400 text-sm">{t('settings:pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -380,7 +380,7 @@ const SettingsPage: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
             >
               <LayoutDashboard className="w-4 h-4" />
-              Dashboard
+              {t('common:nav.dashboard')}
             </a>
           </div>
         </div>
@@ -399,7 +399,7 @@ const SettingsPage: React.FC = () => {
           {/* Gemini API Key */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Gemini API Key
+              {t('settings:geminiApi.title')}
             </label>
             <div className="relative">
               <Key className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -416,7 +416,7 @@ const SettingsPage: React.FC = () => {
                     : apiKeyChanged ? 'border-blue-300 bg-blue-50'
                     : 'border-gray-300'
                 }`}
-                placeholder="Enter your Gemini API key"
+                placeholder={t('settings:geminiApi.placeholder')}
               />
             </div>
             {apiKeyError ? (
@@ -427,21 +427,21 @@ const SettingsPage: React.FC = () => {
             ) : !hasFormApiKey ? (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                API key is required to analyze and track car listings
+                {t('settings:geminiApi.required')}
               </p>
             ) : apiKeyChanged ? (
               <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                Click "Save Settings" to validate and save your API key
+                {t('settings:geminiApi.clickToSave')}
               </p>
             ) : (
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
-                API key configured
+                {t('settings:geminiApi.configured')}
               </p>
             )}
             <p className="text-xs text-slate-400 mt-1">
-              Get your API key from{' '}
+              {t('settings:geminiApi.getFrom')}{' '}
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
@@ -456,7 +456,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Check Frequency */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Auto-Refresh Interval</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('settings:refreshFrequency.title')}</label>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <input
@@ -473,8 +473,8 @@ const SettingsPage: React.FC = () => {
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
                 <div className="flex justify-between text-xs text-slate-400 mt-1">
-                  <span>10 sec</span>
-                  <span>1 month</span>
+                  <span>{t('settings:refreshFrequency.rangeMin')}</span>
+                  <span>{t('settings:refreshFrequency.rangeMax')}</span>
                 </div>
               </div>
               <span className="w-20 text-sm font-medium text-slate-700 text-center bg-slate-100 px-2 py-1 rounded">
@@ -491,7 +491,7 @@ const SettingsPage: React.FC = () => {
             className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {(saving || validatingKey) && <Loader2 className="w-4 h-4 animate-spin" />}
-            {validatingKey ? 'Validating...' : saving ? 'Saving...' : 'Save Settings'}
+            {validatingKey ? t('settings:save.validating') : saving ? t('settings:save.saving') : t('settings:save.button')}
           </button>
         </form>
 
@@ -500,13 +500,13 @@ const SettingsPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <RefreshCw className="w-5 h-5 text-blue-500" />
-              Background Sync
+              {t('settings:syncStatus.title')}
             </h2>
             <div className="flex items-center gap-2">
               {!hasSavedApiKey ? (
                 <span className="flex items-center gap-1 text-xs text-amber-600">
                   <AlertCircle className="w-3 h-3" />
-                  Configure API key first
+                  {t('settings:syncStatus.configureApiKeyFirst')}
                 </span>
               ) : (
                 <button
@@ -518,12 +518,12 @@ const SettingsPage: React.FC = () => {
                   {refreshStatus.isRefreshing ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Syncing {refreshStatus.currentIndex}/{refreshStatus.totalCount}
+                      {t('settings:syncStatus.syncing')} {refreshStatus.currentIndex}/{refreshStatus.totalCount}
                     </>
                   ) : (
                     <>
                       <Play className="w-4 h-4" />
-                      Sync Now
+                      {t('settings:syncStatus.syncNow')}
                     </>
                   )}
                 </button>
@@ -535,16 +535,16 @@ const SettingsPage: React.FC = () => {
             <div className="bg-slate-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Last Sync</span>
+                <span className="text-xs font-medium uppercase">{t('settings:syncStatus.lastSync')}</span>
               </div>
               <p className="text-sm font-semibold text-slate-800">
                 {refreshStatus.lastRefreshTime
                   ? formatEuropeanDateTimeWithSeconds(refreshStatus.lastRefreshTime)
-                  : 'Never'}
+                  : t('settings:syncStatus.never')}
               </p>
               {refreshStatus.lastRefreshCount > 0 && (
                 <p className="text-xs text-slate-500 mt-1">
-                  {refreshStatus.lastRefreshCount} listing{refreshStatus.lastRefreshCount !== 1 ? 's' : ''} updated
+                  {t('settings:syncStatus.listingsUpdated', { count: refreshStatus.lastRefreshCount })}
                 </p>
               )}
             </div>
@@ -552,19 +552,19 @@ const SettingsPage: React.FC = () => {
             <div className="bg-slate-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                 <RefreshCw className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Next Sync</span>
+                <span className="text-xs font-medium uppercase">{t('settings:syncStatus.nextSync')}</span>
               </div>
               <p className="text-sm font-semibold text-slate-800">
                 {refreshStatus.nextRefreshTime
                   ? formatEuropeanDateTimeWithSeconds(refreshStatus.nextRefreshTime)
-                  : 'Not scheduled'}
+                  : t('settings:syncStatus.notScheduled')}
               </p>
             </div>
 
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-blue-600 mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Time Remaining</span>
+                <span className="text-xs font-medium uppercase">{t('settings:syncStatus.timeRemaining')}</span>
               </div>
               <p className="text-lg font-bold text-blue-700 font-mono">
                 {refreshStatus.isRefreshing ? (
@@ -583,10 +583,10 @@ const SettingsPage: React.FC = () => {
               {refreshStatus.isRefreshing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin inline mr-2" />
-                  Syncing ({refreshStatus.currentIndex}/{refreshStatus.totalCount})
+                  {t('settings:syncStatus.syncing')} ({refreshStatus.currentIndex}/{refreshStatus.totalCount})
                 </>
               ) : (
-                'Recent Activity'
+                t('settings:syncStatus.recentActivity')
               )}
             </h3>
 
@@ -647,10 +647,10 @@ const SettingsPage: React.FC = () => {
         <section className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Server className="w-5 h-5 text-slate-500" />
-            <h2 className="text-lg font-semibold text-slate-900">API Server</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t('settings:apiServer.title')}</h2>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Backend Server</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('settings:backendServer.title')}</label>
             <select
               value={currentServerUrl}
               onChange={(e) => handleServerChangeRequest(e.target.value)}
@@ -664,7 +664,7 @@ const SettingsPage: React.FC = () => {
               ))}
             </select>
             <p className="text-xs text-slate-400 mt-1">
-              Select which API server to connect to. Changing the server will log you out.
+              {t('settings:backendServer.changeDescription')}
             </p>
           </div>
         </section>
@@ -678,10 +678,10 @@ const SettingsPage: React.FC = () => {
               <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
                 <AlertCircle className="w-5 h-5 text-amber-600" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900">Change API Server?</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t('settings:serverChange.title')}</h3>
             </div>
             <p className="text-slate-600 mb-6">
-              Are you sure you want to change the API server? You will be logged out and will need to sign in again to the new server.
+              {t('settings:serverChange.description')}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -689,7 +689,7 @@ const SettingsPage: React.FC = () => {
                 disabled={serverChangeLoading}
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('common:button.cancel')}
               </button>
               <button
                 onClick={handleServerChangeConfirm}
@@ -697,7 +697,7 @@ const SettingsPage: React.FC = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {serverChangeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {serverChangeLoading ? 'Changing...' : 'Change Server'}
+                {serverChangeLoading ? t('settings:serverChange.changing') : t('settings:serverChange.confirm')}
               </button>
             </div>
           </div>
@@ -827,7 +827,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
                   onClick={() => toggleExpanded(entry.id, 'prompt')}
                   className="text-xs text-slate-500 hover:text-slate-700"
                 >
-                  {expandedIds.has(`${entry.id}-prompt`) ? '▼' : '▶'} Prompt
+                  {expandedIds.has(`${entry.id}-prompt`) ? '▼' : '▶'} {t('geminiStats.prompt')}
                 </button>
                 {expandedIds.has(`${entry.id}-prompt`) && (
                   <pre className="mt-1 p-2 bg-slate-50 rounded text-xs overflow-x-auto whitespace-pre-wrap max-h-40">
@@ -843,7 +843,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
                     onClick={() => toggleExpanded(entry.id, 'response')}
                     className="text-xs text-slate-500 hover:text-slate-700"
                   >
-                    {expandedIds.has(`${entry.id}-response`) ? '▼' : '▶'} Response
+                    {expandedIds.has(`${entry.id}-response`) ? '▼' : '▶'} {t('geminiStats.response')}
                   </button>
                   {expandedIds.has(`${entry.id}-response`) && (
                     <pre className="mt-1 p-2 bg-green-50 rounded text-xs overflow-x-auto whitespace-pre-wrap max-h-40">

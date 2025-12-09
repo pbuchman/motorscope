@@ -1,5 +1,9 @@
 {
   "appName": "MotorScope",
+  "nav": {
+    "dashboard": "Panel",
+    "settings": "Ustawienia"
+  },
   "button": {
     "save": "Zapisz",
     "cancel": "Anuluj",

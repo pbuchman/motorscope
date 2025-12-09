@@ -3,6 +3,12 @@
   "unexpected": "Wystąpił nieoczekiwany błąd",
   "network": "Błąd sieci. Sprawdź połączenie internetowe.",
   "failedToLoadSection": "Nie udało się załadować tej sekcji",
+  "boundary": {
+    "title": "Coś poszło nie tak",
+    "description": "Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.",
+    "tryAgain": "Spróbuj ponownie",
+    "reloadPage": "Odśwież stronę"
+  },
   "auth": {
     "notAuthenticated": "Zaloguj się, aby kontynuować.",
     "sessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie.",

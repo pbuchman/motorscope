@@ -3,6 +3,12 @@
   "unexpected": "An unexpected error occurred",
   "network": "Network error. Please check your connection.",
   "failedToLoadSection": "Failed to load this section",
+  "boundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try reloading the page.",
+    "tryAgain": "Try Again",
+    "reloadPage": "Reload Page"
+  },
   "auth": {
     "notAuthenticated": "Please sign in to continue.",
     "sessionExpired": "Your session has expired. Please sign in again.",
