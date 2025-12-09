@@ -37,7 +37,7 @@ interface AuthContextState {
  */
 interface AuthContextValue extends AuthContextState {
   login: () => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (backendUrl?: string) => Promise<void>;
   clearError: () => void;
   isLoggingIn: boolean;
 }
@@ -120,9 +120,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [clearError]);
 
   // Logout
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (backendUrl?: string) => {
     try {
-      await logoutFromProvider();
+      await logoutFromProvider(backendUrl);
 
       setState({
         status: 'logged_out',

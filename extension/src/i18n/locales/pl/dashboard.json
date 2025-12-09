@@ -1,0 +1,51 @@
+{
+  "title": "Panel MotorScope",
+  "tracking": "Śledzisz {{count}} pojazd",
+  "tracking_plural": "Śledzisz {{count}} pojazdy",
+  "tracking_0": "Nie śledzisz żadnych pojazdów",
+  "searchPlaceholder": "Szukaj marki, modelu, VIN...",
+  "filters": {
+    "label": "Filtry",
+    "status": "Status",
+    "show": "Pokaż",
+    "make": "Marka",
+    "model": "Model",
+    "source": "Źródło"
+  },
+  "view": {
+    "grid": "Widok siatki",
+    "compact": "Widok kompaktowy"
+  },
+  "empty": {
+    "title": "Nie śledzisz jeszcze żadnych samochodów",
+    "description": "Przejdź do obsługiwanego serwisu z ogłoszeniami, aby rozpocząć śledzenie."
+  },
+  "noResults": {
+    "title": "Brak ogłoszeń pasujących do filtrów",
+    "clearFilters": "Wyczyść filtry"
+  },
+  "showingResults": "Wyświetlono {{shown}} z {{total}} ogłoszeń",
+  "archivedBadge": "Zarchiwizowane - wyłączone z automatycznego odświeżania",
+  "priceHistory": {
+    "title": "Historia cen",
+    "emptyTitle": "Historia cen wkrótce dostępna",
+    "emptyDescription": "Śledź to ogłoszenie przez co najmniej dwa dni, aby zobaczyć jak zmienia się cena."
+  },
+  "listingDetail": {
+    "vehicleId": "Identyfikacja pojazdu",
+    "production": "Produkcja i rejestracja",
+    "engine": "Silnik i napęd",
+    "condition": "Stan",
+    "colors": "Kolory i wnętrze",
+    "location": "Lokalizacja",
+    "seller": "Sprzedawca",
+    "pricing": "Cena",
+    "tracking": "Informacje o śledzeniu",
+    "priceHistoryTable": {
+      "date": "Data",
+      "price": "Cena",
+      "change": "Zmiana"
+    }
+  }
+}
+

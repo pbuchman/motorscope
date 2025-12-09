@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Car, Calendar, Gauge, Fuel } from 'lucide-react';
 import { CarListing } from '@/types';
 import { formatEuropeanDateTime } from '@/utils/formatters';
@@ -24,9 +25,11 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
   showDateWarning,
   onConfirm,
   onCancel,
-}) => (
+}) => {
+  const { t } = useTranslation(['popup', 'common']);
+
+  return (
   <div className="w-full">
-    {/* Warnings - compact */}
     {(showVinWarning || showDateWarning) && (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-left">
         <div className="flex items-start gap-2">
@@ -34,12 +37,12 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
           <div className="text-xs">
             {showVinWarning && (
               <p className="text-amber-700">
-                <span className="font-medium">No VIN detected</span> - car will be identified by URL only
+                {t('popup:preview.warnings.noVin')}
               </p>
             )}
             {showDateWarning && (
               <p className="text-amber-700 mt-1">
-                <span className="font-medium">No posted date</span> - listing date unknown
+                {t('popup:preview.warnings.noDate')}
               </p>
             )}
           </div>
@@ -47,7 +50,7 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
       </div>
     )}
 
-    <h3 className="font-bold text-slate-800 mb-2 text-left text-sm">Confirm Details</h3>
+    <h3 className="font-bold text-slate-800 mb-2 text-left text-sm">{t('popup:preview.subtitle')}</h3>
 
     {/* Preview Card - Compact */}
     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left mb-3">
@@ -91,11 +94,11 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
       <div className="flex flex-wrap gap-1 mt-2">
         {listing.vehicle?.vin ? (
           <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 font-mono">
-            VIN: {listing.vehicle.vin}
+            {t('common:vehicle.vin')}: {listing.vehicle.vin}
           </span>
         ) : (
           <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-            No VIN
+            {t('popup:preview.noVin')}
           </span>
         )}
         {listing.seller?.phone && (
@@ -117,15 +120,16 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
         onClick={onCancel}
         className="flex-1 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50"
       >
-        Cancel
+        {t('common:button.cancel')}
       </button>
       <button
         onClick={onConfirm}
         className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
       >
-        Save
+        {t('common:button.save')}
       </button>
     </div>
   </div>
 );
+};
 

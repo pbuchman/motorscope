@@ -5,7 +5,7 @@
  * Lighter operation than full parsing - only extracts price and availability.
  */
 
-import { ListingStatus } from "../../types";
+import { ListingStatus } from "@/types";
 import { createGeminiClient } from "./client";
 import { refreshSchema } from "./schemas";
 import { buildRefreshPrompt } from "./prompts";
@@ -43,8 +43,9 @@ export async function refreshListingWithGemini(
   const ai = await createGeminiClient();
   const prompt = buildRefreshPrompt(pageTitle, url, pageText);
 
+  let response;
   try {
-    const response = await ai.models.generateContent({
+    response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -52,39 +53,6 @@ export async function refreshListingWithGemini(
         responseSchema: refreshSchema,
       },
     });
-
-    if (!response.text) {
-      throw new Error("No response from AI");
-    }
-
-    const data = JSON.parse(response.text);
-
-    // Build response object for logging
-    const fullResponse = {
-      text: response.text,
-      parsedData: data,
-      // @ts-ignore - SDK may expose these properties
-      usageMetadata: response.usageMetadata || null,
-      // @ts-ignore
-      modelVersion: response.modelVersion || "gemini-2.5-flash",
-    };
-
-    await recordSuccess(url, prompt, fullResponse);
-
-    // Determine listing status
-    let status = ListingStatus.ACTIVE;
-    if (data.isSold === true) {
-      status = ListingStatus.SOLD;
-    } else if (data.isAvailable === false) {
-      status = ListingStatus.EXPIRED;
-    }
-
-    return {
-      price: typeof data.price === 'number' && data.price > 0 ? data.price : 0,
-      currency: data.currency || 'PLN',
-      status,
-    };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     await recordError(url, prompt, errorMessage);
@@ -95,5 +63,45 @@ export async function refreshListingWithGemini(
     }
     throw error;
   }
-}
 
+  if (!response.text) {
+    const errorMessage = "No response from AI";
+    await recordError(url, prompt, errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(response.text);
+  } catch (parseError) {
+    const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+    await recordError(url, prompt, `JSON parse error: ${errorMessage}`);
+    throw parseError;
+  }
+
+  // Build response object for logging
+  const fullResponse = {
+    text: response.text,
+    parsedData: data,
+    // @ts-ignore - SDK may expose these properties
+    usageMetadata: response.usageMetadata || null,
+    // @ts-ignore
+    modelVersion: response.modelVersion || "gemini-2.5-flash",
+  };
+
+  await recordSuccess(url, prompt, fullResponse);
+
+  // Determine listing status
+  let status = ListingStatus.ACTIVE;
+  if (data.isSold === true) {
+    status = ListingStatus.ENDED;
+  } else if (data.isAvailable === false) {
+    status = ListingStatus.ENDED;
+  }
+
+  return {
+    price: typeof data.price === 'number' && data.price > 0 ? data.price : 0,
+    currency: data.currency || 'PLN',
+    status,
+  };
+}

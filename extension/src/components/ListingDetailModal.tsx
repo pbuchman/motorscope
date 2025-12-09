@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CarListing, ListingStatus } from '@/types';
 import PriceChart from '@/components/PriceChart';
 import {
@@ -83,6 +84,7 @@ const InfoSection: React.FC<InfoSectionProps> = ({ title, children }) => {
 };
 
 const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClose }) => {
+  const { t } = useTranslation(['dashboard', 'listing', 'common']);
   const v = listing.vehicle;
   const loc = listing.location;
   const seller = listing.seller;
@@ -90,7 +92,6 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
   // Status styling
   const getStatusColor = () => {
     if (listing.status === ListingStatus.ACTIVE) return 'bg-green-100 text-green-700';
-    if (listing.status === ListingStatus.SOLD) return 'bg-orange-100 text-orange-700';
     return 'bg-red-100 text-red-700';
   };
 
@@ -124,7 +125,7 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
             {/* Status & Source badges */}
             <div className="absolute top-4 right-4 flex gap-2">
               <span className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${getStatusColor()}`}>
-                {listing.status}
+                {t('common:status.' + (listing.status === ListingStatus.ACTIVE ? 'active' : 'ended'))}
               </span>
               <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cyan-100 text-cyan-700">
                 {getMarketplaceDisplayName(listing.source.platform)}
@@ -150,7 +151,7 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
                   <span className={`text-sm px-2 py-0.5 rounded ${
                     totalPriceChange < 0 ? 'bg-green-500' : 'bg-red-500'
                   }`}>
-                    {totalPriceChange < 0 ? '↓' : '↑'} {Math.abs(totalPriceChangePercent)}% since first tracked
+                    {totalPriceChange < 0 ? '↓' : '↑'} {t('common:price.sinceTacked', { percent: Math.abs(totalPriceChangePercent) })}
                   </span>
                 )}
               </div>
@@ -164,99 +165,99 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
             {/* Left column */}
             <div>
               {/* Vehicle Identification */}
-              <InfoSection title="Vehicle Identification">
-                <InfoItem icon={<Hash className="w-4 h-4" />} label="VIN" value={v.vin} highlight />
-                <InfoItem icon={<Car className="w-4 h-4" />} label="Make" value={v.make} />
-                <InfoItem icon={<FileText className="w-4 h-4" />} label="Model" value={v.model} />
-                <InfoItem icon={<Tag className="w-4 h-4" />} label="Generation" value={v.generation} />
-                <InfoItem icon={<Settings2 className="w-4 h-4" />} label="Trim" value={v.trim} />
-                <InfoItem icon={<Car className="w-4 h-4" />} label="Body Type" value={v.bodyType} />
+              <InfoSection title={t('dashboard:listingDetail.vehicleId')}>
+                <InfoItem icon={<Hash className="w-4 h-4" />} label={t('common:vehicle.vin')} value={v.vin} highlight />
+                <InfoItem icon={<Car className="w-4 h-4" />} label={t('common:vehicle.make')} value={v.make} />
+                <InfoItem icon={<FileText className="w-4 h-4" />} label={t('common:vehicle.model')} value={v.model} />
+                <InfoItem icon={<Tag className="w-4 h-4" />} label={t('listing:info.generation')} value={v.generation} />
+                <InfoItem icon={<Settings2 className="w-4 h-4" />} label={t('listing:info.trim')} value={v.trim} />
+                <InfoItem icon={<Car className="w-4 h-4" />} label={t('listing:info.bodyType')} value={v.bodyType} />
               </InfoSection>
 
               {/* Production & Registration */}
-              <InfoSection title="Production & Registration">
-                <InfoItem icon={<Calendar className="w-4 h-4" />} label="Production Year" value={v.productionYear} />
-                <InfoItem icon={<Calendar className="w-4 h-4" />} label="First Registration" value={v.firstRegistrationYear} />
-                <InfoItem icon={<Gauge className="w-4 h-4" />} label="Mileage" value={
+              <InfoSection title={t('dashboard:listingDetail.production')}>
+                <InfoItem icon={<Calendar className="w-4 h-4" />} label={t('listing:info.productionYear')} value={v.productionYear} />
+                <InfoItem icon={<Calendar className="w-4 h-4" />} label={t('listing:info.firstRegistration')} value={v.firstRegistrationYear} />
+                <InfoItem icon={<Gauge className="w-4 h-4" />} label={t('listing:info.mileage')} value={
                   v.mileage?.value ? `${v.mileage.value.toLocaleString()} ${v.mileage.unit || 'km'}` : null
                 } />
-                <InfoItem icon={<Globe className="w-4 h-4" />} label="Origin Country" value={v.registration?.originCountry} />
-                <InfoItem icon={<Globe className="w-4 h-4" />} label="Registered In" value={v.registration?.registeredInCountryCode} />
-                <InfoItem icon={<FileText className="w-4 h-4" />} label="Plate Number" value={v.registration?.plateNumber} />
+                <InfoItem icon={<Globe className="w-4 h-4" />} label={t('listing:info.originCountry')} value={v.registration?.originCountry} />
+                <InfoItem icon={<Globe className="w-4 h-4" />} label={t('listing:info.registeredIn')} value={v.registration?.registeredInCountryCode} />
+                <InfoItem icon={<FileText className="w-4 h-4" />} label={t('listing:info.plateNumber')} value={v.registration?.plateNumber} />
               </InfoSection>
 
               {/* Engine & Drivetrain */}
-              <InfoSection title="Engine & Drivetrain">
-                <InfoItem icon={<Fuel className="w-4 h-4" />} label="Fuel Type" value={v.engine?.fuelType} />
-                <InfoItem icon={<Settings2 className="w-4 h-4" />} label="Engine Capacity" value={
+              <InfoSection title={t('dashboard:listingDetail.engine')}>
+                <InfoItem icon={<Fuel className="w-4 h-4" />} label={t('listing:info.fuelType')} value={v.engine?.fuelType} />
+                <InfoItem icon={<Settings2 className="w-4 h-4" />} label={t('listing:info.engineCapacity')} value={
                   v.engine?.capacityCc ? `${(v.engine.capacityCc / 1000).toFixed(1)}L (${v.engine.capacityCc} cc)` : null
                 } />
-                <InfoItem icon={<Cog className="w-4 h-4" />} label="Power" value={
+                <InfoItem icon={<Cog className="w-4 h-4" />} label={t('listing:info.power')} value={
                   v.engine?.powerHp ? `${v.engine.powerHp} HP${v.engine.powerKw ? ` (${v.engine.powerKw} kW)` : ''}` : null
                 } />
-                <InfoItem icon={<Settings2 className="w-4 h-4" />} label="Engine Code" value={v.engine?.engineCode} />
-                <InfoItem icon={<Shield className="w-4 h-4" />} label="Euro Standard" value={v.engine?.euroStandard} />
-                <InfoItem icon={<Fuel className="w-4 h-4" />} label="Hybrid Type" value={v.engine?.hybridType} />
-                <InfoItem icon={<Cog className="w-4 h-4" />} label="Transmission" value={v.drivetrain?.transmissionType} />
-                <InfoItem icon={<Settings2 className="w-4 h-4" />} label="Transmission Subtype" value={v.drivetrain?.transmissionSubtype} />
-                <InfoItem icon={<Hash className="w-4 h-4" />} label="Gears" value={v.drivetrain?.gearsCount} />
-                <InfoItem icon={<Car className="w-4 h-4" />} label="Drive Type" value={v.drivetrain?.driveType} />
+                <InfoItem icon={<Settings2 className="w-4 h-4" />} label={t('listing:info.engineCode')} value={v.engine?.engineCode} />
+                <InfoItem icon={<Shield className="w-4 h-4" />} label={t('listing:info.euroStandard')} value={v.engine?.euroStandard} />
+                <InfoItem icon={<Fuel className="w-4 h-4" />} label={t('listing:info.hybridType')} value={v.engine?.hybridType} />
+                <InfoItem icon={<Cog className="w-4 h-4" />} label={t('listing:info.transmission')} value={v.drivetrain?.transmissionType} />
+                <InfoItem icon={<Settings2 className="w-4 h-4" />} label={t('listing:info.transmissionSubtype')} value={v.drivetrain?.transmissionSubtype} />
+                <InfoItem icon={<Hash className="w-4 h-4" />} label={t('listing:info.gears')} value={v.drivetrain?.gearsCount} />
+                <InfoItem icon={<Car className="w-4 h-4" />} label={t('listing:info.driveType')} value={v.drivetrain?.driveType} />
               </InfoSection>
             </div>
 
             {/* Right column */}
             <div>
               {/* Condition */}
-              <InfoSection title="Condition">
-                <InfoItem icon={<Tag className="w-4 h-4" />} label="Condition" value={v.condition?.isNew ? 'New' : 'Used'} />
-                <InfoItem icon={<Globe className="w-4 h-4" />} label="Imported" value={
-                  v.condition?.isImported === true ? 'Yes' : v.condition?.isImported === false ? 'No' : null
+              <InfoSection title={t('dashboard:listingDetail.condition')}>
+                <InfoItem icon={<Tag className="w-4 h-4" />} label={t('listing:info.condition')} value={v.condition?.isNew ? t('listing:values.new') : t('listing:values.used')} />
+                <InfoItem icon={<Globe className="w-4 h-4" />} label={t('listing:info.imported')} value={
+                  v.condition?.isImported === true ? t('listing:values.yes') : v.condition?.isImported === false ? t('listing:values.no') : null
                 } />
-                <InfoItem icon={<Shield className="w-4 h-4" />} label="Accident-Free" value={
-                  v.condition?.accidentFreeDeclared === true ? 'Yes (declared)' :
-                  v.condition?.accidentFreeDeclared === false ? 'No' : null
+                <InfoItem icon={<Shield className="w-4 h-4" />} label={t('listing:info.accidentFree')} value={
+                  v.condition?.accidentFreeDeclared === true ? t('listing:values.yesDeclared') :
+                  v.condition?.accidentFreeDeclared === false ? t('listing:values.no') : null
                 } />
-                <InfoItem icon={<FileText className="w-4 h-4" />} label="Service History" value={
-                  v.condition?.serviceHistoryDeclared === true ? 'Available' :
-                  v.condition?.serviceHistoryDeclared === false ? 'Not available' : null
+                <InfoItem icon={<FileText className="w-4 h-4" />} label={t('listing:info.serviceHistory')} value={
+                  v.condition?.serviceHistoryDeclared === true ? t('listing:values.available') :
+                  v.condition?.serviceHistoryDeclared === false ? t('listing:values.notAvailable') : null
                 } />
               </InfoSection>
 
               {/* Colors & Interior */}
-              <InfoSection title="Colors & Interior">
-                <InfoItem icon={<Palette className="w-4 h-4" />} label="Exterior Color" value={v.colorAndInterior?.exteriorColor} />
-                <InfoItem icon={<Palette className="w-4 h-4" />} label="Interior Color" value={v.colorAndInterior?.interiorColor} />
-                <InfoItem icon={<Car className="w-4 h-4" />} label="Upholstery" value={v.colorAndInterior?.upholsteryType} />
+              <InfoSection title={t('dashboard:listingDetail.colors')}>
+                <InfoItem icon={<Palette className="w-4 h-4" />} label={t('listing:info.exteriorColor')} value={v.colorAndInterior?.exteriorColor} />
+                <InfoItem icon={<Palette className="w-4 h-4" />} label={t('listing:info.interiorColor')} value={v.colorAndInterior?.interiorColor} />
+                <InfoItem icon={<Car className="w-4 h-4" />} label={t('listing:info.upholstery')} value={v.colorAndInterior?.upholsteryType} />
               </InfoSection>
 
               {/* Location */}
-              <InfoSection title="Location">
-                <InfoItem icon={<MapPin className="w-4 h-4" />} label="City" value={loc?.city} />
-                <InfoItem icon={<MapPin className="w-4 h-4" />} label="Region" value={loc?.region} />
-                <InfoItem icon={<Building className="w-4 h-4" />} label="Postal Code" value={loc?.postalCode} />
-                <InfoItem icon={<Globe className="w-4 h-4" />} label="Country" value={loc?.countryCode} />
+              <InfoSection title={t('dashboard:listingDetail.location')}>
+                <InfoItem icon={<MapPin className="w-4 h-4" />} label={t('listing:info.city')} value={loc?.city} />
+                <InfoItem icon={<MapPin className="w-4 h-4" />} label={t('listing:info.region')} value={loc?.region} />
+                <InfoItem icon={<Building className="w-4 h-4" />} label={t('listing:info.postalCode')} value={loc?.postalCode} />
+                <InfoItem icon={<Globe className="w-4 h-4" />} label={t('listing:info.country')} value={loc?.countryCode} />
               </InfoSection>
 
               {/* Seller */}
-              <InfoSection title="Seller">
-                <InfoItem icon={<User className="w-4 h-4" />} label="Seller Type" value={seller?.type} />
-                <InfoItem icon={<User className="w-4 h-4" />} label="Name" value={seller?.name} />
-                <InfoItem icon={<Phone className="w-4 h-4" />} label="Phone" value={seller?.phone} />
-                <InfoItem icon={<Building className="w-4 h-4" />} label="Company" value={
-                  seller?.isCompany === true ? 'Yes' : seller?.isCompany === false ? 'No (Private)' : null
+              <InfoSection title={t('dashboard:listingDetail.seller')}>
+                <InfoItem icon={<User className="w-4 h-4" />} label={t('listing:info.sellerType')} value={seller?.type} />
+                <InfoItem icon={<User className="w-4 h-4" />} label={t('listing:info.sellerName')} value={seller?.name} />
+                <InfoItem icon={<Phone className="w-4 h-4" />} label={t('listing:info.phone')} value={seller?.phone} />
+                <InfoItem icon={<Building className="w-4 h-4" />} label={t('listing:info.company')} value={
+                  seller?.isCompany === true ? t('listing:values.yes') : seller?.isCompany === false ? t('listing:values.noPrivate') : null
                 } />
               </InfoSection>
 
               {/* Pricing Details */}
-              <InfoSection title="Pricing">
-                <InfoItem icon={<Tag className="w-4 h-4" />} label="Current Price" value={
+              <InfoSection title={t('dashboard:listingDetail.pricing')}>
+                <InfoItem icon={<Tag className="w-4 h-4" />} label={t('listing:info.currentPrice')} value={
                   `${listing.currentPrice.toLocaleString()} ${listing.currency}`
                 } highlight />
-                <InfoItem icon={<Tag className="w-4 h-4" />} label="Original Price" value={
+                <InfoItem icon={<Tag className="w-4 h-4" />} label={t('listing:info.originalPrice')} value={
                   listing.originalPrice ? `${listing.originalPrice.toLocaleString()} ${listing.currency}` : null
                 } />
-                <InfoItem icon={<FileText className="w-4 h-4" />} label="Negotiable" value={
-                  listing.negotiable === true ? 'Yes' : listing.negotiable === false ? 'No' : null
+                <InfoItem icon={<FileText className="w-4 h-4" />} label={t('listing:info.negotiable')} value={
+                  listing.negotiable === true ? t('listing:values.yes') : listing.negotiable === false ? t('listing:values.no') : null
                 } />
               </InfoSection>
             </div>
@@ -265,7 +266,7 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
           {/* Price History Chart - Full Width */}
           <div className="mt-6 pt-6 border-t border-slate-200">
             <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4">
-              Price History
+              {t('dashboard:priceHistory.title')}
             </h3>
             <PriceChart history={listing.priceHistory} currency={listing.currency} />
 
@@ -275,9 +276,9 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 sticky top-0">
                     <tr>
-                      <th className="text-left py-2 px-3 font-medium text-slate-600">Date</th>
-                      <th className="text-right py-2 px-3 font-medium text-slate-600">Price</th>
-                      <th className="text-right py-2 px-3 font-medium text-slate-600">Change</th>
+                      <th className="text-left py-2 px-3 font-medium text-slate-600">{t('dashboard:listingDetail.priceHistoryTable.date')}</th>
+                      <th className="text-right py-2 px-3 font-medium text-slate-600">{t('dashboard:listingDetail.priceHistoryTable.price')}</th>
+                      <th className="text-right py-2 px-3 font-medium text-slate-600">{t('dashboard:listingDetail.priceHistoryTable.change')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -309,24 +310,24 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
           {/* Tracking Info */}
           <div className="mt-6 pt-6 border-t border-slate-200">
             <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4">
-              Tracking Information
+              {t('dashboard:listingDetail.tracking')}
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <div className="flex items-center gap-2 text-slate-500">
                 <Clock className="w-4 h-4" />
-                <span>Posted: {listing.postedDate ? formatEuropeanDateTime(listing.postedDate) : 'Unknown'}</span>
+                <span>{t('listing:tracking.posted')}: {listing.postedDate ? formatEuropeanDateTime(listing.postedDate) : t('listing:values.unknown')}</span>
               </div>
               <div className="flex items-center gap-2 text-slate-500">
                 <Eye className="w-4 h-4" />
-                <span>First seen: {formatEuropeanDateTime(listing.firstSeenAt)}</span>
+                <span>{t('listing:tracking.firstSeen')}: {formatEuropeanDateTime(listing.firstSeenAt)}</span>
               </div>
               <div className="flex items-center gap-2 text-slate-500">
                 <RefreshCw className="w-4 h-4" />
-                <span>Last checked: {formatEuropeanDateTime(listing.lastSeenAt)}</span>
+                <span>{t('listing:tracking.lastChecked')}: {formatEuropeanDateTime(listing.lastSeenAt)}</span>
               </div>
               <div className="flex items-center gap-2 text-slate-500">
                 <Globe className="w-4 h-4" />
-                <span>Listing ID: {listing.source.listingId || 'N/A'}</span>
+                <span>{t('listing:info.listingId')}: {listing.source.listingId || t('listing:values.na')}</span>
               </div>
             </div>
           </div>
@@ -343,7 +344,7 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClos
             rel="noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
-            Open Original Listing
+            {t('common:button.openOriginalListing')}
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>

@@ -4,6 +4,9 @@ import { AppProvider } from '@/context/AppContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
+// Initialize i18n
+import '@/i18n';
+
 // Lazy load views for better code splitting
 const Dashboard = lazy(() => import('@/components/Dashboard'));
 const ExtensionPopup = lazy(() => import('@/components/ExtensionPopup'));

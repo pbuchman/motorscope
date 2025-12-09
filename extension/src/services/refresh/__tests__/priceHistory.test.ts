@@ -9,7 +9,7 @@ import {
   hasPriceChangedFromPreviousDay,
   consolidateDailyPriceHistory,
 } from '../priceHistory';
-import { PricePoint } from '../../../types';
+import { PricePoint } from '@/types';
 
 describe('Price History Utilities', () => {
   describe('getDateKey', () => {
@@ -47,19 +47,20 @@ describe('Price History Utilities', () => {
       expect(getDateKey(result[0].date)).toBe('2025-12-08');
     });
 
-    it('should update existing price point if same day', () => {
+    it('should always add new price point even if same day', () => {
       const existingHistory: PricePoint[] = [
         { date: '2025-12-08T08:00:00.000Z', price: 100000, currency: 'PLN' },
       ];
 
       const result = updateDailyPriceHistory(existingHistory, 95000, 'PLN');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(95000);
-      expect(getDateKey(result[0].date)).toBe('2025-12-08');
+      // Now we always add, deduplication happens on UI
+      expect(result).toHaveLength(2);
+      expect(result[0].price).toBe(100000);
+      expect(result[1].price).toBe(95000);
     });
 
-    it('should add new price point if different day', () => {
+    it('should add new price point for different day', () => {
       const existingHistory: PricePoint[] = [
         { date: '2025-12-07T18:00:00.000Z', price: 100000, currency: 'PLN' },
       ];
@@ -73,7 +74,7 @@ describe('Price History Utilities', () => {
       expect(getDateKey(result[1].date)).toBe('2025-12-08');
     });
 
-    it('should preserve history when adding new day', () => {
+    it('should preserve all history when adding new entries', () => {
       const existingHistory: PricePoint[] = [
         { date: '2025-12-05T10:00:00.000Z', price: 110000, currency: 'PLN' },
         { date: '2025-12-06T10:00:00.000Z', price: 105000, currency: 'PLN' },

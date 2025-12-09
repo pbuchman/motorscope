@@ -1,0 +1,31 @@
+{
+  "generic": "Wystąpił błąd. Spróbuj ponownie.",
+  "unexpected": "Wystąpił nieoczekiwany błąd",
+  "network": "Błąd sieci. Sprawdź połączenie internetowe.",
+  "failedToLoadSection": "Nie udało się załadować tej sekcji",
+  "auth": {
+    "notAuthenticated": "Zaloguj się, aby kontynuować.",
+    "sessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie.",
+    "signInToTrack": "Zaloguj się, aby śledzić ogłoszenia",
+    "signInToManage": "Zaloguj się, aby zarządzać ogłoszeniami",
+    "signInToRefresh": "Zaloguj się, aby odświeżać ogłoszenia",
+    "mustBeLoggedIn": "Musisz być zalogowany, aby zmienić ustawienia"
+  },
+  "api": {
+    "geminiError": "Nie udało się przeanalizować ogłoszenia. Sprawdź klucz API.",
+    "rateLimited": "Osiągnięto limit zapytań. Spróbuj ponownie później."
+  },
+  "listing": {
+    "failedToRefresh": "Nie udało się odświeżyć",
+    "loginRequired": "Wymagane logowanie - zaloguj się na stronie serwisu",
+    "failedToSave": "Nie udało się zapisać ogłoszenia.",
+    "failedToRemove": "Nie udało się usunąć ogłoszenia.",
+    "failedToExtract": "Nie udało się wyodrębnić danych pojazdu.",
+    "noPageContent": "Nie udało się odczytać zawartości strony. Odśwież stronę i spróbuj ponownie."
+  },
+  "http": {
+    "error": "Błąd HTTP: {{status}}"
+  },
+  "confirmDelete": "Czy na pewno chcesz przestać śledzić ten samochód?"
+}
+

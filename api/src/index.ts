@@ -25,6 +25,7 @@ import {
 } from './config.js';
 import routes from './routes.js';
 import { setupSwagger } from './swagger.js';
+import { runMigrations } from './migrations.js';
 
 // Validate configuration on startup
 try {
@@ -131,22 +132,34 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Server Startup
 // =============================================================================
 
-app.listen(PORT, () => {
-  console.log('='.repeat(60));
-  console.log('MotorScope API Server Started');
-  console.log('='.repeat(60));
-  console.log(`Environment: ${NODE_ENV}`);
-  console.log(`Port: ${PORT}`);
-  console.log(`GCP Project: ${GCP_PROJECT_ID}`);
-  console.log(`Firestore Database: ${FIRESTORE_DATABASE_ID}`);
-  console.log(`CORS Origin: ${IS_PRODUCTION ? ALLOWED_ORIGIN_EXTENSION : 'all (development)'}`);
-  console.log('='.repeat(60));
-  console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`API Docs: http://localhost:${PORT}/docs`);
-  console.log(`OpenAPI Spec: http://localhost:${PORT}/openapi.json`);
-  console.log(`Health check: GET /api/healthz`);
-  console.log('='.repeat(60));
-});
+// Run migrations and start server
+(async () => {
+  try {
+    // Run database migrations before accepting traffic
+    await runMigrations();
+  } catch (error) {
+    console.error('Migration error (non-fatal):', error);
+    // Don't block startup on migration errors
+    // Migrations are designed to be retried on next startup
+  }
+
+  app.listen(PORT, () => {
+    console.log('='.repeat(60));
+    console.log('MotorScope API Server Started');
+    console.log('='.repeat(60));
+    console.log(`Environment: ${NODE_ENV}`);
+    console.log(`Port: ${PORT}`);
+    console.log(`GCP Project: ${GCP_PROJECT_ID}`);
+    console.log(`Firestore Database: ${FIRESTORE_DATABASE_ID}`);
+    console.log(`CORS Origin: ${IS_PRODUCTION ? ALLOWED_ORIGIN_EXTENSION : 'all (development)'}`);
+    console.log('='.repeat(60));
+    console.log(`Server listening on http://localhost:${PORT}`);
+    console.log(`API Docs: http://localhost:${PORT}/docs`);
+    console.log(`OpenAPI Spec: http://localhost:${PORT}/openapi.json`);
+    console.log(`Health check: GET /api/healthz`);
+    console.log('='.repeat(60));
+  });
+})();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

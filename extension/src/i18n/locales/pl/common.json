@@ -1,0 +1,82 @@
+{
+  "appName": "MotorScope",
+  "button": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "confirm": "Potwierdź",
+    "close": "Zamknij",
+    "clear": "Wyczyść",
+    "refresh": "Odśwież",
+    "delete": "Usuń",
+    "archive": "Archiwizuj",
+    "unarchive": "Przywróć z archiwum",
+    "openListing": "Otwórz ogłoszenie",
+    "openOriginalListing": "Otwórz oryginalne ogłoszenie",
+    "viewDetails": "Zobacz szczegóły",
+    "stopTracking": "Przestań śledzić",
+    "startTracking": "Rozpocznij śledzenie",
+    "selectAll": "Zaznacz wszystko",
+    "clearFilters": "Wyczyść ({{count}})"
+  },
+  "userMenu": {
+    "logout": "Wyloguj się",
+    "language": "Język",
+    "languageEn": "English",
+    "languagePl": "Polski"
+  },
+  "status": {
+    "active": "AKTYWNE",
+    "ended": "ZAKOŃCZONE",
+    "archived": "Zarchiwizowane",
+    "tracked": "Śledzone",
+    "finalPrice": "Cena końcowa"
+  },
+  "time": {
+    "trackedSince": "Śledzone od {{date}}",
+    "lastChecked": "Ostatnio sprawdzone {{date}}",
+    "posted": "Dodane {{date}}"
+  },
+  "filter": {
+    "all": "Wszystkie",
+    "allMakes": "Wszystkie marki",
+    "allModels": "Wszystkie modele",
+    "allSources": "Wszystkie źródła",
+    "activeOnly": "Tylko aktywne",
+    "archivedOnly": "Tylko zarchiwizowane",
+    "includingArchived": "Wraz z archiwum"
+  },
+  "sort": {
+    "label": "Sortuj",
+    "newestFirst": "Od najnowszych",
+    "oldestFirst": "Od najstarszych",
+    "priceAsc": "Cena: rosnąco",
+    "priceDesc": "Cena: malejąco",
+    "nameAsc": "Nazwa A-Z"
+  },
+  "price": {
+    "drop": "Spadek",
+    "rise": "Wzrost",
+    "negotiable": "Do negocjacji",
+    "discount": "-{{percent}}%",
+    "sinceTacked": "{{percent}}% od początku śledzenia"
+  },
+  "vehicle": {
+    "vin": "VIN",
+    "make": "Marka",
+    "model": "Model",
+    "year": "Rok",
+    "mileage": "Przebieg",
+    "fuelType": "Rodzaj paliwa",
+    "transmission": "Skrzynia biegów",
+    "power": "Moc",
+    "color": "Kolor",
+    "bodyType": "Typ nadwozia",
+    "accidentFree": "Bezwypadkowy",
+    "new": "Nowy",
+    "imported": "Importowany",
+    "from": "Pochodzenie: {{country}}",
+    "hpUnit": "KM"
+  },
+  "loading": "Ładowanie...",
+  "refreshing": "Odświeżanie..."
+}

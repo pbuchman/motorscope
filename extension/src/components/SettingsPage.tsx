@@ -1,22 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { GeminiStats, GeminiCallHistoryEntry } from '../types';
-import { useSettings, useRefreshStatus, useListings } from '../context/AppContext';
-import { useAuth } from '../auth/AuthContext';
-import { getGeminiStats, getGeminiHistory, clearGeminiLogs } from '../services/settings/geminiStats';
-import { BACKEND_SERVER_OPTIONS } from '../auth/config';
-import { useChromeMessaging } from '../hooks/useChromeMessaging';
-import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Car, Sparkles, LogOut, Key, ExternalLink } from 'lucide-react';
-import { formatEuropeanDateTimeWithSeconds } from '../utils/formatters';
-
-// Google logo SVG component
-const GoogleLogo: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg className={className} viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-  </svg>
-);
+import { useTranslation } from 'react-i18next';
+import { GeminiStats, GeminiCallHistoryEntry } from '@/types';
+import { useSettings, useRefreshStatus } from '@/context/AppContext';
+import { useAuth } from '@/auth/AuthContext';
+import { getGeminiStats, getGeminiHistory, clearGeminiLogs } from '@/services/settings/geminiStats';
+import { BACKEND_SERVER_OPTIONS } from '@/auth/config';
+import { getBackendServerUrl, setBackendServerUrl } from '@/auth/localServerStorage';
+import { useChromeMessaging } from '@/hooks/useChromeMessaging';
+import { RefreshCw, Clock, Play, CheckCircle, XCircle, AlertCircle, LayoutDashboard, Loader2, Circle, Trash2, Car, Sparkles, Key, ExternalLink, Server } from 'lucide-react';
+import { formatEuropeanDateTimeWithSeconds } from '@/utils/formatters';
+import { GoogleLogo, UserMenu } from '@/components/ui';
 
 // Frequency steps from 10 seconds to 1 month (in minutes, with fractions for seconds)
 const FREQUENCY_STEPS = [
@@ -99,9 +92,9 @@ const StatusMessage: React.FC<{ message: string; type?: 'success' | 'warning'; o
 };
 
 const SettingsPage: React.FC = () => {
+  const { t } = useTranslation(['settings', 'common', 'auth']);
   const { settings, update: updateSettings, reload: reloadSettings } = useSettings();
   const { status: refreshStatus } = useRefreshStatus();
-  const { reload: reloadListings } = useListings();
   const auth = useAuth();
   const { triggerManualRefresh } = useChromeMessaging();
 
@@ -120,10 +113,25 @@ const SettingsPage: React.FC = () => {
   const [apiKeyError, setApiKeyError] = useState('');
   const [validatingKey, setValidatingKey] = useState(false);
 
+  // Backend server state (stored in chrome.storage.local, separate from other settings)
+  const [currentServerUrl, setCurrentServerUrl] = useState<string>('');
+  const [serverChangeLoading, setServerChangeLoading] = useState(false);
+  const [showServerChangeConfirm, setShowServerChangeConfirm] = useState(false);
+  const [pendingServerUrl, setPendingServerUrl] = useState<string>('');
+
   // Sync form state when context settings change
   useEffect(() => {
     setFormSettings(settings);
   }, [settings]);
+
+  // Load backend server URL from local storage on mount
+  useEffect(() => {
+    const loadServerUrl = async () => {
+      const url = await getBackendServerUrl();
+      setCurrentServerUrl(url);
+    };
+    loadServerUrl();
+  }, []);
 
   // Reload settings when auth status changes (e.g., after login)
   useEffect(() => {
@@ -182,17 +190,47 @@ const SettingsPage: React.FC = () => {
     await auth.logout();
   }, [auth]);
 
-  const handleServerChange = useCallback((newUrl: string) => {
-    if (newUrl === formSettings.backendUrl) return;
+  // Handle server change request - shows confirmation dialog
+  const handleServerChangeRequest = useCallback((newUrl: string) => {
+    if (newUrl === currentServerUrl) return;
+    setPendingServerUrl(newUrl);
+    setShowServerChangeConfirm(true);
+  }, [currentServerUrl]);
 
-    const confirmed = window.confirm(
-      'Changing the server will reload all listings and settings from the new server. Continue?'
-    );
+  // Confirm server change - logs out from old server, saves new server, stays on settings page
+  const handleServerChangeConfirm = useCallback(async () => {
+    if (!pendingServerUrl) return;
 
-    if (confirmed) {
-      setFormSettings(prev => ({ ...prev, backendUrl: newUrl }));
+    setServerChangeLoading(true);
+    setShowServerChangeConfirm(false);
+
+    try {
+      // Store the old server URL before changing
+      const oldServerUrl = currentServerUrl;
+
+      // Logout from the OLD server (invalidate token on old backend)
+      if (isLoggedIn) {
+        await auth.logout(oldServerUrl);
+      }
+
+      // Save new server URL to local storage
+      await setBackendServerUrl(pendingServerUrl);
+      setCurrentServerUrl(pendingServerUrl);
+
+      console.log('[SettingsPage] Server changed from', oldServerUrl, 'to', pendingServerUrl);
+    } catch (error) {
+      console.error('[SettingsPage] Server change failed:', error);
+    } finally {
+      setServerChangeLoading(false);
+      setPendingServerUrl('');
     }
-  }, [formSettings.backendUrl]);
+  }, [pendingServerUrl, currentServerUrl, isLoggedIn, auth]);
+
+  // Cancel server change
+  const handleServerChangeCancel = useCallback(() => {
+    setShowServerChangeConfirm(false);
+    setPendingServerUrl('');
+  }, []);
 
   const handleTriggerManualRefresh = useCallback(async () => {
     if (!settings.geminiApiKey) return; // Use persisted key, not form key
@@ -234,18 +272,13 @@ const SettingsPage: React.FC = () => {
     try {
       await updateSettings(formSettings);
 
-      // Reload listings if server changed
-      if (formSettings.backendUrl !== settings.backendUrl) {
-        await reloadListings();
-      }
-
       setSuccessMessage(formSettings.geminiApiKey ? 'Settings saved successfully' : 'Settings saved. Add an API key to enable listing analysis.');
     } catch (error) {
       setApiKeyError('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
-  }, [formSettings, settings, updateSettings, reloadListings]);
+  }, [formSettings, updateSettings]);
 
   const refreshStats = useCallback(async () => {
     setRefreshing(true);
@@ -271,7 +304,7 @@ const SettingsPage: React.FC = () => {
       <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-500">Loading...</p>
+          <p className="text-slate-500">{t('common:loading')}</p>
         </div>
       </div>
     );
@@ -285,9 +318,9 @@ const SettingsPage: React.FC = () => {
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Car className="w-10 h-10 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">Sign in to MotorScope</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">{t('auth:signIn.title')}</h2>
           <p className="text-slate-500 mb-8">
-            Sign in to configure your settings and enable background sync.
+            {t('auth:signIn.description')}
           </p>
           <button
             onClick={handleLogin}
@@ -299,7 +332,7 @@ const SettingsPage: React.FC = () => {
             ) : (
               <GoogleLogo className="w-5 h-5" />
             )}
-            <span>Sign in with Google</span>
+            <span>{t('auth:signIn.button')}</span>
           </button>
           {auth.error && (
             <p className="text-red-500 text-sm mt-4">{auth.error}</p>
@@ -322,26 +355,24 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Auth Button */}
+            {/* Auth / User Menu */}
             {isAuthLoading ? (
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-700 rounded-lg">
                 <Loader2 className="w-4 h-4 animate-spin" />
               </div>
             ) : isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
-              >
-                <span className="max-w-32 truncate">{auth.user?.email}</span>
-                <LogOut className="w-4 h-4" />
-              </button>
+              <UserMenu
+                userEmail={auth.user?.email || ''}
+                onLogout={handleLogout}
+                variant="dark"
+              />
             ) : (
               <button
                 onClick={handleLogin}
                 className="flex items-center gap-2 px-3 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors"
               >
                 <GoogleLogo className="w-4 h-4" />
-                <span>Sign in</span>
+                <span>{t('settings:signIn')}</span>
               </button>
             )}
             <a
@@ -364,24 +395,6 @@ const SettingsPage: React.FC = () => {
 
         {/* Settings Form */}
         <form onSubmit={handleSave} className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
-          {/* Backend Server - Only show when logged in */}
-          {isLoggedIn && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Backend Server</label>
-              <select
-                value={formSettings.backendUrl}
-                onChange={(e) => handleServerChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {BACKEND_SERVER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-400 mt-1">Server where your data is stored</p>
-            </div>
-          )}
 
           {/* Gemini API Key */}
           <div>
@@ -468,7 +481,7 @@ const SettingsPage: React.FC = () => {
                 {formatFrequency(formSettings.checkFrequencyMinutes)}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-2">How often listings are automatically refreshed in the background</p>
+            <p className="text-xs text-slate-400 mt-2">{t('settings:refreshFrequency.descriptionAlt')}</p>
           </div>
 
           {/* Save Button */}
@@ -616,7 +629,7 @@ const SettingsPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400">No recent sync activity</p>
+              <p className="text-sm text-slate-400">{t('settings:syncStatus.noRecentActivity')}</p>
             )}
           </div>
         </section>
@@ -629,7 +642,67 @@ const SettingsPage: React.FC = () => {
           setStats(latestStats);
           setHistory(latestHistory);
         }} />
+
+        {/* Server Configuration - Always visible, separate from other settings */}
+        <section className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Server className="w-5 h-5 text-slate-500" />
+            <h2 className="text-lg font-semibold text-slate-900">API Server</h2>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Backend Server</label>
+            <select
+              value={currentServerUrl}
+              onChange={(e) => handleServerChangeRequest(e.target.value)}
+              disabled={serverChangeLoading}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {BACKEND_SERVER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Select which API server to connect to. Changing the server will log you out.
+            </p>
+          </div>
+        </section>
       </div>
+
+      {/* Server Change Confirmation Dialog */}
+      {showServerChangeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Change API Server?</h3>
+            </div>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to change the API server? You will be logged out and will need to sign in again to the new server.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleServerChangeCancel}
+                disabled={serverChangeLoading}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleServerChangeConfirm}
+                disabled={serverChangeLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {serverChangeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {serverChangeLoading ? 'Changing...' : 'Change Server'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -644,6 +717,7 @@ interface GeminiUsageSectionProps {
 }
 
 const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history, refreshing, onRefresh, onClearLogs }) => {
+  const { t } = useTranslation('settings');
   const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [clearing, setClearing] = useState(false);
@@ -668,13 +742,13 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-500" />
-          Gemini AI Analysis Stats
+          {t('geminiStats.title')}
         </h2>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-slate-400" title="All-time total">
-            All-time: {stats.allTimeTotalCalls || 0}
+          <span className="text-slate-400" title={t('geminiStats.allTime')}>
+            {t('geminiStats.allTime')}: {stats.allTimeTotalCalls || 0}
           </span>
-          <span className="text-slate-500">Session: {stats.totalCalls}</span>
+          <span className="text-slate-500">{t('geminiStats.session')}: {stats.totalCalls}</span>
           <span className="text-green-600">✓ {stats.successCount || 0}</span>
           <span className="text-red-600">✗ {stats.errorCount || 0}</span>
           <button
@@ -682,14 +756,14 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
             onClick={onRefresh}
             disabled={refreshing}
             className="flex items-center gap-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
-            title="Refresh stats"
+            title={t('geminiStats.refreshStats')}
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <button
             type="button"
             onClick={async () => {
-              if (confirm('Clear all Gemini logs and reset session counts?')) {
+              if (confirm(t('geminiStats.clearLogsConfirm'))) {
                 setClearing(true);
                 await onClearLogs();
                 setClearing(false);
@@ -697,14 +771,13 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
             }}
             disabled={clearing || history.length === 0}
             className="flex items-center gap-1 text-red-600 hover:text-red-700 disabled:opacity-50"
-            title="Clear logs"
+            title={t('geminiStats.clearLogs')}
           >
             <Trash2 className={`w-4 h-4 ${clearing ? 'animate-pulse' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Filter */}
       <div className="flex gap-2 mb-4">
         {(['all', 'success', 'error'] as const).map(f => (
           <button
@@ -718,7 +791,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            {f === 'all' ? 'All' : f === 'success' ? 'Success' : 'Errors'}
+            {f === 'all' ? t('geminiStats.filterAll') : f === 'success' ? t('geminiStats.filterSuccess') : t('geminiStats.filterErrors')}
             <span className="ml-1 opacity-75">
               ({f === 'all' ? history.length : history.filter(e => e.status === f).length})
             </span>
@@ -726,9 +799,8 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({ stats, history,
         ))}
       </div>
 
-      {/* History */}
       {filteredHistory.length === 0 ? (
-        <p className="text-sm text-slate-400">No API calls recorded yet</p>
+        <p className="text-sm text-slate-400">{t('geminiStats.noApiCalls')}</p>
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {filteredHistory.slice().reverse().slice(0, 50).map(entry => (

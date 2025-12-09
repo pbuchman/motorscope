@@ -1,0 +1,82 @@
+{
+  "appName": "MotorScope",
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "clear": "Clear",
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "openListing": "Open Listing",
+    "openOriginalListing": "Open Original Listing",
+    "viewDetails": "View details",
+    "stopTracking": "Stop Tracking",
+    "startTracking": "Start Tracking",
+    "selectAll": "Select all",
+    "clearFilters": "Clear ({{count}})"
+  },
+  "userMenu": {
+    "logout": "Log out",
+    "language": "Language",
+    "languageEn": "English",
+    "languagePl": "Polski"
+  },
+  "status": {
+    "active": "ACTIVE",
+    "ended": "ENDED",
+    "archived": "Archived",
+    "tracked": "Tracked",
+    "finalPrice": "Final Price"
+  },
+  "time": {
+    "trackedSince": "Tracked since {{date}}",
+    "lastChecked": "Last checked {{date}}",
+    "posted": "Posted {{date}}"
+  },
+  "filter": {
+    "all": "All",
+    "allMakes": "All makes",
+    "allModels": "All models",
+    "allSources": "All sources",
+    "activeOnly": "Active only",
+    "archivedOnly": "Archived only",
+    "includingArchived": "Including archived"
+  },
+  "sort": {
+    "label": "Sort",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "priceAsc": "Price: Low to High",
+    "priceDesc": "Price: High to Low",
+    "nameAsc": "Name A-Z"
+  },
+  "price": {
+    "drop": "Drop",
+    "rise": "Rise",
+    "negotiable": "Negotiable",
+    "discount": "-{{percent}}%",
+    "sinceTacked": "{{percent}}% since first tracked"
+  },
+  "vehicle": {
+    "vin": "VIN",
+    "make": "Make",
+    "model": "Model",
+    "year": "Year",
+    "mileage": "Mileage",
+    "fuelType": "Fuel Type",
+    "transmission": "Transmission",
+    "power": "Power",
+    "color": "Color",
+    "bodyType": "Body Type",
+    "accidentFree": "Accident-free",
+    "new": "New",
+    "imported": "Imported",
+    "from": "From: {{country}}",
+    "hpUnit": "HP"
+  },
+  "loading": "Loading...",
+  "refreshing": "Refreshing..."
+}

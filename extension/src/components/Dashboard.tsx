@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CarListing } from '@/types';
 import { useListings, useSettings } from '@/context/AppContext';
 import { useAuth } from '@/auth/AuthContext';
@@ -6,8 +7,8 @@ import CarCard from '@/components/CarCard';
 import CarCardCompact from '@/components/CarCardCompact';
 import ListingDetailModal from '@/components/ListingDetailModal';
 import DashboardFilters, { FilterState, SortOption, MakeModelOption, DEFAULT_FILTERS, DEFAULT_SORT } from '@/components/DashboardFilters';
-import { GoogleLogo } from '@/components/ui/GoogleLogo';
-import { Search, Car, Settings, Loader2, LogOut, ExternalLink, LayoutGrid, List } from 'lucide-react';
+import { GoogleLogo, UserMenu } from '@/components/ui';
+import { Search, Car, Settings, Loader2, ExternalLink, LayoutGrid, List } from 'lucide-react';
 import { getEnabledMarketplaces, getMarketplaceDisplayName } from '@/config/marketplaces';
 import { patchRemoteSettings } from '@/api/client';
 
@@ -15,6 +16,7 @@ export type ViewMode = 'grid' | 'compact';
 
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common', 'auth', 'errors', 'settings']);
   const { listings, isLoading, refreshingIds, recentlyRefreshedIds, remove, refresh, update } = useListings();
   const { settings, isLoading: settingsLoading } = useSettings();
   const auth = useAuth();
@@ -122,10 +124,10 @@ const Dashboard: React.FC = () => {
 
   // Memoize the removal handler
   const handleRemove = useCallback(async (id: string) => {
-    if (confirm('Are you sure you want to stop tracking this car?')) {
+    if (confirm(t('errors:confirmDelete'))) {
       await remove(id);
     }
-  }, [remove]);
+  }, [remove, t]);
 
   // Memoize the refresh handler
   const handleRefresh = useCallback(async (listing: CarListing) => {
@@ -280,7 +282,7 @@ const Dashboard: React.FC = () => {
       <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-500">Loading...</p>
+          <p className="text-slate-500">{t('common:loading')}</p>
         </div>
       </div>
     );
@@ -294,9 +296,9 @@ const Dashboard: React.FC = () => {
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Car className="w-10 h-10 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">Sign in to MotorScope</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">{t('auth:signIn.title')}</h2>
           <p className="text-slate-500 mb-8">
-            Track car listings, monitor price changes, and access your watchlist from anywhere.
+            {t('auth:signIn.description')}
           </p>
           <button
             onClick={handleLogin}
@@ -308,7 +310,7 @@ const Dashboard: React.FC = () => {
             ) : (
               <GoogleLogo className="w-5 h-5" />
             )}
-            <span>Sign in with Google</span>
+            <span>{t('auth:signIn.button')}</span>
           </button>
           {auth.error && (
             <p className="text-red-500 text-sm mt-4">{auth.error}</p>
@@ -324,7 +326,7 @@ const Dashboard: React.FC = () => {
       <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-500">Loading tracked vehicles...</p>
+          <p className="text-slate-500">{t('common:loading')}</p>
         </div>
       </div>
     );
@@ -338,8 +340,8 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center gap-3">
             <Car className="w-8 h-8 text-blue-400" />
             <div>
-              <h1 className="text-xl font-bold">MotorScope Dashboard</h1>
-              <p className="text-slate-400 text-sm">Tracking {listings.length} vehicle{listings.length !== 1 ? 's' : ''}</p>
+              <h1 className="text-xl font-bold">{t('dashboard:title')}</h1>
+              <p className="text-slate-400 text-sm">{t('dashboard:tracking', { count: listings.length })}</p>
             </div>
           </div>
 
@@ -349,7 +351,7 @@ const Dashboard: React.FC = () => {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search make, model, VIN..."
+                placeholder={t('dashboard:searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-48 md:w-64 pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -361,34 +363,32 @@ const Dashboard: React.FC = () => {
               <button
                 onClick={() => handleViewModeChange('grid')}
                 className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                title="Grid view"
+                title={t('dashboard:view.grid')}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleViewModeChange('compact')}
                 className={`p-1.5 rounded ${viewMode === 'compact' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                title="Compact view"
+                title={t('dashboard:view.compact')}
               >
                 <List className="w-4 h-4" />
               </button>
             </div>
 
-            {/* User / Logout */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
-            >
-              <span className="max-w-32 truncate">{auth.user?.email}</span>
-              <LogOut className="w-4 h-4" />
-            </button>
+            {/* User Menu */}
+            <UserMenu
+              userEmail={auth.user?.email || ''}
+              onLogout={handleLogout}
+              variant="dark"
+            />
 
             <a
               href="index.html?view=settings"
               className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
             >
               <Settings className="w-4 h-4" />
-              Settings
+              {t('settings:title')}
             </a>
           </div>
         </div>
@@ -399,9 +399,9 @@ const Dashboard: React.FC = () => {
         {listings.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-200 rounded-2xl bg-white/50">
             <Car className="w-12 h-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">No cars tracked yet</h3>
+            <h3 className="text-lg font-medium text-gray-900">{t('dashboard:empty.title')}</h3>
             <p className="text-gray-500 text-sm mt-1 max-w-md text-center mb-3">
-              Navigate to a supported car marketplace to track listings.
+              {t('dashboard:empty.description')}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {getEnabledMarketplaces().slice(0, 4).map(marketplace => (
@@ -435,19 +435,19 @@ const Dashboard: React.FC = () => {
             {/* Results count */}
             {filteredAndSortedListings.length !== listings.length && (
               <p className="text-sm text-slate-500 mb-4">
-                Showing {filteredAndSortedListings.length} of {listings.length} listings
+                {t('dashboard:showingResults', { shown: filteredAndSortedListings.length, total: listings.length })}
               </p>
             )}
 
             {/* Listings */}
             {filteredAndSortedListings.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-200 rounded-xl bg-white/50">
-                <p className="text-gray-500">No listings match your filters</p>
+                <p className="text-gray-500">{t('dashboard:noResults.title')}</p>
                 <button
                   onClick={handleClearFilters}
                   className="mt-2 text-sm text-blue-600 hover:underline"
                 >
-                  Clear filters
+                  {t('dashboard:noResults.clearFilters')}
                 </button>
               </div>
             ) : viewMode === 'grid' ? (

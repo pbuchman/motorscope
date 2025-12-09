@@ -1,0 +1,50 @@
+{
+  "title": "MotorScope Dashboard",
+  "tracking": "Tracking {{count}} vehicle",
+  "tracking_plural": "Tracking {{count}} vehicles",
+  "searchPlaceholder": "Search make, model, VIN...",
+  "filters": {
+    "label": "Filters",
+    "status": "Status",
+    "show": "Show",
+    "make": "Make",
+    "model": "Model",
+    "source": "Source"
+  },
+  "view": {
+    "grid": "Grid view",
+    "compact": "Compact view"
+  },
+  "empty": {
+    "title": "No cars tracked yet",
+    "description": "Navigate to a supported car marketplace to track listings."
+  },
+  "noResults": {
+    "title": "No listings match your filters",
+    "clearFilters": "Clear filters"
+  },
+  "showingResults": "Showing {{shown}} of {{total}} listings",
+  "archivedBadge": "Archived - Excluded from auto-refresh",
+  "priceHistory": {
+    "title": "Price History",
+    "emptyTitle": "Price trend coming soon",
+    "emptyDescription": "Track this listing for at least two days to see how the price evolves over time."
+  },
+  "listingDetail": {
+    "vehicleId": "Vehicle Identification",
+    "production": "Production & Registration",
+    "engine": "Engine & Drivetrain",
+    "condition": "Condition",
+    "colors": "Colors & Interior",
+    "location": "Location",
+    "seller": "Seller",
+    "pricing": "Pricing",
+    "tracking": "Tracking Information",
+    "priceHistoryTable": {
+      "date": "Date",
+      "price": "Price",
+      "change": "Change"
+    }
+  }
+}
+

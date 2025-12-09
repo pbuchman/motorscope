@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ListingStatus } from '../types';
 import { Filter, SortAsc, X, Archive, Car, AlertCircle, CheckCircle, ChevronDown, Globe } from 'lucide-react';
 
@@ -58,6 +59,7 @@ interface MultiSelectProps {
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, selected, onChange, placeholder }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -102,10 +104,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, selected, onC
 
       {isOpen && options.length > 0 && (
         <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[180px] max-h-60 overflow-auto">
-          {/* Select/Clear all */}
           <div className="flex justify-between px-2 py-1.5 border-b border-gray-100 text-[10px]">
-            <button onClick={selectAll} className="text-blue-600 hover:underline">Select all</button>
-            <button onClick={clearAll} className="text-slate-500 hover:underline">Clear</button>
+            <button onClick={selectAll} className="text-blue-600 hover:underline">{t('button.selectAll')}</button>
+            <button onClick={clearAll} className="text-slate-500 hover:underline">{t('button.clear')}</button>
           </div>
 
           {/* Options */}
@@ -139,6 +140,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   activeFiltersCount,
   onClearFilters,
 }) => {
+  const { t } = useTranslation(['dashboard', 'common']);
+
   // Get all unique makes
   const availableMakes = availableMakeModels.map(mm => mm.make);
 
@@ -169,81 +172,72 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 mb-4">
       <div className="flex flex-wrap items-center gap-3">
-        {/* Filter icon & label */}
         <div className="flex items-center gap-2 text-slate-600">
           <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">Filters</span>
+          <span className="text-sm font-medium">{t('dashboard:filters.label')}</span>
         </div>
 
-        {/* Status filter */}
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-slate-500">Status:</label>
+          <label className="text-xs text-slate-500">{t('dashboard:filters.status')}:</label>
           <select
             value={filters.status}
             onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as ListingStatus | 'all' })}
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option value="all">All</option>
-            <option value={ListingStatus.ACTIVE}>Active</option>
-            <option value={ListingStatus.SOLD}>Sold</option>
-            <option value={ListingStatus.EXPIRED}>Expired</option>
+            <option value="all">{t('common:filter.all')}</option>
+            <option value={ListingStatus.ACTIVE}>{t('common:status.active')}</option>
+            <option value={ListingStatus.ENDED}>{t('common:status.ended')}</option>
           </select>
         </div>
 
-        {/* Archive filter */}
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-slate-500">Show:</label>
+          <label className="text-xs text-slate-500">{t('dashboard:filters.show')}:</label>
           <select
             value={filters.archived}
             onChange={(e) => onFiltersChange({ ...filters, archived: e.target.value as ArchiveFilter })}
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option value="active">Active only</option>
-            <option value="archived">Archived only</option>
-            <option value="all">All</option>
+            <option value="active">{t('common:filter.activeOnly')}</option>
+            <option value="archived">{t('common:filter.archivedOnly')}</option>
+            <option value="all">{t('common:filter.all')}</option>
           </select>
         </div>
 
-        {/* Make filter (multi-select) */}
         {availableMakes.length > 0 && (
           <MultiSelect
-            label="Make"
+            label={t('dashboard:filters.make')}
             options={availableMakes}
             selected={filters.makes}
             onChange={handleMakesChange}
-            placeholder="All makes"
+            placeholder={t('common:filter.allMakes')}
           />
         )}
 
-        {/* Model filter (multi-select) */}
         {availableModels.length > 0 && (
           <MultiSelect
-            label="Model"
+            label={t('dashboard:filters.model')}
             options={availableModels}
             selected={filters.models}
             onChange={(models) => onFiltersChange({ ...filters, models })}
-            placeholder="All models"
+            placeholder={t('common:filter.allModels')}
           />
         )}
 
-        {/* Source/Marketplace filter (multi-select) */}
         {availableSources.length > 0 && (
           <MultiSelect
-            label="Source"
+            label={t('dashboard:filters.source')}
             options={availableSources.map(s => s.name)}
             selected={filters.sources}
             onChange={(sources) => onFiltersChange({ ...filters, sources })}
-            placeholder="All sources"
+            placeholder={t('common:filter.allSources')}
           />
         )}
 
-        {/* Divider */}
         <div className="h-6 w-px bg-gray-200" />
 
-        {/* Sort */}
         <div className="flex items-center gap-2 text-slate-600">
           <SortAsc className="w-4 h-4" />
-          <span className="text-sm font-medium">Sort</span>
+          <span className="text-sm font-medium">{t('common:sort.label')}</span>
         </div>
 
         <select
@@ -251,33 +245,31 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           onChange={(e) => onSortChange(e.target.value as SortOption)}
           className="text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="price-desc">Price: High to Low</option>
-          <option value="name">Name A-Z</option>
+          <option value="newest">{t('common:sort.newestFirst')}</option>
+          <option value="oldest">{t('common:sort.oldestFirst')}</option>
+          <option value="price-asc">{t('common:sort.priceAsc')}</option>
+          <option value="price-desc">{t('common:sort.priceDesc')}</option>
+          <option value="name">{t('common:sort.nameAsc')}</option>
         </select>
 
-        {/* Clear filters button */}
         {activeFiltersCount > 0 && (
           <button
             onClick={onClearFilters}
             className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
           >
             <X className="w-3 h-3" />
-            Clear ({activeFiltersCount})
+            {t('common:button.clearFilters', { count: activeFiltersCount })}
           </button>
         )}
       </div>
 
-      {/* Active filter badges */}
       {activeFiltersCount > 0 && (
         <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-gray-100">
           {filters.status !== 'all' && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
               {filters.status === ListingStatus.ACTIVE && <CheckCircle className="w-3 h-3" />}
-              {filters.status === ListingStatus.EXPIRED && <AlertCircle className="w-3 h-3" />}
-              Status: {filters.status}
+              {filters.status === ListingStatus.ENDED && <AlertCircle className="w-3 h-3" />}
+              {t('dashboard:filters.status')}: {t('common:status.' + (filters.status === ListingStatus.ACTIVE ? 'active' : 'ended'))}
               <button onClick={() => onFiltersChange({ ...filters, status: 'all' })} className="hover:text-blue-900">
                 <X className="w-3 h-3" />
               </button>
@@ -286,7 +278,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           {filters.archived !== 'active' && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full">
               <Archive className="w-3 h-3" />
-              {filters.archived === 'archived' ? 'Archived only' : 'Including archived'}
+              {filters.archived === 'archived' ? t('common:filter.archivedOnly') : t('common:filter.includingArchived')}
               <button onClick={() => onFiltersChange({ ...filters, archived: 'active' })} className="hover:text-amber-900">
                 <X className="w-3 h-3" />
               </button>
@@ -327,4 +319,3 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 };
 
 export default DashboardFilters;
-

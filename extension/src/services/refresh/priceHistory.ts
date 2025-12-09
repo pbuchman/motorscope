@@ -1,40 +1,44 @@
 /**
  * Price History Utilities
  *
- * Handles daily price point collection:
- * - One price point per day (the most recent)
- * - Updates existing day's price point if same day
- * - Adds new price point if new day
+ * Handles price point collection:
+ * - Always adds a new price point on each refresh
+ * - Deduplication happens on the UI side (in user's timezone)
+ * - This preserves full refresh history for audit/debugging
  */
 
-import { PricePoint } from '../../types';
+import { PricePoint } from '@/types';
 
 /**
- * Get the date string (YYYY-MM-DD) from an ISO date string
+ * Get the local date string (YYYY-MM-DD) from an ISO date string
+ * Uses local timezone to determine the day
  */
 export function getDateKey(isoString: string): string {
-  return isoString.split('T')[0];
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
- * Get today's date key (YYYY-MM-DD)
+ * Get today's local date key (YYYY-MM-DD)
  */
 export function getTodayKey(): string {
   return getDateKey(new Date().toISOString());
 }
 
 /**
- * Update price history with a new price point.
+ * Add a new price point to the history.
  *
- * Rules:
- * - If there's already a price point for today, update it (keep only the latest)
- * - If it's a new day, add a new price point
- * - This ensures exactly one price point per day
+ * Always adds a new price point on each refresh.
+ * Deduplication (one price per day) is handled on the UI side
+ * based on user's timezone. This preserves full refresh history.
  *
  * @param currentHistory - Existing price history
  * @param newPrice - New price value
  * @param currency - Currency code
- * @returns Updated price history array
+ * @returns Updated price history array with new price point appended
  */
 export function updateDailyPriceHistory(
   currentHistory: PricePoint[],
@@ -42,7 +46,6 @@ export function updateDailyPriceHistory(
   currency: string
 ): PricePoint[] {
   const now = new Date().toISOString();
-  const todayKey = getDateKey(now);
 
   const newPricePoint: PricePoint = {
     date: now,
@@ -50,28 +53,11 @@ export function updateDailyPriceHistory(
     currency,
   };
 
-  // If history is empty, start with this price point
-  if (currentHistory.length === 0) {
-    return [newPricePoint];
-  }
-
-  // Check if the last entry is from today
-  const lastEntry = currentHistory[currentHistory.length - 1];
-  const lastEntryDateKey = getDateKey(lastEntry.date);
-
-  if (lastEntryDateKey === todayKey) {
-    // Same day - replace the last entry with updated timestamp and price
-    return [
-      ...currentHistory.slice(0, -1),
-      newPricePoint,
-    ];
-  } else {
-    // New day - add new price point
-    return [
-      ...currentHistory,
-      newPricePoint,
-    ];
-  }
+  // Always append new price point
+  return [
+    ...(currentHistory || []),
+    newPricePoint,
+  ];
 }
 
 /**

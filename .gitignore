@@ -13,9 +13,7 @@ node_modules/
 # Build outputs
 dist/
 dist-ssr/
-api/dist/
-extension/dist/
-extension/coverage/
+coverage/
 *.local
 
 # Environment variables
@@ -32,7 +30,6 @@ extension/coverage/
 Thumbs.db
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj

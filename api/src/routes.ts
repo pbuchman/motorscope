@@ -642,6 +642,7 @@ interface SettingsResponse {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
   geminiStats: UserSettings['geminiStats'];
+  language: 'en' | 'pl';
   lastRefreshTime: string | null;
   nextRefreshTime: string | null;
   lastRefreshCount: number;
@@ -658,6 +659,7 @@ function formatSettingsResponse(settings: UserSettings): SettingsResponse {
     geminiApiKey: settings.geminiApiKey,
     checkFrequencyMinutes: settings.checkFrequencyMinutes,
     geminiStats: settings.geminiStats,
+    language: settings.language ?? 'en',
     lastRefreshTime: settings.lastRefreshTime ?? null,
     nextRefreshTime: settings.nextRefreshTime ?? null,
     lastRefreshCount: settings.lastRefreshCount ?? 0,
@@ -675,6 +677,7 @@ function extractSettingsUpdate(body: Record<string, unknown>): Partial<UserSetti
     'geminiApiKey',
     'checkFrequencyMinutes',
     'geminiStats',
+    'language',
     'lastRefreshTime',
     'nextRefreshTime',
     'lastRefreshCount',

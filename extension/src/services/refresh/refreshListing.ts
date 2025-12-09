@@ -4,7 +4,7 @@
  * Core logic for refreshing a single listing with AI analysis.
  */
 
-import { CarListing, ListingStatus } from '../../types';
+import { CarListing, ListingStatus } from '@/types';
 import { refreshListingWithGemini, RateLimitError } from '../gemini';
 import { fetchListingPage, FetchError } from './fetcher';
 import { updateDailyPriceHistory, hasPriceChangedFromPreviousDay } from './priceHistory';
@@ -25,8 +25,8 @@ export interface RefreshResult {
  * Shared logic used by both Dashboard and background service worker.
  *
  * Price history behavior:
- * - Always records a price point for each day (even if price unchanged)
- * - Only keeps one price point per day (the most recent)
+ * - Always records a new price point on each refresh (full audit trail)
+ * - Deduplication (one per day) happens on UI side based on user's timezone
  * - priceChanged flag indicates if price changed from previous day
  */
 export async function refreshSingleListing(listing: CarListing): Promise<RefreshResult> {
@@ -39,7 +39,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
       return {
         listing: {
           ...listing,
-          status: ListingStatus.EXPIRED,
+          status: ListingStatus.ENDED,
           lastSeenAt: new Date().toISOString(),
           lastRefreshStatus: 'success',
           lastRefreshError: undefined,
@@ -80,8 +80,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
       priceToRecord
     );
 
-    // Always update price history with today's price point
-    // This ensures one price point per day (updates existing or adds new)
+    // Always add new price point to history (deduplication happens on UI)
     updatedListing.priceHistory = updateDailyPriceHistory(
       listing.priceHistory,
       priceToRecord,
@@ -130,4 +129,3 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
     };
   }
 }
-

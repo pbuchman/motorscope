@@ -7,7 +7,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { CarListing, ExtensionSettings, RefreshStatus } from '../types';
+import i18next from 'i18next';
+import { CarListing, ExtensionSettings, RefreshStatus } from '@/types';
 import {
   getRemoteListings,
   saveRemoteListing,
@@ -15,15 +16,15 @@ import {
   getRemoteSettings,
   patchRemoteSettings,
   ApiError,
-} from '../api/client';
-import { DEFAULT_SETTINGS } from '../services/settings/extensionSettings';
+} from '@/api/client';
+import { DEFAULT_SETTINGS } from '@/services/settings/extensionSettings';
 import {
   getRefreshStatus,
   DEFAULT_REFRESH_STATUS,
-} from '../services/settings/refreshStatus';
-import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '../hooks/useChromeMessaging';
-import { refreshSingleListing, RefreshResult } from '../services/refresh';
-import { useAuth } from '../auth/AuthContext';
+} from '@/services/settings/refreshStatus';
+import { useMessageListener, useStorageListener, useChromeMessaging, MessageTypes } from '@/hooks/useChromeMessaging';
+import { refreshSingleListing, RefreshResult } from '@/services/refresh';
+import { useAuth } from '@/auth/AuthContext';
 
 /**
  * Application state interface
@@ -108,16 +109,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const handleApiError = useCallback((err: unknown) => {
     if (err instanceof ApiError) {
       if (err.isAuthError) {
-        // Token expired or invalid - trigger logout
         auth.logout();
-        setError('Your session has expired. Please sign in again.');
+        setError(i18next.t('errors:auth.sessionExpired'));
       } else {
         setError(err.message);
       }
     } else if (err instanceof Error) {
       setError(err.message);
     } else {
-      setError('An unexpected error occurred');
+      setError(i18next.t('errors:unexpected'));
     }
   }, [auth]);
 
@@ -148,25 +148,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsLoadingSettings(true);
     try {
       if (isLoggedIn) {
-        // Load from API
         const remoteSettings = await getRemoteSettings();
         setSettings({
           geminiApiKey: remoteSettings.geminiApiKey || '',
           checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes || DEFAULT_SETTINGS.checkFrequencyMinutes,
-          backendUrl: DEFAULT_SETTINGS.backendUrl,
           dashboardPreferences: remoteSettings.dashboardFilters ? {
             filters: remoteSettings.dashboardFilters,
             sortBy: remoteSettings.dashboardSort || 'newest',
             viewMode: remoteSettings.dashboardViewMode || 'grid',
           } : undefined,
         });
+
+        if (remoteSettings.language && remoteSettings.language !== i18next.language) {
+          i18next.changeLanguage(remoteSettings.language);
+        }
       } else {
-        // Not logged in - use defaults
         setSettings(DEFAULT_SETTINGS);
       }
     } catch (err) {
       console.error('[AppContext] Failed to load settings:', err);
-      // Use defaults on error
       setSettings(DEFAULT_SETTINGS);
     } finally {
       setIsLoadingSettings(false);
@@ -207,7 +207,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Add or update a listing (requires login)
   const addListing = useCallback(async (listing: CarListing) => {
     if (!isLoggedIn) {
-      setError('Please sign in to track listings');
+      setError(i18next.t('errors:auth.signInToTrack'));
       throw new Error('Not authenticated');
     }
 
@@ -227,7 +227,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Remove a listing (requires login)
   const removeListing = useCallback(async (id: string) => {
     if (!isLoggedIn) {
-      setError('Please sign in to manage listings');
+      setError(i18next.t('errors:auth.signInToManage'));
       throw new Error('Not authenticated');
     }
 
@@ -247,7 +247,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Refresh a single listing (requires login)
   const refreshListing = useCallback(async (listing: CarListing): Promise<RefreshResult> => {
     if (!isLoggedIn) {
-      setError('Please sign in to refresh listings');
+      setError(i18next.t('errors:auth.signInToRefresh'));
       throw new Error('Not authenticated');
     }
 
@@ -298,7 +298,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Update settings (requires login)
   const updateSettings = useCallback(async (newSettings: ExtensionSettings) => {
     if (!isLoggedIn) {
-      throw new Error('Must be logged in to update settings');
+      throw new Error(i18next.t('errors:auth.mustBeLoggedIn'));
     }
 
     try {

@@ -6,6 +6,7 @@
  */
 
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CarListing, ListingStatus } from '@/types';
 import {
   Trash2,
@@ -45,6 +46,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
   isRefreshing,
   justRefreshed
 }) => {
+  const { t } = useTranslation(['common', 'errors', 'dashboard']);
   const v = listing.vehicle;
 
   // Get first price for comparison (compare with first recorded, not previous)
@@ -61,21 +63,20 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
   // Status colors
   const getStatusColor = () => {
     if (listing.isArchived) return 'bg-gray-100 text-gray-600';
-    if (listing.status === ListingStatus.EXPIRED) return 'bg-red-100 text-red-700';
-    if (listing.status === ListingStatus.SOLD) return 'bg-orange-100 text-orange-700';
+    if (listing.status === ListingStatus.ENDED) return 'bg-red-100 text-red-700';
     return 'bg-green-100 text-green-700';
   };
 
   const getStatusText = () => {
-    if (listing.isArchived) return 'Archived';
-    return listing.status;
+    if (listing.isArchived) return t('common:status.archived');
+    return t('common:status.' + (listing.status === ListingStatus.ACTIVE ? 'active' : 'ended'));
   };
 
   // Last refresh failed
   const lastRefreshFailed = listing.lastRefreshStatus === 'error';
 
-  // Final price display (for expired/sold listings)
-  const isInactive = listing.status === ListingStatus.EXPIRED || listing.status === ListingStatus.SOLD;
+  // Final price display (for ended listings)
+  const isInactive = listing.status === ListingStatus.ENDED;
 
   return (
     <div className={`bg-white rounded-lg border ${
@@ -96,7 +97,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
         <div className="bg-red-50 border-b border-red-200 px-3 py-1.5 flex items-center gap-2">
           <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
           <p className="text-[10px] text-red-600 truncate">
-            {listing.lastRefreshError || 'Failed to refresh'}
+            {listing.lastRefreshError || t('errors:listing.failedToRefresh')}
           </p>
         </div>
       )}
@@ -194,13 +195,13 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
 
             {/* Final price label for inactive */}
             {isInactive && (
-              <span className="text-[10px] text-slate-400 uppercase">Final Price</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('common:status.finalPrice')}</span>
             )}
           </div>
 
           {/* Tracked since */}
           <div className="text-[10px] text-slate-400 mt-1">
-            Tracked since {formatEuropeanDateShort(listing.firstSeenAt)}
+            {t('common:time.trackedSince', { date: formatEuropeanDateShort(listing.firstSeenAt) })}
           </div>
         </div>
 
@@ -211,14 +212,14 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
             target="_blank"
             rel="noreferrer"
             className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
-            title="Open listing"
+            title={t('common:button.openListing')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
           <button
             onClick={() => onShowDetails(listing)}
             className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
-            title="View details"
+            title={t('common:button.viewDetails')}
           >
             <Info className="w-4 h-4" />
           </button>
@@ -226,7 +227,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
             onClick={() => onRefresh(listing)}
             disabled={isRefreshing}
             className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
-            title="Refresh listing"
+            title={t('common:button.refresh')}
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -237,7 +238,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                 ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' 
                 : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
             }`}
-            title={listing.isArchived ? 'Unarchive' : 'Archive'}
+            title={listing.isArchived ? t('common:button.unarchive') : t('common:button.archive')}
           >
             {listing.isArchived ? (
               <ArchiveRestore className="w-4 h-4" />
@@ -248,7 +249,7 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
           <button
             onClick={() => onRemove(listing.id)}
             className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-            title="Delete"
+            title={t('common:button.delete')}
           >
             <Trash2 className="w-4 h-4" />
           </button>

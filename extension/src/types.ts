@@ -78,8 +78,7 @@ export interface Vehicle {
 
 export enum ListingStatus {
   ACTIVE = 'ACTIVE',
-  SOLD = 'SOLD',
-  EXPIRED = 'EXPIRED',
+  ENDED = 'ENDED',
 }
 
 export interface CarListing {
@@ -161,7 +160,6 @@ export interface DashboardPreferences {
 export interface ExtensionSettings {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
-  backendUrl: string;
   dashboardPreferences?: DashboardPreferences;
 }
 
