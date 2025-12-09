@@ -12,6 +12,7 @@ interface CarCardProps {
   onArchive: (listing: CarListing) => void;
   onShowDetails: (listing: CarListing) => void;
   isRefreshing: boolean;
+  justRefreshed?: boolean;
 }
 
 // Helper to safely get vehicle data
@@ -54,7 +55,7 @@ const getLocationString = (listing: CarListing): string | null => {
 };
 
 
-const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchive, onShowDetails, isRefreshing }) => {
+const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchive, onShowDetails, isRefreshing, justRefreshed }) => {
   // Get normalized vehicle data
   const vehicleData = getVehicleData(listing);
   const locationStr = getLocationString(listing);
@@ -81,8 +82,10 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
   const lastRefreshFailed = listing.lastRefreshStatus === 'error';
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all duration-200 relative ${
-      listing.isArchived ? 'border-amber-200 opacity-80' : 'border-gray-200'
+    <div className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all duration-300 relative ${
+      listing.isArchived ? 'border-amber-200 opacity-80' : 
+      justRefreshed ? 'border-green-400 ring-2 ring-green-200' :
+      'border-gray-200'
     }`}>
       {/* Archived badge */}
       {listing.isArchived && (
@@ -103,15 +106,6 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
 
       {/* Header Image & Status */}
       <div className="relative h-48 bg-gray-100">
-        {/* Error Banner - positioned absolutely to not affect card alignment */}
-        {lastRefreshFailed && !isRefreshing && (
-          <div className="absolute top-0 left-0 right-0 z-10 bg-red-50/95 backdrop-blur-sm border-b border-red-100 px-4 py-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-            <p className="text-xs text-red-600">
-              Failed to refresh. Check Gemini logs and try again later.
-            </p>
-          </div>
-        )}
         <a href={listing.source.url} target="_blank" rel="noreferrer" className="block w-full h-full">
           <img
             src={listing.thumbnailUrl}
@@ -273,6 +267,16 @@ const CarCard: React.FC<CarCardProps> = ({ listing, onRemove, onRefresh, onArchi
           <PriceChart history={listing.priceHistory} currency={listing.currency} />
         </div>
 
+        {/* Error Banner */}
+        {lastRefreshFailed && !isRefreshing && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600">
+              {listing.lastRefreshError || 'Failed to refresh'}
+            </p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <a 
@@ -338,7 +342,9 @@ export default memo(CarCard, (prevProps, nextProps) => {
     prevProps.listing.isArchived === nextProps.listing.isArchived &&
     prevProps.listing.lastSeenAt === nextProps.listing.lastSeenAt &&
     prevProps.listing.lastRefreshStatus === nextProps.listing.lastRefreshStatus &&
+    prevProps.listing.lastRefreshError === nextProps.listing.lastRefreshError &&
     prevProps.listing.priceHistory.length === nextProps.listing.priceHistory.length &&
-    prevProps.isRefreshing === nextProps.isRefreshing
+    prevProps.isRefreshing === nextProps.isRefreshing &&
+    prevProps.justRefreshed === nextProps.justRefreshed
   );
 });

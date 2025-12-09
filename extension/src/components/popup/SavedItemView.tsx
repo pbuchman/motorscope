@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Check, Car, Calendar, Gauge, Fuel, Eye, RefreshCw } from 'lucide-react';
+import { Check, Car, Calendar, Gauge, Fuel, Eye, RefreshCw, ExternalLink } from 'lucide-react';
 import { CarListing } from '@/types';
 import PriceChart from '@/components/PriceChart';
 import { formatEuropeanDateTime } from '@/utils/formatters';
@@ -13,9 +13,10 @@ import { formatEuropeanDateTime } from '@/utils/formatters';
 interface SavedItemViewProps {
   listing: CarListing;
   onUntrack: () => void;
+  onViewInDashboard?: () => void;
 }
 
-export const SavedItemView: React.FC<SavedItemViewProps> = ({ listing, onUntrack }) => (
+export const SavedItemView: React.FC<SavedItemViewProps> = ({ listing, onUntrack, onViewInDashboard }) => (
   <div className="w-full">
     <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
       <div className="flex items-center gap-2">
@@ -115,9 +116,21 @@ export const SavedItemView: React.FC<SavedItemViewProps> = ({ listing, onUntrack
       )}
     </div>
 
-    <button onClick={onUntrack} className="text-red-500 text-sm hover:underline w-full py-2">
-      Stop Tracking
-    </button>
+    {/* Action buttons */}
+    <div className="flex flex-col gap-2">
+      {onViewInDashboard && (
+        <button
+          onClick={onViewInDashboard}
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg w-full py-2 transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+          View Details in Dashboard
+        </button>
+      )}
+      <button onClick={onUntrack} className="text-red-500 text-sm hover:underline w-full py-2">
+        Stop Tracking
+      </button>
+    </div>
   </div>
 );
 

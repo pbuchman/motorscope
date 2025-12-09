@@ -9,7 +9,8 @@ export { refreshSingleListing } from './refreshListing';
 export type { RefreshResult } from './refreshListing';
 
 // Page fetching
-export { fetchPageContent, checkListingExpired } from './fetcher';
+export { fetchListingPage, FetchError } from './fetcher';
+export type { FetchPageResult } from './fetcher';
 
 // Sorting utilities
 export { sortListingsByRefreshPriority } from './sorter';

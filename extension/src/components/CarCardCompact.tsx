@@ -33,6 +33,7 @@ interface CarCardCompactProps {
   onArchive: (listing: CarListing) => void;
   onShowDetails: (listing: CarListing) => void;
   isRefreshing: boolean;
+  justRefreshed?: boolean;
 }
 
 const CarCardCompact: React.FC<CarCardCompactProps> = ({
@@ -41,7 +42,8 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
   onRefresh,
   onArchive,
   onShowDetails,
-  isRefreshing
+  isRefreshing,
+  justRefreshed
 }) => {
   const v = listing.vehicle;
 
@@ -76,11 +78,26 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
   const isInactive = listing.status === ListingStatus.EXPIRED || listing.status === ListingStatus.SOLD;
 
   return (
-    <div className={`bg-white rounded-lg border ${listing.isArchived ? 'border-gray-200 opacity-75' : 'border-gray-200'} hover:shadow-md transition-all duration-200 relative overflow-hidden`}>
+    <div className={`bg-white rounded-lg border ${
+      listing.isArchived ? 'border-gray-200 opacity-75' : 
+      justRefreshed ? 'border-green-400 ring-2 ring-green-200' :
+      lastRefreshFailed ? 'border-red-200' : 
+      'border-gray-200'
+    } hover:shadow-md transition-all duration-300 relative overflow-hidden`}>
       {/* Loading Overlay */}
       {isRefreshing && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
           <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+        </div>
+      )}
+
+      {/* Error Banner at top */}
+      {lastRefreshFailed && !isRefreshing && (
+        <div className="bg-red-50 border-b border-red-200 px-3 py-1.5 flex items-center gap-2">
+          <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+          <p className="text-[10px] text-red-600 truncate">
+            {listing.lastRefreshError || 'Failed to refresh'}
+          </p>
         </div>
       )}
 
@@ -97,11 +114,6 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
             alt={listing.title}
             className="w-full h-full object-cover"
           />
-          {lastRefreshFailed && !isRefreshing && (
-            <div className="absolute top-1 left-1">
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-            </div>
-          )}
         </a>
 
         {/* Content */}
@@ -254,8 +266,10 @@ export default memo(CarCardCompact, (prevProps, nextProps) => {
     prevProps.listing.isArchived === nextProps.listing.isArchived &&
     prevProps.listing.lastSeenAt === nextProps.listing.lastSeenAt &&
     prevProps.listing.lastRefreshStatus === nextProps.listing.lastRefreshStatus &&
+    prevProps.listing.lastRefreshError === nextProps.listing.lastRefreshError &&
     prevProps.listing.priceHistory.length === nextProps.listing.priceHistory.length &&
-    prevProps.isRefreshing === nextProps.isRefreshing
+    prevProps.isRefreshing === nextProps.isRefreshing &&
+    prevProps.justRefreshed === nextProps.justRefreshed
   );
 });
 

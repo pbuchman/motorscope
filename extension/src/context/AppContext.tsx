@@ -40,6 +40,7 @@ interface AppState {
 
   // Refresh state
   refreshingIds: Set<string>;
+  recentlyRefreshedIds: Set<string>;
 
   // Error state
   error: string | null;
@@ -91,6 +92,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Refresh tracking
   const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
+  const [recentlyRefreshedIds, setRecentlyRefreshedIds] = useState<Set<string>>(new Set());
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -258,7 +260,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Save the updated listing
       if (result.success || result.listing.lastRefreshStatus === 'error') {
         await saveRemoteListing(result.listing);
-        await reloadListings();
+
+        // Update just this listing in the local state (no full reload)
+        setListings(prev => prev.map(l =>
+          l.id === result.listing.id ? result.listing : l
+        ));
+
+        // Add to recently refreshed for animation
+        setRecentlyRefreshedIds(prev => new Set(prev).add(listing.id));
+
+        // Remove from recently refreshed after animation completes
+        setTimeout(() => {
+          setRecentlyRefreshedIds(prev => {
+            const next = new Set(prev);
+            next.delete(listing.id);
+            return next;
+          });
+        }, 1500);
+
         notifyListingUpdated();
       }
 
@@ -274,7 +293,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return next;
       });
     }
-  }, [isLoggedIn, reloadListings, notifyListingUpdated, handleApiError]);
+  }, [isLoggedIn, notifyListingUpdated, handleApiError]);
 
   // Update settings (requires login)
   const updateSettings = useCallback(async (newSettings: ExtensionSettings) => {
@@ -347,6 +366,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLoadingListings,
     isLoadingSettings,
     refreshingIds,
+    recentlyRefreshedIds,
     error,
 
     // Actions
@@ -365,6 +385,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLoadingListings,
     isLoadingSettings,
     refreshingIds,
+    recentlyRefreshedIds,
     error,
     reloadListings,
     addListing,
@@ -399,11 +420,12 @@ export const useAppContext = (): AppContextValue => {
  * Hook for listings-specific state and actions
  */
 export const useListings = () => {
-  const { listings, isLoadingListings, refreshingIds, reloadListings, addListing, removeListing, refreshListing, error, clearError } = useAppContext();
+  const { listings, isLoadingListings, refreshingIds, recentlyRefreshedIds, reloadListings, addListing, removeListing, refreshListing, error, clearError } = useAppContext();
   return {
     listings,
     isLoading: isLoadingListings,
     refreshingIds,
+    recentlyRefreshedIds,
     reload: reloadListings,
     add: addListing,
     update: addListing, // addListing also handles updates (upsert)

@@ -15,7 +15,7 @@ export type ViewMode = 'grid' | 'compact';
 
 
 const Dashboard: React.FC = () => {
-  const { listings, isLoading, refreshingIds, remove, refresh, update } = useListings();
+  const { listings, isLoading, refreshingIds, recentlyRefreshedIds, remove, refresh, update } = useListings();
   const { settings, isLoading: settingsLoading } = useSettings();
   const auth = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +28,22 @@ const Dashboard: React.FC = () => {
 
   const isLoggedIn = auth.status === 'logged_in';
   const isAuthLoading = auth.status === 'loading';
+
+  // Check URL for listing ID to auto-open detail modal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const listingId = params.get('listing');
+    if (listingId && listings.length > 0 && !isLoading) {
+      const listing = listings.find(l => l.id === listingId);
+      if (listing) {
+        setSelectedListing(listing);
+        // Remove the param from URL without reload
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('listing');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    }
+  }, [listings, isLoading]);
 
   // Load dashboard preferences from settings once loaded
   useEffect(() => {
@@ -445,6 +461,7 @@ const Dashboard: React.FC = () => {
                     onArchive={handleArchive}
                     onShowDetails={handleShowDetails}
                     isRefreshing={refreshingIds.has(listing.id)}
+                    justRefreshed={recentlyRefreshedIds.has(listing.id)}
                   />
                 ))}
               </div>
@@ -459,6 +476,7 @@ const Dashboard: React.FC = () => {
                     onArchive={handleArchive}
                     onShowDetails={handleShowDetails}
                     isRefreshing={refreshingIds.has(listing.id)}
+                    justRefreshed={recentlyRefreshedIds.has(listing.id)}
                   />
                 ))}
               </div>

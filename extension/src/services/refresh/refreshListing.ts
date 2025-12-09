@@ -6,7 +6,7 @@
 
 import { CarListing, ListingStatus } from '../../types';
 import { refreshListingWithGemini, RateLimitError } from '../gemini';
-import { fetchPageContent, checkListingExpired } from './fetcher';
+import { fetchListingPage, FetchError } from './fetcher';
 import { updateDailyPriceHistory, hasPriceChangedFromPreviousDay } from './priceHistory';
 
 /**
@@ -31,10 +31,11 @@ export interface RefreshResult {
  */
 export async function refreshSingleListing(listing: CarListing): Promise<RefreshResult> {
   try {
-    // Check for expired listing first
-    const { expired, status } = await checkListingExpired(listing.source.url);
+    // Fetch page content (single request - checks status and gets content)
+    const fetchResult = await fetchListingPage(listing.source.url);
 
-    if (expired) {
+    // Check for expired listing (404/410)
+    if (fetchResult.expired) {
       return {
         listing: {
           ...listing,
@@ -48,26 +49,23 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
     }
 
     // Non-OK response (including status 0, which indicates a network error)
-    if (status !== 200) {
+    if (fetchResult.status !== 200) {
       return {
         listing: {
           ...listing,
           lastRefreshStatus: 'error',
-          lastRefreshError: `HTTP ${status}`,
+          lastRefreshError: `HTTP ${fetchResult.status}`,
         },
         success: false,
-        error: `HTTP error: ${status}`,
+        error: `HTTP error: ${fetchResult.status}`,
       };
     }
-
-    // Fetch and parse page content
-    const { textContent, pageTitle } = await fetchPageContent(listing.source.url);
 
     // Use Gemini to analyze the page
     const result = await refreshListingWithGemini(
       listing.source.url,
-      textContent,
-      pageTitle || listing.title
+      fetchResult.textContent || '',
+      fetchResult.pageTitle || listing.title
     );
 
     const updatedListing = { ...listing };
@@ -107,8 +105,16 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
       priceChanged,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
     const isRateLimited = error instanceof RateLimitError;
+    const isCorsError = error instanceof FetchError && error.isCorsError;
+
+    // Provide a user-friendly error message for CORS errors
+    let errorMsg: string;
+    if (isCorsError) {
+      errorMsg = 'Login required - please log in to the marketplace site';
+    } else {
+      errorMsg = error instanceof Error ? error.message : String(error);
+    }
 
     console.error(`[RefreshService] Failed to refresh ${listing.source.url}:`, error);
 

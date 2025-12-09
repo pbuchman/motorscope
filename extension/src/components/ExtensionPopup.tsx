@@ -221,7 +221,17 @@ const ExtensionPopup: React.FC = () => {
 
     // Already tracked
     if (savedItem) {
-      return <SavedItemView listing={savedItem} onUntrack={handleUnbookmark} />;
+      return (
+        <SavedItemView
+          listing={savedItem}
+          onUntrack={handleUnbookmark}
+          onViewInDashboard={() => {
+            // Open dashboard with listing parameter to auto-open detail modal
+            const dashboardUrl = chrome.runtime.getURL(`index.html?view=dashboard&listing=${encodeURIComponent(savedItem.id)}`);
+            chrome.tabs.create({ url: dashboardUrl });
+          }}
+        />
+      );
     }
 
     // Ready to analyze
