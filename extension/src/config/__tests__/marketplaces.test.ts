@@ -35,6 +35,10 @@ describe('Marketplace Configuration', () => {
         expect(marketplace.url).toBeDefined();
         expect(typeof marketplace.enabled).toBe('boolean');
         expect(marketplace.offerPagePatterns).toBeDefined();
+        // useBackgroundTab is optional, but if defined must be boolean
+        if (marketplace.useBackgroundTab !== undefined) {
+          expect(typeof marketplace.useBackgroundTab).toBe('boolean');
+        }
       }
     });
   });
@@ -194,6 +198,34 @@ describe('Edge Cases', () => {
     expect(isSupportedMarketplace('not-a-valid-url')).toBe(false);
     expect(isOfferPage('not-a-valid-url')).toBe(false);
     expect(isTrackableOfferPage('not-a-valid-url')).toBe(false);
+  });
+});
+
+describe('Background Tab Configuration', () => {
+  it('should configure otomoto to use standard fetch', () => {
+    const otomoto = SUPPORTED_MARKETPLACES.find(m => m.id === 'otomoto');
+    expect(otomoto).toBeDefined();
+    expect(otomoto?.useBackgroundTab).toBe(false);
+  });
+
+  it('should configure autoplac to use background tab', () => {
+    const autoplac = SUPPORTED_MARKETPLACES.find(m => m.id === 'autoplac');
+    expect(autoplac).toBeDefined();
+    expect(autoplac?.useBackgroundTab).toBe(true);
+  });
+
+  it('should return correct marketplace config for autoplac URLs', () => {
+    const marketplace = getMarketplaceForUrl('https://autoplac.pl/ogloszenie/test-123');
+    expect(marketplace).not.toBeNull();
+    expect(marketplace?.id).toBe('autoplac');
+    expect(marketplace?.useBackgroundTab).toBe(true);
+  });
+
+  it('should return correct marketplace config for otomoto URLs', () => {
+    const marketplace = getMarketplaceForUrl('https://www.otomoto.pl/osobowe/oferta/test');
+    expect(marketplace).not.toBeNull();
+    expect(marketplace?.id).toBe('otomoto');
+    expect(marketplace?.useBackgroundTab).toBe(false);
   });
 });
 

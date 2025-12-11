@@ -30,6 +30,12 @@ export interface MarketplaceConfig {
    * These take precedence - if matched, page is not considered an offer
    */
   excludePatterns?: (string | RegExp)[];
+  /**
+   * Whether to use background tab for fetching listings
+   * Set to true for marketplaces with Cloudflare or similar restrictions
+   * that block standard fetch() requests
+   */
+  useBackgroundTab?: boolean;
 }
 
 /**
@@ -62,6 +68,7 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
       '/osobowe/',          // Category listing (but not /oferta/)
       '?search',            // Search queries
     ],
+    useBackgroundTab: false, // Use standard fetch for OTOMOTO
   },
   {
     id: 'autoplac',
@@ -83,6 +90,7 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
       '/lista/',
       '?page=',
     ],
+    useBackgroundTab: true, // Use background tab due to Cloudflare restrictions
   },
 ];
 

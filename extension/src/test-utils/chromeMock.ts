@@ -257,8 +257,26 @@ function createChromeMock() {
     tabs: {
       query: jest.fn(async () => []),
       update: jest.fn(async () => ({})),
-      create: jest.fn(async () => ({ id: 1 })),
+      create: jest.fn(async (createProperties) => ({ 
+        id: 1, 
+        url: createProperties.url,
+        active: createProperties.active !== false,
+        index: 0,
+        pinned: false,
+        highlighted: false,
+        windowId: 1,
+        incognito: false,
+      })),
+      remove: jest.fn(async () => undefined),
       sendMessage: jest.fn(async () => undefined),
+      onUpdated: {
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+      },
+    },
+
+    scripting: {
+      executeScript: jest.fn(async () => []),
     },
 
     notifications: {
