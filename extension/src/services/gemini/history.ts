@@ -4,7 +4,7 @@
  * Records successful and failed Gemini API calls for debugging and analytics.
  */
 
-import {GeminiCallHistoryEntry} from "../../types";
+import {GeminiCallHistoryEntry} from "@/types";
 import {recordGeminiCall} from "../settings";
 
 /**

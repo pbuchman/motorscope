@@ -4,7 +4,7 @@
  * Utilities for sorting listings by various criteria.
  */
 
-import {CarListing} from '../../types';
+import {CarListing} from '@/types';
 
 /**
  * Sort listings by refresh priority:

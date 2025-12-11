@@ -1,12 +1,12 @@
 // Background service worker for MotorScope (ES Module)
-import {CarListing, RefreshedListingInfo, RefreshPendingItem, RefreshStatus} from './types';
-import {extensionStorage} from './services/extensionStorage';
-import {refreshSingleListing, sortListingsByRefreshPriority} from './services/refresh';
-import {STORAGE_KEYS} from './services/settings/storageKeys';
-import {DEFAULT_REFRESH_STATUS} from './services/settings/refreshStatus';
-import {getToken, initializeAuth, isTokenExpired, trySilentLogin} from './auth/oauthClient';
-import {getStoredToken} from './auth/storage';
-import {API_PREFIX, DEFAULT_BACKEND_URL, LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH} from './auth/config';
+import {CarListing, RefreshedListingInfo, RefreshPendingItem, RefreshStatus} from '@/types';
+import {extensionStorage} from '@/services/extensionStorage';
+import {refreshSingleListing, sortListingsByRefreshPriority} from '@/services/refresh';
+import {STORAGE_KEYS} from '@/services/settings/storageKeys';
+import {DEFAULT_REFRESH_STATUS} from '@/services/settings/refreshStatus';
+import {getToken, initializeAuth, isTokenExpired, trySilentLogin} from '@/auth/oauthClient';
+import {getStoredToken} from '@/auth/storage';
+import {API_PREFIX, DEFAULT_BACKEND_URL, LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH} from '@/auth/config';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const AUTH_CHECK_ALARM_NAME = 'motorscope_auth_check';

@@ -8,14 +8,14 @@
  * User must be authenticated to access stats/history.
  */
 
-import {GeminiCallHistoryEntry, GeminiStats} from '../../types';
+import {GeminiCallHistoryEntry, GeminiStats} from '@/types';
 import {
     addRemoteGeminiHistory,
     clearRemoteGeminiHistory,
     getRemoteGeminiHistory,
     getRemoteSettings,
     patchRemoteSettings,
-} from '../../api/client';
+} from '@/api/client';
 
 // ============================================================================
 // Defaults

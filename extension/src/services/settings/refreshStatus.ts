@@ -5,7 +5,7 @@
  * Tracks progress, pending items, and recent activity.
  */
 
-import {RefreshStatus} from '../../types';
+import {RefreshStatus} from '@/types';
 import {STORAGE_KEYS} from './storageKeys';
 import {getWithDefault, setStorage} from './storageHelpers';
 

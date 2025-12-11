@@ -4,7 +4,7 @@
  * Extracts full car listing data from webpage content using Gemini AI.
  */
 
-import {CarListing} from "../../types";
+import {CarListing} from "@/types";
 import {createGeminiClient} from "./client";
 import {carListingSchema} from "./schemas";
 import {buildParsePrompt} from "./prompts";

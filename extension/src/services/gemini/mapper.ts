@@ -4,8 +4,8 @@
  * Transforms raw Gemini response data into CarListing objects.
  */
 
-import {CarListing, ListingStatus, Location, Seller, Vehicle} from "../../types";
-import {cleanVin, normalizeUrl} from "../../utils/formatters";
+import {CarListing, ListingStatus, Location, Seller, Vehicle} from "@/types";
+import {cleanVin, normalizeUrl} from "@/utils/formatters";
 
 /** Schema version for data compatibility */
 const SCHEMA_VERSION = "1.0.0";
