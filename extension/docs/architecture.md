@@ -159,6 +159,7 @@ useStorageListener → State Update → Re-render
 - Defines supported car marketplaces
 - URL patterns for offer detection
 - Domain matching rules
+- Background tab configuration for marketplaces with restrictions (e.g., Cloudflare)
 
 **Auth Config (`src/auth/config.ts`)**
 - OAuth client ID

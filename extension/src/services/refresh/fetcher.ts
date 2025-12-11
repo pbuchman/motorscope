@@ -7,6 +7,14 @@
 
 import { getMarketplaceForUrl } from '@/config/marketplaces';
 
+// Constants for content extraction and timeouts
+const MAX_TEXT_CONTENT_LENGTH = 20000;
+const TAB_LOADING_TIMEOUT_MS = 30000;
+
+// Common error indicators for detecting expired listings
+const ERROR_404_INDICATORS = ['404', 'not found', 'nie znaleziono'];
+const ERROR_410_INDICATORS = ['410', 'gone'];
+
 /**
  * Custom error for CORS/network issues that may indicate login required
  */
@@ -49,7 +57,7 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
       }
 
       const tabId = tab.id;
-      let timeoutId: NodeJS.Timeout;
+      let timeoutId: number;
       let resolved = false;
 
       // Clean up function
@@ -60,14 +68,14 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
         });
       };
 
-      // Set timeout for page load (30 seconds)
+      // Set timeout for page load
       timeoutId = setTimeout(() => {
         if (!resolved) {
           resolved = true;
           cleanup();
           reject(new FetchError('Tab loading timeout'));
         }
-      }, 30000);
+      }, TAB_LOADING_TIMEOUT_MS);
 
       // Listen for tab updates
       const updateListener = async (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo, updatedTab: chrome.tabs.Tab) => {
@@ -89,14 +97,17 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
                 const bodyText = document.body?.innerText || '';
                 const html = document.documentElement?.outerHTML || '';
                 
-                // Check for common error indicators
-                const is404 = title.toLowerCase().includes('404') || 
-                              title.toLowerCase().includes('not found') ||
-                              bodyText.toLowerCase().includes('404') ||
-                              bodyText.toLowerCase().includes('nie znaleziono');
+                // Check for common error indicators (case-insensitive)
+                const lowerTitle = title.toLowerCase();
+                const lowerBody = bodyText.toLowerCase();
                 
-                const is410 = title.toLowerCase().includes('410') || 
-                              title.toLowerCase().includes('gone');
+                const is404 = lowerTitle.includes('404') || 
+                              lowerTitle.includes('not found') ||
+                              lowerBody.includes('404') ||
+                              lowerBody.includes('nie znaleziono');
+                
+                const is410 = lowerTitle.includes('410') || 
+                              lowerTitle.includes('gone');
                 
                 return {
                   title,
@@ -140,7 +151,7 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
               .replace(/<[^>]+>/g, ' ')
               .replace(/\s+/g, ' ')
               .trim()
-              .substring(0, 20000);
+              .substring(0, MAX_TEXT_CONTENT_LENGTH);
 
             resolve({
               expired: false,
@@ -205,7 +216,7 @@ async function fetchListingPageWithFetch(url: string): Promise<FetchPageResult> 
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .substring(0, 20000);
+      .substring(0, MAX_TEXT_CONTENT_LENGTH);
 
     return {
       expired: false,
