@@ -49,7 +49,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={true}
                     detectedMarketplace={mockMarketplace}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             expect(screen.getByText(/no listing detected/i)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={true}
                     detectedMarketplace={mockMarketplace}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             expect(screen.getByText(/navigate to/i)).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={false}
                     detectedMarketplace={null}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             expect(screen.getByText(/not on a supported marketplace/i)).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={false}
                     detectedMarketplace={null}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             // Should show marketplace links
@@ -101,7 +101,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={false}
                     detectedMarketplace={null}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             const otomotoLink = screen.getByText('Otomoto');
@@ -129,7 +129,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={false}
                     detectedMarketplace={null}
                     enabledMarketplaces={manyMarketplaces}
-                />
+                />,
             );
 
             // Should only show first 3
@@ -145,7 +145,7 @@ describe('NoListingView', () => {
                     isOnMarketplace={false}
                     detectedMarketplace={null}
                     enabledMarketplaces={mockEnabledMarketplaces}
-                />
+                />,
             );
 
             // Should have an SVG icon

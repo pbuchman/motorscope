@@ -86,7 +86,7 @@ describe('AnalyzePrompt', () => {
         it('calls onOpenSettings when settings button is clicked', async () => {
             const onOpenSettings = jest.fn();
             const {user} = render(
-                <AnalyzePrompt {...defaultProps} hasApiKey={false} onOpenSettings={onOpenSettings}/>
+                <AnalyzePrompt {...defaultProps} hasApiKey={false} onOpenSettings={onOpenSettings}/>,
             );
 
             const button = screen.getByRole('button', {name: /settings/i});

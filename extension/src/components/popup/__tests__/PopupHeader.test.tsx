@@ -57,7 +57,7 @@ describe('PopupHeader', () => {
         it('calls onOpenDashboard when dashboard button is clicked', async () => {
             const onOpenDashboard = jest.fn();
             const {user} = render(
-                <PopupHeader {...defaultProps} onOpenDashboard={onOpenDashboard}/>
+                <PopupHeader {...defaultProps} onOpenDashboard={onOpenDashboard}/>,
             );
 
             const button = screen.getByRole('button', {name: /dashboard/i});
@@ -77,7 +77,7 @@ describe('PopupHeader', () => {
         it('calls onOpenSettings when settings button is clicked', async () => {
             const onOpenSettings = jest.fn();
             const {user} = render(
-                <PopupHeader {...defaultProps} onOpenSettings={onOpenSettings}/>
+                <PopupHeader {...defaultProps} onOpenSettings={onOpenSettings}/>,
             );
 
             const settingsButton = screen.getByTitle(/settings/i);
@@ -94,7 +94,7 @@ describe('PopupHeader', () => {
                     {...defaultProps}
                     isLoggedIn={true}
                     userEmail="test@example.com"
-                />
+                />,
             );
 
             expect(screen.getByTestId('user-menu')).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('PopupHeader', () => {
                     isLoggedIn={true}
                     userEmail="test@example.com"
                     onLogout={onLogout}
-                />
+                />,
             );
 
             const logoutButton = screen.getByRole('button', {name: /logout/i});

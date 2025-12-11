@@ -44,7 +44,7 @@ describe('Gemini Client', () => {
             mockGetGeminiApiKey.mockResolvedValue(null);
 
             await expect(createGeminiClient()).rejects.toThrow(
-                'API Key is missing. Please configure your GEMINI_API_KEY in settings.'
+                'API Key is missing. Please configure your GEMINI_API_KEY in settings.',
             );
         });
 
@@ -52,7 +52,7 @@ describe('Gemini Client', () => {
             mockGetGeminiApiKey.mockResolvedValue('');
 
             await expect(createGeminiClient()).rejects.toThrow(
-                'API Key is missing. Please configure your GEMINI_API_KEY in settings.'
+                'API Key is missing. Please configure your GEMINI_API_KEY in settings.',
             );
         });
 
@@ -60,7 +60,7 @@ describe('Gemini Client', () => {
             mockGetGeminiApiKey.mockResolvedValue(undefined as any);
 
             await expect(createGeminiClient()).rejects.toThrow(
-                'API Key is missing. Please configure your GEMINI_API_KEY in settings.'
+                'API Key is missing. Please configure your GEMINI_API_KEY in settings.',
             );
         });
 

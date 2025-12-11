@@ -32,22 +32,19 @@ const extractPageContent = (): PageContentResult => ({
 /**
  * Execute content extraction script in a tab
  */
-const executeContentScript = (tabId: number): Promise<PageContentResult | null> => {
-    return new Promise((resolve) => {
-        chrome.scripting.executeScript(
-            {
-                target: {tabId},
-                func: extractPageContent,
-            },
-            (results) => {
-                if (results?.[0]?.result) {
-                    resolve(results[0].result as PageContentResult);
-                } else {
-                    resolve(null);
-                }
-            }
-        );
-    });
+const executeContentScript = async (tabId: number): Promise<PageContentResult | null> => {
+    try {
+        const results = await chrome.scripting.executeScript({
+            target: {tabId},
+            func: extractPageContent,
+        });
+        if (results?.[0]?.result) {
+            return results[0].result as PageContentResult;
+        }
+        return null;
+    } catch {
+        return null;
+    }
 };
 
 /**

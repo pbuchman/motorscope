@@ -5,8 +5,8 @@
  * User must be logged in to use the extension.
  */
 
-import React, {createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState,} from 'react';
-import {initializeAuth, loginWithProvider, logout as logoutFromProvider, trySilentLogin, User,} from './oauthClient';
+import React, {createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {initializeAuth, loginWithProvider, logout as logoutFromProvider, trySilentLogin, User} from './oauthClient';
 
 /**
  * Auth context state
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
             clearError,
             isLoggingIn,
         }),
-        [state, login, logout, clearError, isLoggingIn]
+        [state, login, logout, clearError, isLoggingIn],
     );
 
     return (

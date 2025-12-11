@@ -4,7 +4,7 @@
  * Uses the global chromeMock set up in setupTests.ts
  */
 
-import {clearBackendServerUrl, getBackendServerUrl, setBackendServerUrl,} from '@/auth/localServerStorage';
+import {clearBackendServerUrl, getBackendServerUrl, setBackendServerUrl} from '@/auth/localServerStorage';
 import {BACKEND_SERVER_OPTIONS, DEFAULT_BACKEND_URL} from '@/auth/config';
 import {getChromeMock} from '@/test-utils/chromeMock';
 
@@ -57,7 +57,7 @@ describe('Local Server Storage', () => {
 
         it('should throw error for invalid URL', async () => {
             await expect(setBackendServerUrl('https://invalid-server.com')).rejects.toThrow(
-                'Invalid backend server URL'
+                'Invalid backend server URL',
             );
         });
 

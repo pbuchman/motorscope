@@ -20,10 +20,10 @@ interface NoListingViewProps {
 }
 
 export const NoListingView: React.FC<NoListingViewProps> = ({
-                                                                isOnMarketplace,
-                                                                detectedMarketplace,
-                                                                enabledMarketplaces,
-                                                            }) => {
+    isOnMarketplace,
+    detectedMarketplace,
+    enabledMarketplaces,
+}) => {
     const {t} = useTranslation('popup');
 
     return (

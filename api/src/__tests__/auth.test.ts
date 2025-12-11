@@ -20,7 +20,7 @@ describe('Authentication Module', () => {
             const token = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com', jti: 'test-jti'},
                 TEST_SECRET,
-                {expiresIn: '1h'}
+                {expiresIn: '1h'},
             );
 
             expect(token).toBeDefined();
@@ -42,7 +42,7 @@ describe('Authentication Module', () => {
             const token = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com'},
                 TEST_SECRET,
-                {expiresIn: '1h'}
+                {expiresIn: '1h'},
             );
             const decoded = jwt.decode(token) as any;
 
@@ -55,7 +55,7 @@ describe('Authentication Module', () => {
         it('should verify valid token', () => {
             const token = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com'},
-                TEST_SECRET
+                TEST_SECRET,
             );
 
             const payload = jwt.verify(token, TEST_SECRET) as any;
@@ -71,7 +71,7 @@ describe('Authentication Module', () => {
         it('should throw for tampered token', () => {
             const token = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com'},
-                TEST_SECRET
+                TEST_SECRET,
             );
             const tamperedToken = token.slice(0, -5) + 'xxxxx';
 
@@ -81,7 +81,7 @@ describe('Authentication Module', () => {
         it('should throw for token with wrong secret', () => {
             const token = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com'},
-                'wrong-secret'
+                'wrong-secret',
             );
 
             expect(() => jwt.verify(token, TEST_SECRET)).toThrow();
@@ -91,7 +91,7 @@ describe('Authentication Module', () => {
             const expiredToken = jwt.sign(
                 {userId: 'user_123', email: 'test@example.com'},
                 TEST_SECRET,
-                {expiresIn: '-1h'}
+                {expiresIn: '-1h'},
             );
 
             expect(() => jwt.verify(expiredToken, TEST_SECRET)).toThrow(/expired/i);
@@ -238,7 +238,7 @@ describe('auth.ts integration tests', () => {
 
         const auth = await import('../auth.js');
 
-        await expect(auth.verifyGoogleToken('bad')).rejects.toThrow(/Invalid or expired Google token/);
+        await expect(auth.verifyGoogleToken('bad')).rejects.toThrow(/Token payload is empty/);
     });
 
     it('verifyGoogleAccessToken should return payload on OK fetch', async () => {
@@ -269,7 +269,7 @@ describe('auth.ts integration tests', () => {
 
         const auth = await import('../auth.js');
 
-        await expect(auth.verifyGoogleAccessToken('bad')).rejects.toThrow(/Invalid or expired Google access token/);
+        await expect(auth.verifyGoogleAccessToken('bad')).rejects.toThrow(/Google userinfo request failed: 401/);
     });
 
     it('generateJwt/verifyJwt roundtrip and expiration extraction', async () => {
@@ -407,7 +407,7 @@ describe('auth.ts integration tests', () => {
             }));
 
             const auth = await import('../auth.js');
-            await expect(auth.verifyGoogleToken('token')).rejects.toThrow(/Invalid or expired Google token/);
+            await expect(auth.verifyGoogleToken('token')).rejects.toThrow(/Token missing required fields/);
         });
 
         it('should throw when payload has email but missing sub', async () => {
@@ -421,7 +421,7 @@ describe('auth.ts integration tests', () => {
             }));
 
             const auth = await import('../auth.js');
-            await expect(auth.verifyGoogleToken('token')).rejects.toThrow(/Invalid or expired Google token/);
+            await expect(auth.verifyGoogleToken('token')).rejects.toThrow(/Token missing required fields/);
         });
 
         it('should throw when verifyIdToken throws an error', async () => {
@@ -450,7 +450,7 @@ describe('auth.ts integration tests', () => {
             (global.fetch as any).__isMock = true;
 
             const auth = await import('../auth.js');
-            await expect(auth.verifyGoogleAccessToken('token')).rejects.toThrow(/Invalid or expired Google access token/);
+            await expect(auth.verifyGoogleAccessToken('token')).rejects.toThrow(/User info missing required fields/);
         });
 
         it('should throw when userinfo has email but missing sub', async () => {
@@ -463,7 +463,7 @@ describe('auth.ts integration tests', () => {
             (global.fetch as any).__isMock = true;
 
             const auth = await import('../auth.js');
-            await expect(auth.verifyGoogleAccessToken('token')).rejects.toThrow(/Invalid or expired Google access token/);
+            await expect(auth.verifyGoogleAccessToken('token')).rejects.toThrow(/User info missing required fields/);
         });
 
         it('should throw when fetch throws an error', async () => {
@@ -501,7 +501,7 @@ describe('auth.ts integration tests', () => {
             const expiredToken = jwt.sign(
                 {userId: 'user', email: 'e@ex.com', jti: 'jti'},
                 'test-secret',
-                {expiresIn: '-1h'}
+                {expiresIn: '-1h'},
             );
 
             expect(() => auth.verifyJwt(expiredToken)).toThrow(/Token has expired/);

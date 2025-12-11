@@ -22,7 +22,7 @@ import {
     RefreshCw,
     Trash2,
     TrendingDown,
-    TrendingUp
+    TrendingUp,
 } from 'lucide-react';
 import {formatEuropeanDateShort} from '@/utils/formatters';
 import {getMarketplaceDisplayName} from '@/config/marketplaces';
@@ -38,14 +38,14 @@ interface CarCardCompactProps {
 }
 
 const CarCardCompact: React.FC<CarCardCompactProps> = ({
-                                                           listing,
-                                                           onRemove,
-                                                           onRefresh,
-                                                           onArchive,
-                                                           onShowDetails,
-                                                           isRefreshing,
-                                                           justRefreshed
-                                                       }) => {
+    listing,
+    onRemove,
+    onRefresh,
+    onArchive,
+    onShowDetails,
+    isRefreshing,
+    justRefreshed,
+}) => {
     const {t} = useTranslation(['common', 'errors', 'dashboard']);
     const v = listing.vehicle;
 
@@ -130,33 +130,33 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                             <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                                 {v.productionYear && (
                                     <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3"/>
+                                        <Calendar className="w-3 h-3"/>
                                         {v.productionYear}
-                  </span>
+                                    </span>
                                 )}
                                 {v.mileage?.value && (
                                     <span className="flex items-center gap-1">
-                    <Gauge className="w-3 h-3"/>
+                                        <Gauge className="w-3 h-3"/>
                                         {v.mileage.value.toLocaleString()} {v.mileage.unit || 'km'}
-                  </span>
+                                    </span>
                                 )}
                                 {v.engine?.fuelType && (
                                     <span className="flex items-center gap-1">
-                    <Fuel className="w-3 h-3"/>
+                                        <Fuel className="w-3 h-3"/>
                                         {v.engine.fuelType}
-                  </span>
+                                    </span>
                                 )}
                             </div>
                         </div>
 
                         {/* Status and Source badges */}
                         <div className="flex items-center gap-1">
-              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${getStatusColor()}`}>
-                {getStatusText()}
-              </span>
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${getStatusColor()}`}>
+                                {getStatusText()}
+                            </span>
                             <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-100 text-cyan-700">
-                {getMarketplaceDisplayName(listing.source.platform)}
-              </span>
+                                {getMarketplaceDisplayName(listing.source.platform)}
+                            </span>
                         </div>
                     </div>
 
@@ -165,32 +165,32 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                         <div className="flex items-center gap-2">
                             {/* Current price */}
                             <span className={`font-bold ${isInactive ? 'text-slate-500' : 'text-slate-800'}`}>
-                {listing.currentPrice.toLocaleString()} {listing.currency}
-              </span>
+                                {listing.currentPrice.toLocaleString()} {listing.currency}
+                            </span>
 
                             {/* Price change indicator (compared to first recorded price) */}
                             {firstPrice && priceDiff !== 0 && (
                                 <span
                                     className={`flex items-center gap-0.5 text-xs ${priceDiff < 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {priceDiff < 0 ? (
+                                    {priceDiff < 0 ? (
                       <TrendingDown className="w-3 h-3"/>
                   ) : (
                       <TrendingUp className="w-3 h-3"/>
                   )}
                                     {priceChangePercent}%
-                </span>
+                                </span>
                             )}
                             {firstPrice && priceDiff === 0 && (
                                 <span className="flex items-center gap-0.5 text-xs text-slate-400">
-                  <Minus className="w-3 h-3"/>
-                </span>
+                                    <Minus className="w-3 h-3"/>
+                                </span>
                             )}
 
                             {/* First price (if different) */}
                             {firstPrice && firstPrice !== listing.currentPrice && (
                                 <span className="text-xs text-slate-400 line-through">
-                  {firstPrice.toLocaleString()}
-                </span>
+                                    {firstPrice.toLocaleString()}
+                                </span>
                             )}
                         </div>
 

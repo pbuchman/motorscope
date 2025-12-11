@@ -5,12 +5,12 @@
  * Lighter operation than full parsing - only extracts price and availability.
  */
 
-import {ListingStatus} from "@/types";
-import {createGeminiClient} from "./client";
-import {refreshSchema} from "./schemas";
-import {buildRefreshPrompt} from "./prompts";
-import {recordError, recordSuccess} from "./history";
-import {isRateLimitError, RateLimitError} from "./errors";
+import {ListingStatus} from '@/types';
+import {createGeminiClient} from './client';
+import {refreshSchema} from './schemas';
+import {buildRefreshPrompt} from './prompts';
+import {recordError, recordSuccess} from './history';
+import {isRateLimitError, RateLimitError} from './errors';
 
 /**
  * Result of a listing refresh operation
@@ -34,10 +34,10 @@ export interface RefreshResult {
 export async function refreshListingWithGemini(
     url: string,
     pageText: string,
-    pageTitle: string
+    pageTitle: string,
 ): Promise<RefreshResult> {
     if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
-        throw new Error("Page content is empty or invalid");
+        throw new Error('Page content is empty or invalid');
     }
 
     const ai = await createGeminiClient();
@@ -46,10 +46,10 @@ export async function refreshListingWithGemini(
     let response;
     try {
         response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
+                responseMimeType: 'application/json',
                 responseSchema: refreshSchema,
             },
         });
@@ -65,7 +65,7 @@ export async function refreshListingWithGemini(
     }
 
     if (!response.text) {
-        const errorMessage = "No response from AI";
+        const errorMessage = 'No response from AI';
         await recordError(url, prompt, errorMessage);
         throw new Error(errorMessage);
     }
@@ -86,7 +86,7 @@ export async function refreshListingWithGemini(
         // @ts-ignore - SDK may expose these properties
         usageMetadata: response.usageMetadata || null,
         // @ts-ignore
-        modelVersion: response.modelVersion || "gemini-2.5-flash",
+        modelVersion: response.modelVersion || 'gemini-2.5-flash',
     };
 
     await recordSuccess(url, prompt, fullResponse);

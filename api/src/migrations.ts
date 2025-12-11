@@ -14,7 +14,7 @@
  */
 
 import {Firestore, Timestamp} from '@google-cloud/firestore';
-import {FIRESTORE_DATABASE_ID, GCP_PROJECT_ID,} from './config.js';
+import {FIRESTORE_DATABASE_ID, GCP_PROJECT_ID} from './config.js';
 
 // Import migration registry and types
 import {migrations} from './migrations/index.js';
@@ -50,7 +50,7 @@ async function isMigrationApplied(migrationId: string): Promise<boolean> {
  */
 async function recordMigration(
     migration: Migration,
-    durationMs: number
+    durationMs: number,
 ): Promise<void> {
     const record: MigrationRecord = {
         id: migration.id,
@@ -192,7 +192,7 @@ export async function runMigrations(): Promise<void> {
  */
 export async function getMigrationStatus(): Promise<
     Array<{ id: string; description: string; applied: boolean; appliedAt?: Date }>
-> {
+    > {
     const status: Array<{
         id: string;
         description: string;

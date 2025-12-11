@@ -22,7 +22,7 @@ import {
     Server,
     Sparkles,
     Trash2,
-    XCircle
+    XCircle,
 } from 'lucide-react';
 import {formatEuropeanDateTimeWithSeconds} from '@/utils/formatters';
 import {GoogleLogo, UserMenu} from '@/components/ui';
@@ -31,7 +31,7 @@ import {GoogleLogo, UserMenu} from '@/components/ui';
 const FREQUENCY_STEPS = [
     0.167, 1, 2, 5, 10, 15, 30, 45,
     60, 120, 180, 240, 360, 480, 720,
-    1440, 2880, 4320, 10080, 20160, 43200
+    1440, 2880, 4320, 10080, 20160, 43200,
 ];
 
 const formatFrequency = (minutes: number): string => {
@@ -63,9 +63,9 @@ const validateGeminiApiKey = async (apiKey: string, t: (key: string) => string):
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     contents: [{parts: [{text: 'Hi'}]}],
-                    generationConfig: {maxOutputTokens: 1}
-                })
-            }
+                    generationConfig: {maxOutputTokens: 1},
+                }),
+            },
         );
 
         if (response.ok) {
@@ -87,10 +87,10 @@ const validateGeminiApiKey = async (apiKey: string, t: (key: string) => string):
 
 // Success/Warning message component that auto-dismisses
 const StatusMessage: React.FC<{ message: string; type?: 'success' | 'warning'; onDismiss: () => void }> = ({
-                                                                                                               message,
-                                                                                                               type = 'success',
-                                                                                                               onDismiss
-                                                                                                           }) => {
+    message,
+    type = 'success',
+    onDismiss,
+}) => {
     useEffect(() => {
         const timer = setTimeout(onDismiss, 4000);
         return () => clearTimeout(timer);
@@ -130,7 +130,7 @@ const SettingsPage: React.FC = () => {
         allTimeTotalCalls: 0,
         totalCalls: 0,
         successCount: 0,
-        errorCount: 0
+        errorCount: 0,
     });
     const [history, setHistory] = useState<GeminiCallHistoryEntry[]>([]);
     const [countdown, setCountdown] = useState<string>('');
@@ -423,7 +423,7 @@ const SettingsPage: React.FC = () => {
 
                 {/* Settings Form */}
                 <form onSubmit={handleSave}
-                      className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
+                    className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
 
                     {/* Gemini API Key */}
                     <div>
@@ -500,7 +500,7 @@ const SettingsPage: React.FC = () => {
                                         const stepIndex = parseInt(e.target.value, 10);
                                         setFormSettings(prev => ({
                                             ...prev,
-                                            checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex]
+                                            checkFrequencyMinutes: FREQUENCY_STEPS[stepIndex],
                                         }));
                                     }}
                                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -512,8 +512,8 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <span
                                 className="w-20 text-sm font-medium text-slate-700 text-center bg-slate-100 px-2 py-1 rounded">
-                {formatFrequency(formSettings.checkFrequencyMinutes)}
-              </span>
+                                {formatFrequency(formSettings.checkFrequencyMinutes)}
+                            </span>
                         </div>
                         <p className="text-xs text-slate-400 mt-2">{t('settings:refreshFrequency.descriptionAlt')}</p>
                     </div>
@@ -539,9 +539,9 @@ const SettingsPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                             {!hasSavedApiKey ? (
                                 <span className="flex items-center gap-1 text-xs text-amber-600">
-                  <AlertCircle className="w-3 h-3"/>
+                                    <AlertCircle className="w-3 h-3"/>
                                     {t('settings:syncStatus.configureApiKeyFirst')}
-                </span>
+                                </span>
                             ) : (
                                 <button
                                     type="button"
@@ -606,9 +606,9 @@ const SettingsPage: React.FC = () => {
                             <p className="text-lg font-bold text-blue-700 font-mono">
                                 {refreshStatus.isRefreshing ? (
                                     <span className="flex items-center gap-2 text-sm">
-                    <RefreshCw className="w-4 h-4 animate-spin"/>
+                                        <RefreshCw className="w-4 h-4 animate-spin"/>
                                         {refreshStatus.currentIndex}/{refreshStatus.totalCount}
-                  </span>
+                                    </span>
                                 ) : countdown}
                             </p>
                         </div>
@@ -653,7 +653,7 @@ const SettingsPage: React.FC = () => {
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {refreshStatus.recentlyRefreshed.slice(0, 10).map((item, index) => (
                                     <div key={`${item.id}-${index}`}
-                                         className="flex items-center gap-2 p-2 bg-slate-50 rounded text-sm">
+                                        className="flex items-center gap-2 p-2 bg-slate-50 rounded text-sm">
                                         {item.status === 'success' ? (
                                             <CheckCircle className="w-4 h-4 text-green-500 shrink-0"/>
                                         ) : (
@@ -661,8 +661,8 @@ const SettingsPage: React.FC = () => {
                                         )}
                                         <span className="truncate flex-1 text-slate-700">{item.title}</span>
                                         <span className="text-xs text-slate-400 shrink-0">
-                      {formatEuropeanDateTimeWithSeconds(item.timestamp).split(' ')[1]}
-                    </span>
+                                            {formatEuropeanDateTimeWithSeconds(item.timestamp).split(' ')[1]}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -674,13 +674,13 @@ const SettingsPage: React.FC = () => {
 
                 {/* Gemini AI Stats */}
                 <GeminiUsageSection stats={stats} history={history} refreshing={refreshing} onRefresh={refreshStats}
-                                    onClearLogs={async () => {
-                                        await clearGeminiLogs();
-                                        const latestStats = await getGeminiStats();
-                                        const latestHistory = await getGeminiHistory();
-                                        setStats(latestStats);
-                                        setHistory(latestHistory);
-                                    }}/>
+                    onClearLogs={async () => {
+                        await clearGeminiLogs();
+                        const latestStats = await getGeminiStats();
+                        const latestHistory = await getGeminiHistory();
+                        setStats(latestStats);
+                        setHistory(latestHistory);
+                    }}/>
 
                 {/* Server Configuration - Always visible, separate from other settings */}
                 <section className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
@@ -757,12 +757,12 @@ interface GeminiUsageSectionProps {
 }
 
 const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
-                                                                   stats,
-                                                                   history,
-                                                                   refreshing,
-                                                                   onRefresh,
-                                                                   onClearLogs
-                                                               }) => {
+    stats,
+    history,
+    refreshing,
+    onRefresh,
+    onClearLogs,
+}) => {
     const {t} = useTranslation('settings');
     const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all');
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -791,9 +791,9 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                     {t('geminiStats.title')}
                 </h2>
                 <div className="flex items-center gap-3 text-sm">
-          <span className="text-slate-400" title={t('geminiStats.allTime')}>
-            {t('geminiStats.allTime')}: {stats.allTimeTotalCalls || 0}
-          </span>
+                    <span className="text-slate-400" title={t('geminiStats.allTime')}>
+                        {t('geminiStats.allTime')}: {stats.allTimeTotalCalls || 0}
+                    </span>
                     <span className="text-slate-500">{t('geminiStats.session')}: {stats.totalCalls}</span>
                     <span className="text-green-600">✓ {stats.successCount || 0}</span>
                     <span className="text-red-600">✗ {stats.errorCount || 0}</span>
@@ -840,7 +840,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                         {f === 'all' ? t('geminiStats.filterAll') : f === 'success' ? t('geminiStats.filterSuccess') : t('geminiStats.filterErrors')}
                         <span className="ml-1 opacity-75">
               ({f === 'all' ? history.length : history.filter(e => e.status === f).length})
-            </span>
+                        </span>
                     </button>
                 ))}
             </div>
@@ -859,13 +859,13 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                                         <XCircle className="w-4 h-4 text-red-500 shrink-0"/>
                                     )}
                                     <a href={entry.url} target="_blank" rel="noopener noreferrer"
-                                       className="text-blue-600 hover:underline truncate">
+                                        className="text-blue-600 hover:underline truncate">
                                         {entry.url}
                                     </a>
                                 </div>
                                 <span className="text-xs text-slate-400 shrink-0">
-                  {formatEuropeanDateTimeWithSeconds(entry.timestamp)}
-                </span>
+                                    {formatEuropeanDateTimeWithSeconds(entry.timestamp)}
+                                </span>
                             </div>
 
                             {/* Prompt Preview */}
@@ -879,8 +879,8 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                                 {expandedIds.has(`${entry.id}-prompt`) && (
                                     <pre
                                         className="mt-1 p-2 bg-slate-50 rounded text-xs overflow-x-auto whitespace-pre-wrap max-h-40">
-                    {entry.promptPreview}
-                  </pre>
+                                        {entry.promptPreview}
+                                    </pre>
                                 )}
                             </div>
 
@@ -896,8 +896,8 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                                     {expandedIds.has(`${entry.id}-response`) && (
                                         <pre
                                             className="mt-1 p-2 bg-green-50 rounded text-xs overflow-x-auto whitespace-pre-wrap max-h-40">
-                      {entry.rawResponse}
-                    </pre>
+                                            {entry.rawResponse}
+                                        </pre>
                                     )}
                                 </div>
                             )}

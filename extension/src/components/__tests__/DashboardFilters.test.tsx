@@ -7,10 +7,10 @@
 import React from 'react';
 import {render, screen, within} from '../../test-utils/renderHelpers';
 import DashboardFilters, {
-  DEFAULT_FILTERS,
-  DEFAULT_SORT,
-  FilterState,
-  MakeModelOption,
+    DEFAULT_FILTERS,
+    DEFAULT_SORT,
+    FilterState,
+    MakeModelOption,
 } from '@/components/DashboardFilters';
 import {ListingStatus} from '@/types';
 
@@ -80,14 +80,14 @@ describe('DashboardFilters', () => {
         it('calls onFiltersChange when status changes', async () => {
             const onFiltersChange = jest.fn();
             const {user} = render(
-                <DashboardFilters {...defaultProps} onFiltersChange={onFiltersChange}/>
+                <DashboardFilters {...defaultProps} onFiltersChange={onFiltersChange}/>,
             );
 
             const statusSelect = screen.getAllByRole('combobox')[0];
             await user.selectOptions(statusSelect, ListingStatus.ACTIVE);
 
             expect(onFiltersChange).toHaveBeenCalledWith(
-                expect.objectContaining({status: ListingStatus.ACTIVE})
+                expect.objectContaining({status: ListingStatus.ACTIVE}),
             );
         });
     });
@@ -107,14 +107,14 @@ describe('DashboardFilters', () => {
         it('calls onFiltersChange when archived filter changes', async () => {
             const onFiltersChange = jest.fn();
             const {user} = render(
-                <DashboardFilters {...defaultProps} onFiltersChange={onFiltersChange}/>
+                <DashboardFilters {...defaultProps} onFiltersChange={onFiltersChange}/>,
             );
 
             const archivedSelect = screen.getAllByRole('combobox')[1];
             await user.selectOptions(archivedSelect, 'archived');
 
             expect(onFiltersChange).toHaveBeenCalledWith(
-                expect.objectContaining({archived: 'archived'})
+                expect.objectContaining({archived: 'archived'}),
             );
         });
     });
@@ -135,7 +135,7 @@ describe('DashboardFilters', () => {
         it('calls onSortChange when sort changes', async () => {
             const onSortChange = jest.fn();
             const {user} = render(
-                <DashboardFilters {...defaultProps} onSortChange={onSortChange}/>
+                <DashboardFilters {...defaultProps} onSortChange={onSortChange}/>,
             );
 
             const sortSelect = screen.getAllByRole('combobox')[2];
@@ -165,7 +165,7 @@ describe('DashboardFilters', () => {
                     {...defaultProps}
                     activeFiltersCount={2}
                     onClearFilters={onClearFilters}
-                />
+                />,
             );
 
             const clearButton = screen.getByText(/clear.*2/i);
@@ -186,7 +186,7 @@ describe('DashboardFilters', () => {
                     {...defaultProps}
                     filters={filters}
                     activeFiltersCount={1}
-                />
+                />,
             );
 
             expect(screen.getByText(/status.*active/i)).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('DashboardFilters', () => {
                     {...defaultProps}
                     filters={filters}
                     activeFiltersCount={1}
-                />
+                />,
             );
 
             // Archived Only appears in both dropdown and tag - just verify it exists
@@ -220,7 +220,7 @@ describe('DashboardFilters', () => {
                     {...defaultProps}
                     filters={filters}
                     activeFiltersCount={1}
-                />
+                />,
             );
 
             // The filter tag section shows the make name
@@ -238,7 +238,7 @@ describe('DashboardFilters', () => {
                     {...defaultProps}
                     filters={filters}
                     activeFiltersCount={1}
-                />
+                />,
             );
 
             expect(screen.getByText('2 makes')).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe('DashboardFilters', () => {
                     filters={filters}
                     onFiltersChange={onFiltersChange}
                     activeFiltersCount={1}
-                />
+                />,
             );
 
             // Find the X button in the status tag
@@ -265,7 +265,7 @@ describe('DashboardFilters', () => {
             await user.click(removeButton);
 
             expect(onFiltersChange).toHaveBeenCalledWith(
-                expect.objectContaining({status: 'all'})
+                expect.objectContaining({status: 'all'}),
             );
         });
     });

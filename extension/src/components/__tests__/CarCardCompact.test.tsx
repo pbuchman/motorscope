@@ -183,7 +183,7 @@ describe('CarCardCompact', () => {
         it('shows error banner when last refresh failed', () => {
             const listingWithError = createMockListing({
                 lastRefreshStatus: 'error',
-                lastRefreshError: 'Failed to fetch listing'
+                lastRefreshError: 'Failed to fetch listing',
             });
             render(<CarCardCompact {...defaultProps} listing={listingWithError}/>);
 

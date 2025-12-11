@@ -22,12 +22,12 @@ interface UserMenuProps {
 }
 
 export const UserMenu: React.FC<UserMenuProps> = ({
-                                                      userEmail,
-                                                      onLogout,
-                                                      onLanguageChange,
-                                                      variant = 'dark',
-                                                      compact = false,
-                                                  }) => {
+    userEmail,
+    onLogout,
+    onLanguageChange,
+    variant = 'dark',
+    compact = false,
+}) => {
     const {t} = useTranslation('common');
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -94,9 +94,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 aria-expanded={isOpen}
                 aria-haspopup="true"
             >
-        <span className={`truncate ${compact ? 'max-w-[120px]' : 'max-w-[180px]'}`}>
-          {userEmail}
-        </span>
+                <span className={`truncate ${compact ? 'max-w-[120px]' : 'max-w-[180px]'}`}>
+                    {userEmail}
+                </span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </button>
 

@@ -58,7 +58,7 @@ describe('UserMenu', () => {
                 <div>
                     <UserMenu {...defaultProps} />
                     <button>Outside</button>
-                </div>
+                </div>,
             );
 
             // Open menu

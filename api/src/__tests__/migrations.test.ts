@@ -145,7 +145,7 @@ describe('Status normalization migration (20241209)', () => {
     const createTestFirestore = (docs: Record<string, { status: string }>): Firestore => {
         type StatusDoc = { status: string } & Record<string, unknown>;
         const collectionDocs = new Map<string, StatusDoc>(
-            Object.entries(docs).map(([id, data]) => [id, {...data}])
+            Object.entries(docs).map(([id, data]) => [id, {...data}]),
         );
 
         const batchUpdates: Array<() => Promise<void>> = [];

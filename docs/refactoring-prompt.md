@@ -29,10 +29,12 @@ Apply these rules everywhere in the monorepo unless they clearly contradict exis
 1. No TypeScript errors, no warning spam
 
 - The TypeScript type-check (for example: tsc or the configured type-check script) must complete with zero errors.
+- **Build commands include typecheck**: Both `npm run build` scripts run `npm run lint && npm run typecheck` (extension) or `npm run lint && tsc` (API) before building, so builds will fail on any TypeScript or ESLint error.
 - Do not "fix" type problems by sprinkling ts-ignore, ts-expect-error, or by loosening types to any, unknown, or broad unions, unless there is a very strong and explicit reason. Prefer real, correct typing.
 - Treat all TypeScript compiler, ESLint, test-runner, and build-time warnings as problems to be fixed.
 - This includes "minor" hints like "you can shorten this import", unused imports, implicit any, unreachable code, deprecated APIs, etc.
 - When you finish, the project should build, type-check, lint, and run tests with no TypeScript errors and no warnings.
+- **Always run `npm run build` before considering a task complete** to ensure both lint and typecheck pass.
 
 2. TypeScript / module style
 
@@ -61,6 +63,57 @@ Apply these rules everywhere in the monorepo unless they clearly contradict exis
 
 - Preserve existing public API shapes (HTTP responses, migration entrypoints, message formats, etc.).
 - If structural changes are unavoidable, they must be intentional, minimal, and clearly described in your final summary.
+
+6. Code formatting consistency
+
+Formatting is **enforced at the monorepo level** via:
+- **EditorConfig** (`/.editorconfig`) - enforces formatting in WebStorm, VS Code, and other editors
+- **ESLint** (`/.eslintrc.json`) - shared rules extended by both `/api` and `/extension`
+
+**Build will fail** if formatting rules are violated: `npm run build` runs `lint → typecheck → compile`.
+
+**Monorepo commands** (run from root):
+- `npm run lint` - Lint both projects
+- `npm run lint:fix` - Auto-fix both projects  
+- `npm run typecheck` - Type-check both projects
+- `npm run build` - Build both (includes lint + typecheck)
+- `npm run test` - Test both projects
+
+**Rules enforced:**
+
+- **Indentation**: 4 spaces (no tabs) - **ESLint: indent**
+- **Import braces**: No spaces inside: `{foo, bar}` not `{ foo, bar }` - **ESLint: object-curly-spacing**
+- **Quotes**: Single quotes for imports: `'./types'` not `"./types"` - **ESLint: quotes**
+- **Object braces**: No spaces inside for inline: `{foo: 1}` not `{ foo: 1 }` - **ESLint: object-curly-spacing**
+- **Trailing commas**: Required in multi-line objects/arrays - **ESLint: comma-dangle**
+- **Opening braces**: Same line as statement
+- **Arrow functions**: Preferred for callbacks and functional components
+- **No trailing whitespace** - **ESLint: no-trailing-spaces**
+- **Files end with single newline** - **ESLint: eol-last**
+
+
+Example of correct formatting:
+```typescript
+import React, {useCallback, useState} from 'react';
+import {useTranslation} from 'react-i18next';
+
+import {CarListing} from '@/types';
+
+const Component: React.FC = () => {
+    const {t} = useTranslation('common');
+    const [value, setValue] = useState<string>('');
+
+    const handleChange = useCallback((newValue: string) => {
+        setValue(newValue);
+    }, []);
+
+    return (
+        <div className="container">
+            {t('label')}
+        </div>
+    );
+};
+```
 
 -------------------------------------------------------------------------------
 PART A – I18N REFACTOR IN /extension (EN CANONICAL, PL SYNCED)

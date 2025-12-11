@@ -4,13 +4,13 @@
  * Extracts full car listing data from webpage content using Gemini AI.
  */
 
-import {CarListing} from "@/types";
-import {createGeminiClient} from "./client";
-import {carListingSchema} from "./schemas";
-import {buildParsePrompt} from "./prompts";
-import {validateParseResponse} from "./validation";
-import {mapToCarListing} from "./mapper";
-import {recordError, recordSuccess} from "./history";
+import {CarListing} from '@/types';
+import {createGeminiClient} from './client';
+import {carListingSchema} from './schemas';
+import {buildParsePrompt} from './prompts';
+import {validateParseResponse} from './validation';
+import {mapToCarListing} from './mapper';
+import {recordError, recordSuccess} from './history';
 
 /**
  * Parse car listing data from webpage content using Gemini AI.
@@ -26,17 +26,17 @@ export async function parseCarDataWithGemini(
     url: string,
     pageText: string,
     pageTitle: string,
-    scrapedImageUrl?: string | null
+    scrapedImageUrl?: string | null,
 ): Promise<Partial<CarListing>> {
     // Input validation
     if (!url || typeof url !== 'string') {
-        throw new Error("Invalid URL provided");
+        throw new Error('Invalid URL provided');
     }
     if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
-        throw new Error("Page content is empty or invalid");
+        throw new Error('Page content is empty or invalid');
     }
     if (!pageTitle || typeof pageTitle !== 'string') {
-        throw new Error("Page title is missing or invalid");
+        throw new Error('Page title is missing or invalid');
     }
 
     const ai = await createGeminiClient();
@@ -45,10 +45,10 @@ export async function parseCarDataWithGemini(
     let response;
     try {
         response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
+                responseMimeType: 'application/json',
                 responseSchema: carListingSchema,
             },
         });
@@ -59,7 +59,7 @@ export async function parseCarDataWithGemini(
     }
 
     if (!response.text) {
-        const errorMessage = "No response from AI";
+        const errorMessage = 'No response from AI';
         await recordError(url, prompt, errorMessage);
         throw new Error(errorMessage);
     }
@@ -73,7 +73,7 @@ export async function parseCarDataWithGemini(
         // @ts-ignore - SDK may expose these properties
         usageMetadata: response.usageMetadata || null,
         // @ts-ignore
-        modelVersion: response.modelVersion || "gemini-2.5-flash",
+        modelVersion: response.modelVersion || 'gemini-2.5-flash',
     };
 
     await recordSuccess(url, prompt, fullResponse);

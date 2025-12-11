@@ -16,7 +16,7 @@ const PriceChart: React.FC<PriceChartProps> = ({history, currency}) => {
     // Deduplicate price points by local day to avoid showing multiple points on the same day
     const deduplicatedHistory = useMemo(
         () => deduplicatePricePointsByLocalDay(history),
-        [history]
+        [history],
     );
 
     const data = deduplicatedHistory.map(h => ({
@@ -57,7 +57,7 @@ const PriceChart: React.FC<PriceChartProps> = ({history, currency}) => {
                         contentStyle={{
                             borderRadius: '8px',
                             border: 'none',
-                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                         }}
                         formatter={(value: number) => [`${value.toLocaleString()} ${currency}`, 'Price']}
                         labelFormatter={(label) => label}

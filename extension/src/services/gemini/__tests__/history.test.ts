@@ -65,7 +65,7 @@ describe('Gemini History', () => {
                     url,
                     promptPreview: prompt,
                     status: 'success',
-                })
+                }),
             );
         });
 
@@ -79,7 +79,7 @@ describe('Gemini History', () => {
             expect(recordGeminiCall).toHaveBeenCalledWith(
                 expect.objectContaining({
                     rawResponse: JSON.stringify(response, null, 2),
-                })
+                }),
             );
         });
 
@@ -89,7 +89,7 @@ describe('Gemini History', () => {
             expect(recordGeminiCall).toHaveBeenCalledWith(
                 expect.objectContaining({
                     timestamp: expect.any(String),
-                })
+                }),
             );
         });
     });
@@ -109,7 +109,7 @@ describe('Gemini History', () => {
                     promptPreview: prompt,
                     status: 'error',
                     error,
-                })
+                }),
             );
         });
     });

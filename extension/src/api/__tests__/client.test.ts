@@ -149,7 +149,7 @@ describe('API URL Building', () => {
             const cloudRunUrl = 'https://motorscope-dev-663051224718.europe-west1.run.app';
 
             expect(buildUrl(cloudRunUrl, '/listings')).toBe(
-                'https://motorscope-dev-663051224718.europe-west1.run.app/api/listings'
+                'https://motorscope-dev-663051224718.europe-west1.run.app/api/listings',
             );
         });
     });
@@ -174,7 +174,7 @@ describe('API URL Building', () => {
         it('should build listings endpoints', () => {
             expect(buildUrl(baseUrl, '/listings')).toBe('https://api.example.com/api/listings');
             expect(buildUrl(baseUrl, '/listings/vin_ABC123')).toBe(
-                'https://api.example.com/api/listings/vin_ABC123'
+                'https://api.example.com/api/listings/vin_ABC123',
             );
         });
 
@@ -190,10 +190,10 @@ describe('API URL Building', () => {
 
         it('should build gemini-history endpoints', () => {
             expect(buildUrl(baseUrl, '/gemini-history')).toBe(
-                'https://api.example.com/api/gemini-history'
+                'https://api.example.com/api/gemini-history',
             );
             expect(buildUrl(baseUrl, '/gemini-history?limit=50')).toBe(
-                'https://api.example.com/api/gemini-history?limit=50'
+                'https://api.example.com/api/gemini-history?limit=50',
             );
         });
 

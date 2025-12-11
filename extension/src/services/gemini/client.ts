@@ -4,8 +4,8 @@
  * Creates and configures Google GenAI client instances.
  */
 
-import {GoogleGenAI} from "@google/genai";
-import {getGeminiApiKey} from "../settings";
+import {GoogleGenAI} from '@google/genai';
+import {getGeminiApiKey} from '../settings';
 
 /**
  * Create a configured Gemini AI client instance.
@@ -14,7 +14,7 @@ import {getGeminiApiKey} from "../settings";
 export async function createGeminiClient(): Promise<GoogleGenAI> {
     const apiKey = await getGeminiApiKey();
     if (!apiKey) {
-        throw new Error("API Key is missing. Please configure your GEMINI_API_KEY in settings.");
+        throw new Error('API Key is missing. Please configure your GEMINI_API_KEY in settings.');
     }
     return new GoogleGenAI({apiKey});
 }

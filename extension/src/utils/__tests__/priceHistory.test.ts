@@ -2,7 +2,7 @@
  * Tests for UI Price History utilities (deduplication)
  */
 
-import {deduplicatePricePointsByLocalDay, getLocalDateString,} from '../priceHistory';
+import {deduplicatePricePointsByLocalDay, getLocalDateString} from '../priceHistory';
 import {PricePoint} from '@/types';
 
 describe('Price History UI Utilities', () => {

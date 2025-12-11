@@ -65,7 +65,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
         const result = await refreshListingWithGemini(
             listing.source.url,
             fetchResult.textContent || '',
-            fetchResult.pageTitle || listing.title
+            fetchResult.pageTitle || listing.title,
         );
 
         const updatedListing = {...listing};
@@ -77,14 +77,14 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
         // Check if price changed from previous day (for UI notification purposes)
         const priceChanged = hasPriceChangedFromPreviousDay(
             listing.priceHistory,
-            priceToRecord
+            priceToRecord,
         );
 
         // Always add new price point to history (deduplication happens on UI)
         updatedListing.priceHistory = updateDailyPriceHistory(
             listing.priceHistory,
             priceToRecord,
-            currencyToUse
+            currencyToUse,
         );
 
         // Update current price if we got a valid new price

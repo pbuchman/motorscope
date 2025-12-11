@@ -59,7 +59,7 @@ export function sendSuccess<T>(res: Response, data: T, statusCode: number = 200)
 export function sendOperationSuccess(
     res: Response,
     message?: string,
-    extra?: Record<string, unknown>
+    extra?: Record<string, unknown>,
 ): void {
     const response: Record<string, unknown> = {success: true};
     if (message) {

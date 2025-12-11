@@ -11,7 +11,7 @@ jest.mock('../../../api/client', () => ({
     clearRemoteGeminiHistory: jest.fn(),
 }));
 
-import {clearGeminiLogs, getGeminiHistory, getGeminiStats, recordGeminiCall,} from '../geminiStats';
+import {clearGeminiLogs, getGeminiHistory, getGeminiStats, recordGeminiCall} from '../geminiStats';
 
 import {
     addRemoteGeminiHistory,

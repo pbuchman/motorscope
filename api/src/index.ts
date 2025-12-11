@@ -156,7 +156,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
         console.log(`Server listening on http://localhost:${PORT}`);
         console.log(`API Docs: http://localhost:${PORT}/docs`);
         console.log(`OpenAPI Spec: http://localhost:${PORT}/openapi.json`);
-        console.log(`Health check: GET /api/healthz`);
+        console.log('Health check: GET /api/healthz');
         console.log('='.repeat(60));
     });
 })();

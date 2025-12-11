@@ -17,7 +17,7 @@ jest.mock('../storageKeys', () => ({
     },
 }));
 
-import {DEFAULT_REFRESH_STATUS, getRefreshStatus, saveRefreshStatus, updateRefreshStatus,} from '../refreshStatus';
+import {DEFAULT_REFRESH_STATUS, getRefreshStatus, saveRefreshStatus, updateRefreshStatus} from '../refreshStatus';
 import {getWithDefault, setStorage} from '../storageHelpers';
 import {STORAGE_KEYS} from '../storageKeys';
 import {RefreshStatus} from '@/types';
@@ -63,7 +63,7 @@ describe('Refresh Status Service', () => {
 
             expect(mockGetWithDefault).toHaveBeenCalledWith(
                 STORAGE_KEYS.refreshStatus,
-                DEFAULT_REFRESH_STATUS
+                DEFAULT_REFRESH_STATUS,
             );
         });
 
@@ -127,14 +127,14 @@ describe('Refresh Status Service', () => {
                         title: 'Mercedes C200',
                         url: 'https://example.com/3',
                         status: 'success',
-                        timestamp: '2024-12-09T09:00:00Z'
+                        timestamp: '2024-12-09T09:00:00Z',
                     },
                     {
                         id: 'id2',
                         title: 'VW Golf',
                         url: 'https://example.com/4',
                         status: 'success',
-                        timestamp: '2024-12-09T09:01:00Z'
+                        timestamp: '2024-12-09T09:01:00Z',
                     },
                     {
                         id: 'id3',
@@ -142,7 +142,7 @@ describe('Refresh Status Service', () => {
                         url: 'https://example.com/5',
                         status: 'error',
                         timestamp: '2024-12-09T09:02:00Z',
-                        error: 'Network error'
+                        error: 'Network error',
                     },
                 ],
                 refreshErrors: [
@@ -151,7 +151,7 @@ describe('Refresh Status Service', () => {
                         title: 'Ford Focus',
                         url: 'https://example.com/5',
                         error: 'Network error',
-                        timestamp: '2024-12-09T09:02:00Z'
+                        timestamp: '2024-12-09T09:02:00Z',
                     },
                 ],
             };
@@ -198,14 +198,14 @@ describe('Refresh Status Service', () => {
                         title: 'BMW 320d',
                         url: 'https://example.com/1',
                         status: 'success',
-                        timestamp: '2024-12-09T08:00:00Z'
+                        timestamp: '2024-12-09T08:00:00Z',
                     },
                     {
                         id: 'id2',
                         title: 'Audi A4',
                         url: 'https://example.com/2',
                         status: 'success',
-                        timestamp: '2024-12-09T08:01:00Z'
+                        timestamp: '2024-12-09T08:01:00Z',
                     },
                 ],
             };
@@ -240,14 +240,14 @@ describe('Refresh Status Service', () => {
                     title: 'BMW 320d',
                     url: 'https://example.com/1',
                     error: 'Network error',
-                    timestamp: '2024-12-09T10:00:00Z'
+                    timestamp: '2024-12-09T10:00:00Z',
                 },
                 {
                     id: 'err2',
                     title: 'Audi A4',
                     url: 'https://example.com/2',
                     error: 'Rate limited',
-                    timestamp: '2024-12-09T10:01:00Z'
+                    timestamp: '2024-12-09T10:01:00Z',
                 },
             ];
 

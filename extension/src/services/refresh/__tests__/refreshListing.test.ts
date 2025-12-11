@@ -200,7 +200,7 @@ describe('Refresh Listing Service', () => {
             expect(mockUpdatePriceHistory).toHaveBeenCalledWith(
                 baseListing.priceHistory,
                 145000,
-                'PLN'
+                'PLN',
             );
         });
 
@@ -225,7 +225,7 @@ describe('Refresh Listing Service', () => {
             expect(result.priceChanged).toBe(true);
             expect(mockHasPriceChanged).toHaveBeenCalledWith(
                 baseListing.priceHistory,
-                140000
+                140000,
             );
         });
 

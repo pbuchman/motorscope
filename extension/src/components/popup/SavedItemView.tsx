@@ -49,8 +49,8 @@ export const SavedItemView: React.FC<SavedItemViewProps> = ({listing, onUntrack,
                     <div className="flex items-center gap-1 text-slate-600">
                         <Car className="w-3 h-3"/>
                         <span className="truncate">
-              {listing.vehicle?.make} {listing.vehicle?.model}
-            </span>
+                            {listing.vehicle?.make} {listing.vehicle?.model}
+                        </span>
                     </div>
                     <div className="flex items-center gap-1 text-slate-600">
                         <Calendar className="w-3 h-3"/>
@@ -59,9 +59,9 @@ export const SavedItemView: React.FC<SavedItemViewProps> = ({listing, onUntrack,
                     <div className="flex items-center gap-1 text-slate-600">
                         <Gauge className="w-3 h-3"/>
                         <span>
-              {listing.vehicle?.mileage?.value?.toLocaleString()}{' '}
+                            {listing.vehicle?.mileage?.value?.toLocaleString()}{' '}
                             {listing.vehicle?.mileage?.unit || 'km'}
-            </span>
+                        </span>
                     </div>
                     <div className="flex items-center gap-1 text-slate-600">
                         <Fuel className="w-3 h-3"/>
@@ -89,22 +89,22 @@ export const SavedItemView: React.FC<SavedItemViewProps> = ({listing, onUntrack,
 
                 {listing.postedDate && (
                     <div className="bg-green-50 border border-green-200 rounded px-2 py-0.5 mb-2">
-            <span className="text-[10px] text-green-700">
+                        <span className="text-[10px] text-green-700">
               📅 {t('common:time.posted', {date: formatEuropeanDateTime(listing.postedDate)})}
-            </span>
+                        </span>
                     </div>
                 )}
 
                 {/* Tracking Info */}
                 <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
-          <span className="inline-flex items-center gap-1">
-            <Eye className="w-3 h-3"/>
-              {t('common:time.trackedSince', {date: formatEuropeanDateTime(listing.firstSeenAt)})}
-          </span>
                     <span className="inline-flex items-center gap-1">
-            <RefreshCw className="w-3 h-3"/>
+                        <Eye className="w-3 h-3"/>
+                        {t('common:time.trackedSince', {date: formatEuropeanDateTime(listing.firstSeenAt)})}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3"/>
                         {t('common:time.lastChecked', {date: formatEuropeanDateTime(listing.lastSeenAt)})}
-          </span>
+                    </span>
                 </div>
 
                 {/* Price History Chart - only show when there's actual history (2+ points) */}

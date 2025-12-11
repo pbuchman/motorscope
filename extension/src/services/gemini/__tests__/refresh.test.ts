@@ -120,7 +120,7 @@ describe('Gemini Refresh Service', () => {
                 expect(mockRecordSuccess).toHaveBeenCalledWith(
                     testUrl,
                     expect.any(String),
-                    expect.objectContaining({text: expect.any(String)})
+                    expect.objectContaining({text: expect.any(String)}),
                 );
             });
 
@@ -187,25 +187,25 @@ describe('Gemini Refresh Service', () => {
         describe('input validation', () => {
             it('should throw error for empty page content', async () => {
                 await expect(
-                    refreshListingWithGemini(testUrl, '', testPageTitle)
+                    refreshListingWithGemini(testUrl, '', testPageTitle),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
 
             it('should throw error for whitespace-only page content', async () => {
                 await expect(
-                    refreshListingWithGemini(testUrl, '   \n\t  ', testPageTitle)
+                    refreshListingWithGemini(testUrl, '   \n\t  ', testPageTitle),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
 
             it('should throw error for null page content', async () => {
                 await expect(
-                    refreshListingWithGemini(testUrl, null as any, testPageTitle)
+                    refreshListingWithGemini(testUrl, null as any, testPageTitle),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
 
             it('should throw error for non-string page content', async () => {
                 await expect(
-                    refreshListingWithGemini(testUrl, 123 as any, testPageTitle)
+                    refreshListingWithGemini(testUrl, 123 as any, testPageTitle),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
         });
@@ -215,13 +215,13 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('Network error'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow('Network error');
 
                 expect(mockRecordError).toHaveBeenCalledWith(
                     testUrl,
                     expect.any(String),
-                    'Network error'
+                    'Network error',
                 );
             });
 
@@ -229,7 +229,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockResolvedValue({text: ''});
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow('No response from AI');
             });
 
@@ -237,7 +237,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockResolvedValue({text: null});
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow('No response from AI');
             });
 
@@ -245,7 +245,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('Request failed with status 429'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow(RateLimitError);
             });
 
@@ -253,7 +253,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('quota exceeded'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow(RateLimitError);
             });
 
@@ -261,7 +261,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('Rate limit reached'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow(RateLimitError);
             });
 
@@ -269,7 +269,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('Resource exhausted'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow(RateLimitError);
             });
 
@@ -277,7 +277,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockRejectedValue(new Error('Server error 500'));
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.not.toBeInstanceOf(RateLimitError);
             });
 
@@ -285,7 +285,7 @@ describe('Gemini Refresh Service', () => {
                 mockGenerateContent.mockResolvedValue({text: 'invalid json {'});
 
                 await expect(
-                    refreshListingWithGemini(testUrl, testPageText, testPageTitle)
+                    refreshListingWithGemini(testUrl, testPageText, testPageTitle),
                 ).rejects.toThrow();
 
                 expect(mockRecordError).toHaveBeenCalled();

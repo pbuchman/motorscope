@@ -67,7 +67,7 @@ jest.mock('recharts', () => {
                 typeof children === 'function'
                     ? (children as (size: { width: number; height: number }) => React.ReactNode)({
                         width: resolvedWidth,
-                        height: resolvedHeight
+                        height: resolvedHeight,
                     })
                     : children;
 

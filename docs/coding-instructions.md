@@ -8,10 +8,10 @@ For comprehensive refactoring tasks, see [refactoring-prompt.md](./refactoring-p
 
 ## General Principles
 
-1. **Zero errors, zero warnings**: TypeScript type-check must complete with zero errors. Treat all compiler, ESLint, and build-time warnings as problems to fix.
-2. **Always validate changes**: After editing a file, check for TypeScript errors and fix them before moving on.
-3. **Build and test**: Run `npm run build` and `npm test` to verify changes.
-4. **No suppression hacks**: Do not use `ts-ignore`, `ts-expect-error`, or loosen types to `any`/`unknown` just to hide errors.
+1. **Zero TypeScript errors, zero warnings**: The build must complete with no errors and no warnings (including "shorten import" hints, unused variables, etc.).
+2. **No suppression hacks**: Do not use `ts-ignore`, `ts-expect-error`, or loosen types to `any`/`unknown` just to hide errors.
+3. **Always validate changes**: After editing a file, check for TypeScript errors and fix them.
+4. **Build and test**: Run `npm run build` and `npm test` for both projects.
 
 ---
 
@@ -24,10 +24,9 @@ For comprehensive refactoring tasks, see [refactoring-prompt.md](./refactoring-p
 
 ### Import Paths
 
-- Use the `@/` path alias instead of relative paths when importing from deep directories
+- Use the `@/` path alias instead of deep relative paths
 - Example: Use `@/types` instead of `../../types`
 - The alias is configured in `tsconfig.json` as `"@/*": ["./src/*"]`
-- Fix "shorten import" warnings by using the alias
 
 ### Typing
 
@@ -35,24 +34,21 @@ For comprehensive refactoring tasks, see [refactoring-prompt.md](./refactoring-p
 - Prefer explicit, accurate types
 - Fix implicit `any` warnings
 
-### Avoid These Anti-Patterns
+### Anti-Patterns to Avoid
 
 1. **Throwing exceptions caught locally**
    ```typescript
-   // ❌ Bad - throw inside try block that catches it
+   // ❌ Bad
    try {
      if (!data) throw new Error('No data');
-     // ... more logic
    } catch (error) {
      throw new Error('Operation failed');
    }
    
-   // ✅ Good - restructure control flow
-   if (!data) {
-     throw new Error('No data');
-   }
+   // ✅ Good
+   if (!data) throw new Error('No data');
    try {
-     // only external operations that can fail
+     // external operations only
    } catch (error) {
      throw new Error('Operation failed');
    }
@@ -61,29 +57,134 @@ For comprehensive refactoring tasks, see [refactoring-prompt.md](./refactoring-p
 2. **Redundant local variables**
    ```typescript
    // ❌ Bad
-   const result = someFunction();
+   const result = fn();
    return result;
    
    // ✅ Good
-   return someFunction();
+   return fn();
    ```
 
-3. **Unused variables/imports**
-   - Remove any declared but unused variables
-   - Use `_` prefix for intentionally unused parameters (e.g., `_sender`)
+3. **Unused variables/imports** - Remove them; use `_` prefix for intentionally unused params
 
-4. **Deeply nested promise chains**
-   - Use `async/await` instead of `.then()` chains
+4. **Deeply nested promise chains** - Use `async/await`
 
-5. **Copy-pasted code**
-   - Factor repeated logic into shared utilities
+5. **Copy-pasted code** - Factor into shared utilities
 
 ---
 
-## No Magic Strings
+## Code Formatting
 
-- UI text in `/extension` must be centralized in i18n files
-- Repeated logic (status normalization, price history transforms) should be in shared utilities
+Consistent formatting is **enforced at the monorepo level** by ESLint and EditorConfig.
+
+### EditorConfig (WebStorm / VS Code)
+
+The root `.editorconfig` file enforces formatting in all editors that support it (WebStorm, VS Code, etc.):
+- 4-space indentation for TypeScript/JavaScript
+- UTF-8 encoding
+- LF line endings
+- Trim trailing whitespace
+- Insert final newline
+
+**WebStorm**: EditorConfig is supported natively. Settings are automatically applied.
+
+### ESLint Configuration (Monorepo)
+
+The root `/.eslintrc.json` defines shared rules for both `/api` and `/extension`:
+- 4-space indentation
+- Single quotes for strings/imports
+- No spaces inside braces `{foo}` not `{ foo }`
+- Trailing commas in multiline
+- No trailing whitespace
+- Newline at end of file
+
+Each project extends the root config:
+- `/api/.eslintrc.json` - extends root, adds Node.js env
+- `/extension/.eslintrc.json` - extends root, adds browser env + JSX
+
+### Running Checks
+
+```bash
+# Monorepo-wide commands (from root)
+npm run lint          # Lint both projects
+npm run lint:fix      # Auto-fix both projects
+npm run typecheck     # Type-check both projects
+npm run build         # Build both (includes lint + typecheck)
+npm run test          # Test both projects
+
+# Per-project commands
+npm run lint:api      # Lint API only
+npm run lint:extension # Lint extension only
+npm run typecheck:api # Type-check API only
+npm run typecheck:extension # Type-check extension only
+```
+
+**Note**: `npm run build` runs `lint → typecheck → compile` for each project. Build fails on any error.
+
+### Indentation & Spacing
+
+- **Indentation**: 4 spaces (no tabs) - **enforced by ESLint**
+- **Line length**: Keep lines reasonably short (~100-120 chars)
+- **Trailing whitespace**: None
+- **Final newline**: Files should end with a single newline
+
+### Import Formatting
+
+- **No spaces inside braces**: `{foo, bar}` not `{ foo, bar }`
+- **Single quotes** for import paths: `'./types'` not `"./types"`
+- **Group imports** by type (React, external, internal) with blank lines between
+
+```typescript
+// ✅ Correct
+import React, {useCallback, useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
+
+import {CarListing} from '@/types';
+import {useAuth} from '@/auth/AuthContext';
+```
+
+### Object/Array Formatting
+
+- **No spaces inside braces/brackets** for inline: `{foo: 1}` not `{ foo: 1 }`
+- **Trailing commas** in multi-line objects/arrays
+- **Consistent brace style**: Opening brace on same line
+
+```typescript
+// ✅ Correct
+const config = {
+    id: 'test',
+    enabled: true,
+};
+
+// ✅ Correct inline
+const obj = {foo: 1, bar: 2};
+```
+
+### Function Formatting
+
+- **Arrow functions** preferred for callbacks and functional components
+- **No space before parentheses** in function calls: `fn()` not `fn ()`
+- **Space after keywords**: `if (`, `for (`, `while (`
+
+```typescript
+// ✅ Correct
+const handleClick = () => {
+    doSomething();
+};
+
+if (condition) {
+    // ...
+}
+```
+
+---
+
+## i18n (Extension Only)
+
+- All user-facing strings must use i18n (`t()`, `useTranslation()`)
+- English is canonical; Polish must be synced (all EN keys must exist in PL)
+- No inline user-visible text in components
+- Preserve placeholders (`{{name}}`, etc.) in translations
+- Use appropriate plural forms (`_plural`, `_0` for Polish zero-form)
 
 ---
 
@@ -99,25 +200,17 @@ import type { Migration } from './types.js';
 const migration: Migration = {
   id: 'YYYYMMDD_description',
   description: 'Human readable description',
-  up: async (db) => {
-    // migration logic
-  },
+  up: async (db) => { /* logic */ },
 };
 
 export default migration;
 ```
 
-Then import in the registry (`/api/src/migrations/index.ts`):
-
+Registry (`/api/src/migrations/index.ts`):
 ```typescript
 import myMigration from './YYYYMMDD_description.js';
-
-export const migrations: Migration[] = [
-  myMigration,
-];
+export const migrations: Migration[] = [myMigration];
 ```
-
-The main migration module (`/api/src/migrations.ts`) should be orchestration-only - no inline Firestore logic.
 
 ### Components and Services (Extension)
 
@@ -126,97 +219,56 @@ The main migration module (`/api/src/migrations.ts`) should be orchestration-onl
 
 ---
 
-## i18n (Extension Only)
-
-- All user-facing strings must use i18n (`t()`, `useTranslation()`, `<Trans>`)
-- English is canonical; Polish must be synced
-- No inline user-visible text in components
-- Preserve placeholders (`{name}`, `{{variable}}`, etc.) in translations
-
----
-
 ## Testing Principles
 
-Tests must be **behavior-focused**, not written to inflate coverage:
+Tests must be **behavior-focused**:
 
 - ❌ Avoid "renders without crashing" as the only assertion
-- ❌ Avoid pure snapshot tests that don't guard meaningful behavior
-- ❌ Avoid tests that pass even if core logic is broken
-- ✅ For each test, ask: "If I break this logic, will this test fail?"
+- ❌ Avoid pure snapshot tests that don't guard behavior
+- ✅ For each test: "If I break this logic, will this test fail?"
 - ✅ Assert on user-visible outcomes and data changes
 
 ---
 
-## CSS
-
-- Remove unused CSS selectors
-- Use Tailwind classes instead of custom CSS when possible
-
----
-
-## Documentation
-
-- Keep `/docs` folder clean - remove investigation/issue files once resolved
-- Update documentation when changing related code
-- Markdown files with code examples will show IDE "errors" - these are false positives
-
----
-
-## Project-Specific Notes
+## Project Structure
 
 ### Extension (`/extension`)
 
 - Background service worker: `src/background.ts`
 - Auth: `chrome.identity.getAuthToken()` for Google OAuth
 - Session storage: `chrome.storage.session` for runtime state
-- i18n: EN/PL locales, react-i18next
-- Backend API: used for persistent data (listings, settings)
+- i18n: EN/PL locales in `src/i18n/locales/`
 
 ### API (`/api`)
 
-- Express backend with Firestore database
+- Express + Firestore
 - JWT tokens include `jti` for blacklist support
-- Migrations: one file per migration in `/api/src/migrations/`, run on startup
-- No i18n layer - English only
+- Migrations: one file per migration in `src/migrations/`
+- No i18n - English only
 
 ---
 
 ## Before Committing
 
-1. **Build both projects** (must pass with no errors):
-   ```bash
-   cd api && npm run build
-   cd extension && npm run build
-   ```
+```bash
+# Both must pass with no errors/warnings
+# Note: npm run build automatically runs lint first
+cd api && npm run build && npm test
+cd extension && npm run build && npm test
 
-2. **Run tests** (must pass with no warnings):
-   ```bash
-   cd api && npm test
-   cd extension && npm test
-   ```
+# To auto-fix formatting issues:
+cd api && npm run lint:fix
+cd extension && npm run lint:fix
+```
 
-3. **Check for TypeScript errors** in IDE
-
-4. **Verify no warnings** - including:
-   - Unused imports/variables
-   - "Shorten import" hints
-   - Deprecated API usage
-   - Implicit any
-
----
-
-## Summary of Rules
-
-At the end of each task, verify:
+### Checklist
 
 - [ ] Zero TypeScript errors
-- [ ] Zero warnings (compiler, linter, tests)
-- [ ] No `ts-ignore` or `any` hacks added
+- [ ] Zero ESLint errors (build will fail otherwise)
+- [ ] No `ts-ignore` or `any` hacks (in production code)
 - [ ] Import paths use `@/` alias where applicable
 - [ ] No unused variables or imports
-- [ ] Tests are behavior-focused
-- [ ] i18n strings in locale files (extension)
-- [ ] Migrations in dedicated files (api)
-- [ ] Builds pass for both projects
+- [ ] 4-space indentation, single quotes, no trailing whitespace
+- [ ] i18n: EN/PL keys in sync (extension)
 - [ ] Tests pass for both projects
 

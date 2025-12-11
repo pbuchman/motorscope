@@ -10,7 +10,7 @@
 export function buildParsePrompt(
     pageTitle: string,
     url: string,
-    pageText: string
+    pageText: string,
 ): string {
     return `
 Extract car listing data from this webpage into the JSON schema.
@@ -45,7 +45,7 @@ Key extraction rules:
 export function buildRefreshPrompt(
     pageTitle: string,
     url: string,
-    pageText: string
+    pageText: string,
 ): string {
     return `
     Analyze the following car listing page and extract the current price and availability status.

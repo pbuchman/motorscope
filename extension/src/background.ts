@@ -71,7 +71,7 @@ const getSettings = async (): Promise<Settings> => {
  */
 const apiRequest = async <T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
 ): Promise<T> => {
     const token = await getToken();
 

@@ -471,14 +471,14 @@ describe('Database Module', () => {
                     url: 'http://example.com',
                     promptPreview: 'test',
                     status: 'success' as const,
-                    timestamp: '2024-01-01'
+                    timestamp: '2024-01-01',
                 },
                 {
                     id: 'entry-2',
                     url: 'http://example.com/2',
                     promptPreview: 'test2',
                     status: 'error' as const,
-                    timestamp: '2024-01-02'
+                    timestamp: '2024-01-02',
                 },
             ];
 

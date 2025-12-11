@@ -19,7 +19,7 @@ import {
     MapPin,
     RefreshCw,
     Settings2,
-    Trash2
+    Trash2,
 } from 'lucide-react';
 import {formatEuropeanDateTime} from '@/utils/formatters';
 import {getMarketplaceDisplayName} from '@/config/marketplaces';
@@ -75,14 +75,14 @@ const getLocationString = (listing: CarListing): string | null => {
 
 
 const CarCard: React.FC<CarCardProps> = ({
-                                             listing,
-                                             onRemove,
-                                             onRefresh,
-                                             onArchive,
-                                             onShowDetails,
-                                             isRefreshing,
-                                             justRefreshed
-                                         }) => {
+    listing,
+    onRemove,
+    onRefresh,
+    onArchive,
+    onShowDetails,
+    isRefreshing,
+    justRefreshed,
+}) => {
     const {t} = useTranslation(['common', 'dashboard', 'errors']);
     // Get normalized vehicle data
     const vehicleData = getVehicleData(listing);
@@ -145,32 +145,32 @@ const CarCard: React.FC<CarCardProps> = ({
                     />
                 </a>
                 <div className={`absolute right-3 flex gap-2 ${listing.isArchived ? 'top-10' : 'top-3'}`}>
-           <span className={`px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md ${
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md ${
                listing.status === ListingStatus.ACTIVE ? 'bg-green-500/20 text-green-900 bg-white/80' :
                    'bg-red-500/20 text-red-900 bg-white/80'
-           }`}>
-            {t('common:status.' + (listing.status === ListingStatus.ACTIVE ? 'active' : 'ended'))}
-          </span>
+                    }`}>
+                        {t('common:status.' + (listing.status === ListingStatus.ACTIVE ? 'active' : 'ended'))}
+                    </span>
                     <span
                         className="px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md bg-cyan-500/20 text-cyan-900 bg-white/80">
-            {getMarketplaceDisplayName(listing.source.platform)}
-          </span>
+                        {getMarketplaceDisplayName(listing.source.platform)}
+                    </span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
                     <h3 className="text-white font-bold text-lg truncate">{listing.title}</h3>
                     <div className="flex items-center gap-2 text-white/90 flex-wrap">
-             <span className="text-xl font-bold">
-               {listing.currentPrice.toLocaleString()} {listing.currency}
-             </span>
+                        <span className="text-xl font-bold">
+                            {listing.currentPrice.toLocaleString()} {listing.currency}
+                        </span>
                         {isInactive && (
                             <span
                                 className="text-xs bg-slate-500 text-white px-1.5 rounded">{t('common:status.finalPrice')}</span>
                         )}
                         {hasDiscount && !isInactive && (
                             <>
-                 <span className="text-sm line-through text-white/60">
-                   {listing.originalPrice!.toLocaleString()}
-                 </span>
+                                <span className="text-sm line-through text-white/60">
+                                    {listing.originalPrice!.toLocaleString()}
+                                </span>
                                 <span
                                     className="text-xs bg-green-500 text-white px-1.5 rounded">{t('common:price.discount', {percent: discountPercent})}</span>
                             </>
@@ -214,15 +214,15 @@ const CarCard: React.FC<CarCardProps> = ({
                     {listing.postedDate && (
                         <span
                             className="inline-flex items-center text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
-              <Clock className="w-3 h-3 mr-1"/>
+                            <Clock className="w-3 h-3 mr-1"/>
                             {t('common:time.posted', {date: formatEuropeanDateTime(listing.postedDate)})}
-            </span>
+                        </span>
                     )}
                     {vehicleData.vin && (
                         <span
                             className="inline-flex items-center text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200 font-mono">
-               {t('common:vehicle.vin')}: {vehicleData.vin}
-             </span>
+                            {t('common:vehicle.vin')}: {vehicleData.vin}
+                        </span>
                     )}
                     {listing.seller?.phone && (
                         <a
@@ -235,79 +235,79 @@ const CarCard: React.FC<CarCardProps> = ({
                     {vehicleData.engineCapacity && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               <Settings2 className="w-3 h-3 mr-1"/>
+                            <Settings2 className="w-3 h-3 mr-1"/>
                             {vehicleData.engineCapacity}
-             </span>
+                        </span>
                     )}
                     {vehicleData.transmission && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               {vehicleData.transmission}
-             </span>
+                            {vehicleData.transmission}
+                        </span>
                     )}
                     {vehicleData.powerHp && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               {vehicleData.powerHp} {t('common:vehicle.hpUnit')}
-             </span>
+                            {vehicleData.powerHp} {t('common:vehicle.hpUnit')}
+                        </span>
                     )}
                     {vehicleData.color && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               {vehicleData.color}
-             </span>
+                            {vehicleData.color}
+                        </span>
                     )}
                     {vehicleData.bodyType && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               <Car className="w-3 h-3 mr-1"/>
+                            <Car className="w-3 h-3 mr-1"/>
                             {vehicleData.bodyType}
-             </span>
+                        </span>
                     )}
                     {locationStr && (
                         <span
                             className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-               <MapPin className="w-3 h-3 mr-1"/>
+                            <MapPin className="w-3 h-3 mr-1"/>
                             {locationStr}
-             </span>
+                        </span>
                     )}
                     {vehicleData.accidentFree === true && (
                         <span
                             className="inline-flex items-center text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200">
                ✓ {t('common:vehicle.accidentFree')}
-             </span>
+                        </span>
                     )}
                     {vehicleData.isNew === true && (
                         <span
                             className="inline-flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-               {t('common:vehicle.new')}
-             </span>
+                            {t('common:vehicle.new')}
+                        </span>
                     )}
                     {vehicleData.originCountry && (
                         <span
                             className="inline-flex items-center text-[10px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-               <Globe className="w-3 h-3 mr-1"/>
+                            <Globe className="w-3 h-3 mr-1"/>
                             {t('common:vehicle.from', {country: vehicleData.originCountry})}
-             </span>
+                        </span>
                     )}
                     {vehicleData.isImported === true && !vehicleData.originCountry && (
                         <span
                             className="inline-flex items-center text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-               {t('common:vehicle.imported')}
-             </span>
+                            {t('common:vehicle.imported')}
+                        </span>
                     )}
                 </div>
 
                 {/* Tracking Info */}
                 <div className="flex flex-wrap gap-2 mb-4 text-[10px] text-slate-400">
-          <span className="inline-flex items-center gap-1">
-            <Eye className="w-3 h-3"/>
-              {t('common:time.trackedSince', {date: formatEuropeanDateTime(listing.firstSeenAt)})}
-          </span>
                     <span className="inline-flex items-center gap-1">
-            <RefreshCw className="w-3 h-3"/>
+                        <Eye className="w-3 h-3"/>
+                        {t('common:time.trackedSince', {date: formatEuropeanDateTime(listing.firstSeenAt)})}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3"/>
                         {t('common:time.lastChecked', {date: formatEuropeanDateTime(listing.lastSeenAt)})}
-          </span>
+                    </span>
                 </div>
 
                 {/* Chart */}

@@ -75,37 +75,37 @@ describe('Gemini Parse Service', () => {
         describe('input validation', () => {
             it('should throw error for invalid URL', async () => {
                 await expect(
-                    parseCarDataWithGemini('', 'page content', 'Page Title')
+                    parseCarDataWithGemini('', 'page content', 'Page Title'),
                 ).rejects.toThrow('Invalid URL provided');
 
                 await expect(
-                    parseCarDataWithGemini(null as any, 'page content', 'Page Title')
+                    parseCarDataWithGemini(null as any, 'page content', 'Page Title'),
                 ).rejects.toThrow('Invalid URL provided');
             });
 
             it('should throw error for empty page content', async () => {
                 await expect(
-                    parseCarDataWithGemini('https://example.com', '', 'Page Title')
+                    parseCarDataWithGemini('https://example.com', '', 'Page Title'),
                 ).rejects.toThrow('Page content is empty or invalid');
 
                 await expect(
-                    parseCarDataWithGemini('https://example.com', '   ', 'Page Title')
+                    parseCarDataWithGemini('https://example.com', '   ', 'Page Title'),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
 
             it('should throw error for invalid page content type', async () => {
                 await expect(
-                    parseCarDataWithGemini('https://example.com', null as any, 'Page Title')
+                    parseCarDataWithGemini('https://example.com', null as any, 'Page Title'),
                 ).rejects.toThrow('Page content is empty or invalid');
             });
 
             it('should throw error for missing page title', async () => {
                 await expect(
-                    parseCarDataWithGemini('https://example.com', 'content', '')
+                    parseCarDataWithGemini('https://example.com', 'content', ''),
                 ).rejects.toThrow('Page title is missing or invalid');
 
                 await expect(
-                    parseCarDataWithGemini('https://example.com', 'content', null as any)
+                    parseCarDataWithGemini('https://example.com', 'content', null as any),
                 ).rejects.toThrow('Page title is missing or invalid');
             });
         });
@@ -115,20 +115,20 @@ describe('Gemini Parse Service', () => {
                 await parseCarDataWithGemini(
                     'https://otomoto.pl/listing/123',
                     'BMW M3 2020 100000km',
-                    'BMW M3 - Otomoto'
+                    'BMW M3 - Otomoto',
                 );
 
                 expect(mockCreateGeminiClient).toHaveBeenCalled();
                 expect(mockBuildParsePrompt).toHaveBeenCalledWith(
                     'BMW M3 - Otomoto',
                     'https://otomoto.pl/listing/123',
-                    'BMW M3 2020 100000km'
+                    'BMW M3 2020 100000km',
                 );
                 expect(mockGenerateContent).toHaveBeenCalledWith(
                     expect.objectContaining({
                         model: 'gemini-2.5-flash',
                         contents: 'mock prompt',
-                    })
+                    }),
                 );
             });
 
@@ -136,7 +136,7 @@ describe('Gemini Parse Service', () => {
                 const result = await parseCarDataWithGemini(
                     'https://example.com',
                     'Test content',
-                    'Test Title'
+                    'Test Title',
                 );
 
                 expect(mockValidateParseResponse).toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe('Gemini Parse Service', () => {
                 await parseCarDataWithGemini(
                     'https://example.com',
                     'Test content',
-                    'Test Title'
+                    'Test Title',
                 );
 
                 expect(mockRecordSuccess).toHaveBeenCalledWith(
@@ -160,7 +160,7 @@ describe('Gemini Parse Service', () => {
                     'mock prompt',
                     expect.objectContaining({
                         text: expect.any(String),
-                    })
+                    }),
                 );
             });
 
@@ -169,14 +169,14 @@ describe('Gemini Parse Service', () => {
                     'https://example.com',
                     'Test content',
                     'Test Title',
-                    'https://example.com/image.jpg'
+                    'https://example.com/image.jpg',
                 );
 
                 expect(mockMapToCarListing).toHaveBeenCalledWith(
                     expect.anything(),
                     'https://example.com',
                     'Test Title',
-                    'https://example.com/image.jpg'
+                    'https://example.com/image.jpg',
                 );
             });
         });
@@ -187,13 +187,13 @@ describe('Gemini Parse Service', () => {
                 mockGenerateContent.mockRejectedValue(apiError);
 
                 await expect(
-                    parseCarDataWithGemini('https://example.com', 'content', 'Title')
+                    parseCarDataWithGemini('https://example.com', 'content', 'Title'),
                 ).rejects.toThrow('API Error');
 
                 expect(mockRecordError).toHaveBeenCalledWith(
                     'https://example.com',
                     'mock prompt',
-                    'API Error'
+                    'API Error',
                 );
             });
 
@@ -201,13 +201,13 @@ describe('Gemini Parse Service', () => {
                 mockGenerateContent.mockResolvedValue({text: null});
 
                 await expect(
-                    parseCarDataWithGemini('https://example.com', 'content', 'Title')
+                    parseCarDataWithGemini('https://example.com', 'content', 'Title'),
                 ).rejects.toThrow('No response from AI');
 
                 expect(mockRecordError).toHaveBeenCalledWith(
                     'https://example.com',
                     'mock prompt',
-                    'No response from AI'
+                    'No response from AI',
                 );
             });
 
@@ -215,7 +215,7 @@ describe('Gemini Parse Service', () => {
                 mockGenerateContent.mockResolvedValue({text: ''});
 
                 await expect(
-                    parseCarDataWithGemini('https://example.com', 'content', 'Title')
+                    parseCarDataWithGemini('https://example.com', 'content', 'Title'),
                 ).rejects.toThrow('No response from AI');
             });
         });

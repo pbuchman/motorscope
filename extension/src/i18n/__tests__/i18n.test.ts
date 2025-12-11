@@ -211,7 +211,7 @@ describe('i18n Configuration', () => {
         const checkInterpolation = (
             en: Record<string, unknown>,
             pl: Record<string, unknown>,
-            path = ''
+            path = '',
         ): string[] => {
             const mismatches: string[] = [];
 
@@ -237,8 +237,8 @@ describe('i18n Configuration', () => {
                         ...checkInterpolation(
                             enVal as Record<string, unknown>,
                             plVal as Record<string, unknown>,
-                            currentPath
-                        )
+                            currentPath,
+                        ),
                     );
                 }
             }

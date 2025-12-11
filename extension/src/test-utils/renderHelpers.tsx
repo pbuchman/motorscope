@@ -32,7 +32,7 @@ const AllProviders: React.FC<WrapperProps> = ({children}) => {
  */
 export function renderWithProviders(
     ui: ReactElement,
-    options?: Omit<RenderOptions, 'wrapper'>
+    options?: Omit<RenderOptions, 'wrapper'>,
 ): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
     const user = userEvent.setup();
 

@@ -22,7 +22,7 @@ import {
     getGoogleTokenSilent,
     removeCachedGoogleToken,
 } from './googleAuth';
-import {clearAuthData, getStoredAuthData, getStoredToken, storeAuthData,} from './storage';
+import {clearAuthData, getStoredAuthData, getStoredToken, storeAuthData} from './storage';
 import {API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH} from './config';
 import {getBackendServerUrl} from './localServerStorage';
 

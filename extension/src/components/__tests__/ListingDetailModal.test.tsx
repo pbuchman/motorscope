@@ -53,7 +53,7 @@ describe('ListingDetailModal', () => {
         it('calls onClose when close button clicked', async () => {
             const onClose = jest.fn();
             const {user, container} = render(
-                <ListingDetailModal {...defaultProps} onClose={onClose}/>
+                <ListingDetailModal {...defaultProps} onClose={onClose}/>,
             );
 
             // Find the close button (first button with X icon)
@@ -67,7 +67,7 @@ describe('ListingDetailModal', () => {
         it('calls onClose when overlay clicked', async () => {
             const onClose = jest.fn();
             const {user, container} = render(
-                <ListingDetailModal {...defaultProps} onClose={onClose}/>
+                <ListingDetailModal {...defaultProps} onClose={onClose}/>,
             );
 
             const overlay = container.querySelector('.fixed.inset-0');
@@ -80,7 +80,7 @@ describe('ListingDetailModal', () => {
         it('does not close when modal content clicked', async () => {
             const onClose = jest.fn();
             const {user} = render(
-                <ListingDetailModal {...defaultProps} onClose={onClose}/>
+                <ListingDetailModal {...defaultProps} onClose={onClose}/>,
             );
 
             // Click on title inside modal

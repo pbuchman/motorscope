@@ -4,8 +4,8 @@
  * Records successful and failed Gemini API calls for debugging and analytics.
  */
 
-import {GeminiCallHistoryEntry} from "@/types";
-import {recordGeminiCall} from "../settings";
+import {GeminiCallHistoryEntry} from '@/types';
+import {recordGeminiCall} from '../settings';
 
 /**
  * Format data as JSON for logging
@@ -24,7 +24,7 @@ export function formatJsonResponse(data: unknown): string {
 export async function recordSuccess(
     url: string,
     prompt: string,
-    rawResponse: unknown
+    rawResponse: unknown,
 ): Promise<void> {
     const entry: GeminiCallHistoryEntry = {
         id: crypto.randomUUID(),
@@ -43,7 +43,7 @@ export async function recordSuccess(
 export async function recordError(
     url: string,
     prompt: string,
-    errorResponse: string
+    errorResponse: string,
 ): Promise<void> {
     const entry: GeminiCallHistoryEntry = {
         id: crypto.randomUUID(),

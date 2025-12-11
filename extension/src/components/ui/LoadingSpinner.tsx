@@ -23,10 +23,10 @@ const sizeClasses = {
 };
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-                                                                  message = 'Loading...',
-                                                                  size = 'md',
-                                                                  className = '',
-                                                              }) => (
+    message = 'Loading...',
+    size = 'md',
+    className = '',
+}) => (
     <div className={`flex flex-col items-center justify-center ${className}`}>
         <Loader2 className={`${sizeClasses[size]} text-blue-600 animate-spin mb-3`}/>
         {message && <p className="text-sm text-slate-500">{message}</p>}

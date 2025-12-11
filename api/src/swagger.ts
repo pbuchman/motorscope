@@ -360,7 +360,7 @@ export function setupSwagger(app: Express): void {
         swaggerUi.setup(swaggerSpec, {
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'MotorScope API Documentation',
-        })
+        }),
     );
 
     // Serve raw OpenAPI JSON at /openapi.json

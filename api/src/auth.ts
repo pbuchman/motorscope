@@ -17,6 +17,7 @@ import {isTokenBlacklisted} from './db.js';
 
 // Extend Express Request type to include user info
 declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace Express {
         interface Request {
             user?: JwtPayload;
@@ -233,7 +234,7 @@ export function getTokenExpiration(payload: JwtPayload): Date {
 export function authMiddleware(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ): void {
     const authHeader = req.headers.authorization;
 

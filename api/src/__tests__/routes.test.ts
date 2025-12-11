@@ -499,7 +499,7 @@ describe('API Routes', () => {
                     url: 'http://example.com',
                     promptPreview: 'test',
                     status: 'success',
-                    timestamp: '2024-01-01'
+                    timestamp: '2024-01-01',
                 },
             ];
             mockAddGeminiHistoryEntries.mockResolvedValue(undefined);
@@ -518,7 +518,7 @@ describe('API Routes', () => {
                 url: 'http://example.com',
                 promptPreview: 'test',
                 status: 'success',
-                timestamp: '2024-01-01'
+                timestamp: '2024-01-01',
             };
             mockAddGeminiHistoryEntries.mockResolvedValue(undefined);
 

@@ -24,7 +24,7 @@ import {parseCarDataWithGemini} from '@/services/gemini';
 
 // Components
 import {LoadingSpinner} from '@/components/ui/LoadingSpinner';
-import {AnalyzePrompt, LoginView, NoListingView, PopupHeader, PreviewCard, SavedItemView,} from '@/components/popup';
+import {AnalyzePrompt, LoginView, NoListingView, PopupHeader, PreviewCard, SavedItemView} from '@/components/popup';
 
 // Config & Utils
 import {
@@ -125,7 +125,7 @@ const ExtensionPopup: React.FC = () => {
                 currentUrl,
                 contentToAnalyze.content,
                 contentToAnalyze.title,
-                contentToAnalyze.image
+                contentToAnalyze.image,
             );
 
             setPreviewData(listingData as CarListing);
@@ -277,7 +277,7 @@ const ExtensionPopup: React.FC = () => {
                 {isLoggedIn && (
                     <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">
             ☁️ {t('popup:footer.cloudSync')}
-          </span>
+                    </span>
                 )}
             </div>
         </div>

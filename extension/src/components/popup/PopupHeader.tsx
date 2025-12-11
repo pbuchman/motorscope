@@ -18,12 +18,12 @@ interface PopupHeaderProps {
 }
 
 export const PopupHeader: React.FC<PopupHeaderProps> = ({
-                                                            isLoggedIn,
-                                                            userEmail,
-                                                            onOpenDashboard,
-                                                            onOpenSettings,
-                                                            onLogout,
-                                                        }) => {
+    isLoggedIn,
+    userEmail,
+    onOpenDashboard,
+    onOpenSettings,
+    onLogout,
+}) => {
     const {t} = useTranslation(['common', 'settings']);
 
     return (

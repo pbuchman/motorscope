@@ -93,11 +93,11 @@ const MultiSelect: React.FC<MultiSelectProps> = ({label, options, selected, onCh
                     onClick={() => setIsOpen(!isOpen)}
                     className="flex items-center gap-1 text-xs border border-gray-200 rounded px-2 py-1 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[100px]"
                 >
-          <span className="truncate">
-            {selected.length === 0 ? placeholder :
+                    <span className="truncate">
+                        {selected.length === 0 ? placeholder :
                 selected.length === 1 ? selected[0] :
                     `${selected.length} selected`}
-          </span>
+                    </span>
                     <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
                 </button>
             </div>
@@ -107,9 +107,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({label, options, selected, onCh
                     className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[180px] max-h-60 overflow-auto">
                     <div className="flex justify-between px-2 py-1.5 border-b border-gray-100 text-[10px]">
                         <button onClick={selectAll}
-                                className="text-blue-600 hover:underline">{t('button.selectAll')}</button>
+                            className="text-blue-600 hover:underline">{t('button.selectAll')}</button>
                         <button onClick={clearAll}
-                                className="text-slate-500 hover:underline">{t('button.clear')}</button>
+                            className="text-slate-500 hover:underline">{t('button.clear')}</button>
                     </div>
 
                     {/* Options */}
@@ -134,15 +134,15 @@ const MultiSelect: React.FC<MultiSelectProps> = ({label, options, selected, onCh
 };
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
-                                                               filters,
-                                                               onFiltersChange,
-                                                               sortBy,
-                                                               onSortChange,
-                                                               availableMakeModels,
-                                                               availableSources,
-                                                               activeFiltersCount,
-                                                               onClearFilters,
-                                                           }) => {
+    filters,
+    onFiltersChange,
+    sortBy,
+    onSortChange,
+    availableMakeModels,
+    availableSources,
+    activeFiltersCount,
+    onClearFilters,
+}) => {
     const {t} = useTranslation(['dashboard', 'common']);
 
     // Get all unique makes
@@ -271,59 +271,59 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     {filters.status !== 'all' && (
                         <span
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
-              {filters.status === ListingStatus.ACTIVE && <CheckCircle className="w-3 h-3"/>}
+                            {filters.status === ListingStatus.ACTIVE && <CheckCircle className="w-3 h-3"/>}
                             {filters.status === ListingStatus.ENDED && <AlertCircle className="w-3 h-3"/>}
                             {t('dashboard:filters.status')}: {t('common:status.' + (filters.status === ListingStatus.ACTIVE ? 'active' : 'ended'))}
                             <button onClick={() => onFiltersChange({...filters, status: 'all'})}
-                                    className="hover:text-blue-900">
-                <X className="w-3 h-3"/>
-              </button>
-            </span>
+                                className="hover:text-blue-900">
+                                <X className="w-3 h-3"/>
+                            </button>
+                        </span>
                     )}
                     {filters.archived !== 'active' && (
                         <span
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full">
-              <Archive className="w-3 h-3"/>
+                            <Archive className="w-3 h-3"/>
                             {filters.archived === 'archived' ? t('common:filter.archivedOnly') : t('common:filter.includingArchived')}
                             <button onClick={() => onFiltersChange({...filters, archived: 'active'})}
-                                    className="hover:text-amber-900">
-                <X className="w-3 h-3"/>
-              </button>
-            </span>
+                                className="hover:text-amber-900">
+                                <X className="w-3 h-3"/>
+                            </button>
+                        </span>
                     )}
                     {filters.makes.length > 0 && (
                         <span
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full">
-              <Car className="w-3 h-3"/>
+                            <Car className="w-3 h-3"/>
                             {filters.makes.length === 1 ? filters.makes[0] : `${filters.makes.length} makes`}
                             <button onClick={() => onFiltersChange({...filters, makes: [], models: []})}
-                                    className="hover:text-purple-900">
-                <X className="w-3 h-3"/>
-              </button>
-            </span>
+                                className="hover:text-purple-900">
+                                <X className="w-3 h-3"/>
+                            </button>
+                        </span>
                     )}
                     {filters.models.length > 0 && (
                         <span
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-green-50 text-green-700 rounded-full">
-              {filters.models.length === 1 ? filters.models[0] : `${filters.models.length} models`}
+                            {filters.models.length === 1 ? filters.models[0] : `${filters.models.length} models`}
                             <button onClick={() => onFiltersChange({...filters, models: []})}
-                                    className="hover:text-green-900">
-                <X className="w-3 h-3"/>
-              </button>
-            </span>
+                                className="hover:text-green-900">
+                                <X className="w-3 h-3"/>
+                            </button>
+                        </span>
                     )}
                     {filters.sources.length > 0 && (
                         <span
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">
-              <Globe className="w-3 h-3"/>
+                            <Globe className="w-3 h-3"/>
                             {filters.sources.length === 1
                                 ? filters.sources[0]
                                 : `${filters.sources.length} sources`}
                             <button onClick={() => onFiltersChange({...filters, sources: []})}
-                                    className="hover:text-cyan-900">
-                <X className="w-3 h-3"/>
-              </button>
-            </span>
+                                className="hover:text-cyan-900">
+                                <X className="w-3 h-3"/>
+                            </button>
+                        </span>
                     )}
                 </div>
             )}

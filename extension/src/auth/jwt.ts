@@ -49,7 +49,7 @@ export const decodeJwt = (token: string): JwtPayload | null => {
  */
 export const isJwtExpired = (
     token: string | JwtPayload,
-    leewaySeconds: number = JWT_EXP_LEEWAY_SECONDS
+    leewaySeconds: number = JWT_EXP_LEEWAY_SECONDS,
 ): boolean => {
     const payload = typeof token === 'string' ? decodeJwt(token) : token;
 

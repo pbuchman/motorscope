@@ -145,7 +145,7 @@ describe('Swagger Configuration', () => {
         it('should configure swagger-ui with custom options', async () => {
             const {setupSwagger} = await import('../swagger.js');
 
-            let swaggerUiOptions: any = null;
+            let _swaggerUiOptions: any = null;
 
             // Mock Express app that captures swagger-ui setup call
             const mockApp = {
@@ -153,7 +153,7 @@ describe('Swagger Configuration', () => {
                     // swagger-ui-express.setup returns a middleware, we can inspect the call
                     if (path === '/docs' && handlers.length > 1) {
                         // The setup options are passed to swagger-ui
-                        swaggerUiOptions = handlers;
+                        _swaggerUiOptions = handlers;
                     }
                 }),
                 get: jest.fn(),

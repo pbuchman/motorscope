@@ -38,7 +38,7 @@ describe('StatusBadge', () => {
 
     it('applies additional custom className', () => {
         render(
-            <StatusBadge status={ListingStatus.ACTIVE} className="custom-class"/>
+            <StatusBadge status={ListingStatus.ACTIVE} className="custom-class"/>,
         );
 
         const badge = screen.getByText('Active');

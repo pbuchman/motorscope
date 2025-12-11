@@ -120,7 +120,7 @@ describe('SavedItemView', () => {
         it('calls onViewInDashboard when button is clicked', async () => {
             const onViewInDashboard = jest.fn();
             const {user} = render(
-                <SavedItemView {...defaultProps} onViewInDashboard={onViewInDashboard}/>
+                <SavedItemView {...defaultProps} onViewInDashboard={onViewInDashboard}/>,
             );
 
             const button = screen.getByRole('button', {name: /view in dashboard/i});

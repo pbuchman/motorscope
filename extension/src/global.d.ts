@@ -36,28 +36,41 @@ declare namespace chrome {
             active?: boolean;
         }
 
+        export interface TabChangeInfo {
+            status?: 'loading' | 'complete';
+            url?: string;
+            title?: string;
+        }
+
         export function query(
             queryInfo: { active?: boolean; currentWindow?: boolean },
             callback: (tabs: Tab[]) => void
         ): void;
 
         export function create(
-            createProperties: { url?: string; active?: boolean }
+            createProperties: { url?: string; active?: boolean },
+            callback?: (tab: Tab) => void
         ): void;
+
+        export function remove(tabId: number): Promise<void>;
+
+        export const onUpdated: {
+            addListener(callback: (tabId: number, changeInfo: TabChangeInfo, tab: Tab) => void): void;
+            removeListener(callback: (tabId: number, changeInfo: TabChangeInfo, tab: Tab) => void): void;
+        };
     }
 
     export namespace scripting {
-        export interface InjectionResult {
-            result?: any;
+        export interface InjectionResult<T = any> {
+            result?: T;
         }
 
-        export function executeScript(
+        export function executeScript<T = any>(
             injection: {
                 target: { tabId: number };
-                func: () => any;
-            },
-            callback?: (results: InjectionResult[]) => void
-        ): void;
+                func: () => T;
+            }
+        ): Promise<InjectionResult<T>[]>;
     }
 
     export namespace storage {

@@ -25,7 +25,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({status, className = ''}
         <span
             className={`px-2 py-1 text-xs font-semibold rounded-md backdrop-blur-md ${statusStyles[status]} ${className}`}
         >
-      {t(labelKey)}
-    </span>
+            {t(labelKey)}
+        </span>
     );
 };

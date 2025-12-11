@@ -21,7 +21,7 @@ export class ApiError extends Error {
     constructor(
         message: string,
         public statusCode: number,
-        public isAuthError: boolean = false
+        public isAuthError: boolean = false,
     ) {
         super(message);
         this.name = 'ApiError';
@@ -45,7 +45,7 @@ const buildApiUrl = async (endpoint: string): Promise<string> => {
  */
 const apiRequest = async <T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
 ): Promise<T> => {
     const token = await getToken();
 
@@ -70,7 +70,7 @@ const apiRequest = async <T>(
         throw new ApiError(
             errorData.message || `Request failed: ${response.status}`,
             response.status,
-            isAuthError
+            isAuthError,
         );
     }
 
@@ -93,7 +93,7 @@ export const getRemoteListings = async (): Promise<CarListing[]> => {
  * @returns Success response
  */
 export const saveRemoteListings = async (
-    listings: CarListing[]
+    listings: CarListing[],
 ): Promise<{ success: boolean; count: number }> => {
     return apiRequest<{ success: boolean; count: number }>(LISTINGS_ENDPOINT_PATH, {
         method: 'PUT',
@@ -121,7 +121,7 @@ export const saveRemoteListing = async (listing: CarListing): Promise<CarListing
  * @returns Success response
  */
 export const deleteRemoteListing = async (
-    listingId: string
+    listingId: string,
 ): Promise<{ success: boolean }> => {
     return apiRequest<{ success: boolean }>(`${LISTINGS_ENDPOINT_PATH}/${listingId}`, {
         method: 'DELETE',
@@ -217,7 +217,7 @@ export const getRemoteGeminiHistory = async (limit: number = 100): Promise<Gemin
  * Add Gemini history entries to the backend
  */
 export const addRemoteGeminiHistory = async (
-    entries: GeminiCallHistoryEntry | GeminiCallHistoryEntry[]
+    entries: GeminiCallHistoryEntry | GeminiCallHistoryEntry[],
 ): Promise<{ success: boolean; count: number }> => {
     return apiRequest<{ success: boolean; count: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
         method: 'POST',

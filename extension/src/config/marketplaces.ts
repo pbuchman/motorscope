@@ -68,7 +68,8 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
             '/osobowe/',          // Category listing (but not /oferta/)
             '?search',            // Search queries
         ],
-    useBackgroundTab: false, // Use standard fetch for OTOMOTO},
+        useBackgroundTab: false, // Use standard fetch for OTOMOTO
+    },
     {
         id: 'autoplac',
         name: 'Autoplac',
@@ -89,8 +90,8 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
             '/lista/',
             '?page=',
         ],
-    useBackgroundTab: true, // Use background tab due to Cloudflare restrictions
-  },
+        useBackgroundTab: true, // Use background tab due to Cloudflare restrictions
+    },
 ];
 
 /**
@@ -116,7 +117,7 @@ export const getMarketplaceDisplayName = (platform: string): string => {
 
     const marketplace = SUPPORTED_MARKETPLACES.find(m =>
         m.domains.some(d => d.toLowerCase().replace('www.', '') === normalizedPlatform) ||
-        m.id.toLowerCase() === normalizedPlatform.replace('.pl', '').replace('.de', '')
+        m.id.toLowerCase() === normalizedPlatform.replace('.pl', '').replace('.de', ''),
     );
 
     return marketplace?.name || platform;
@@ -200,7 +201,7 @@ export const getMarketplaceForUrl = (url: string): MarketplaceConfig | null => {
     try {
         const urlLower = url.toLowerCase();
         return getEnabledMarketplaces().find(m =>
-            m.domains.some(domain => urlLower.includes(domain.toLowerCase()))
+            m.domains.some(domain => urlLower.includes(domain.toLowerCase())),
         ) || null;
     } catch {
         return null;

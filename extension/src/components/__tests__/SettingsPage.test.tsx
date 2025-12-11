@@ -129,7 +129,7 @@ describe('SettingsPage', () => {
                 expect(
                     screen.getByText(/next/i) ||
                     screen.getByText(/status/i) ||
-                    screen.getByText(/scheduled/i)
+                    screen.getByText(/scheduled/i),
                 ).toBeTruthy();
             });
         });
@@ -174,7 +174,7 @@ describe('SettingsPage', () => {
                 expect(
                     screen.getByText(/hour/i) ||
                     screen.getByText(/60/i) ||
-                    screen.getByText(/min/i)
+                    screen.getByText(/min/i),
                 ).toBeTruthy();
             });
         });
@@ -187,7 +187,7 @@ describe('SettingsPage', () => {
                 expect(
                     screen.getByText(/next/i) ||
                     screen.getByText(/scheduled/i) ||
-                    document.querySelector('[class*="countdown"]')
+                    document.querySelector('[class*="countdown"]'),
                 ).toBeTruthy();
             });
         });

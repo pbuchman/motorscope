@@ -18,7 +18,7 @@ import {
     saveRemoteListing,
 } from '@/api/client';
 import {DEFAULT_SETTINGS} from '@/services/settings/extensionSettings';
-import {DEFAULT_REFRESH_STATUS, getRefreshStatus,} from '@/services/settings/refreshStatus';
+import {DEFAULT_REFRESH_STATUS, getRefreshStatus} from '@/services/settings/refreshStatus';
 import {MessageTypes, useChromeMessaging, useMessageListener, useStorageListener} from '@/hooks/useChromeMessaging';
 import {RefreshResult, refreshSingleListing} from '@/services/refresh';
 import {useAuth} from '@/auth/AuthContext';
@@ -261,7 +261,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({children}) => {
 
                 // Update just this listing in the local state (no full reload)
                 setListings(prev => prev.map(l =>
-                    l.id === result.listing.id ? result.listing : l
+                    l.id === result.listing.id ? result.listing : l,
                 ));
 
                 // Add to recently refreshed for animation
@@ -428,7 +428,7 @@ export const useListings = () => {
         removeListing,
         refreshListing,
         error,
-        clearError
+        clearError,
     } = useAppContext();
     return {
         listings,

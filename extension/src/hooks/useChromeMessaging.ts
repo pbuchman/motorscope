@@ -75,7 +75,7 @@ export const sendMessage = async <T = unknown>(message: ExtensionMessage): Promi
  */
 export const useMessageListener = (
     handler: (message: ExtensionMessage) => void,
-    deps: React.DependencyList = []
+    deps: React.DependencyList = [],
 ): void => {
     const handlerRef = useRef(handler);
     handlerRef.current = handler;
@@ -93,7 +93,7 @@ export const useMessageListener = (
         return () => {
             chrome.runtime.onMessage.removeListener(listener);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
     }, deps);
 };
 
@@ -107,7 +107,7 @@ export const useMessageListener = (
 export const useStorageListener = (
     handler: (changes: { [key: string]: StorageChange }) => void,
     deps: React.DependencyList = [],
-    namespace: 'session' | 'local' | 'all' = 'session'
+    namespace: 'session' | 'local' | 'all' = 'session',
 ): void => {
     const handlerRef = useRef(handler);
     handlerRef.current = handler;
@@ -119,7 +119,7 @@ export const useStorageListener = (
 
         const listener = (
             changes: { [key: string]: StorageChange },
-            changedNamespace: string
+            changedNamespace: string,
         ) => {
             // Filter by namespace
             if (namespace === 'all' || changedNamespace === namespace) {
@@ -131,7 +131,7 @@ export const useStorageListener = (
         return () => {
             chrome.storage.onChanged.removeListener(listener);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
     }, deps);
 };
 

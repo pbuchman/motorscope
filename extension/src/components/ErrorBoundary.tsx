@@ -46,8 +46,8 @@ const DefaultErrorFallback: React.FC<{
                         </p>
                         {errorInfo?.componentStack && (
                             <pre className="text-xs font-mono text-gray-600 mt-2 whitespace-pre-wrap">
-                {errorInfo.componentStack}
-              </pre>
+                                {errorInfo.componentStack}
+                            </pre>
                         )}
                     </div>
                 )}

@@ -128,7 +128,7 @@ describe('ExtensionPopup', () => {
                         platform: 'otomoto',
                         url: 'https://www.otomoto.pl/oferta/test-listing',
                         listingId: 'test',
-                        countryCode: 'PL'
+                        countryCode: 'PL',
                     },
                 });
                 mockUseListings.listings = [savedListing];
@@ -204,7 +204,7 @@ describe('ExtensionPopup', () => {
             expect(
                 screen.getByText(/not on/i) ||
                 screen.getByText(/marketplace/i) ||
-                screen.getByText(/supported/i)
+                screen.getByText(/supported/i),
             ).toBeTruthy();
         });
     });

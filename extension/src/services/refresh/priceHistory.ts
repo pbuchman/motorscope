@@ -43,7 +43,7 @@ export function getTodayKey(): string {
 export function updateDailyPriceHistory(
     currentHistory: PricePoint[],
     newPrice: number,
-    currency: string
+    currency: string,
 ): PricePoint[] {
     const now = new Date().toISOString();
 
@@ -69,7 +69,7 @@ export function updateDailyPriceHistory(
  */
 export function hasPriceChangedFromPreviousDay(
     currentHistory: PricePoint[],
-    newPrice: number
+    newPrice: number,
 ): boolean {
     if (currentHistory.length === 0) {
         return false; // No previous price to compare
@@ -106,7 +106,7 @@ export function consolidateDailyPriceHistory(history: PricePoint[]): PricePoint[
 
     // Sort by date (oldest first)
     const sorted = [...history].sort((a, b) =>
-        new Date(a.date).getTime() - new Date(b.date).getTime()
+        new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
     // Group by day and keep only the latest entry per day
@@ -119,7 +119,7 @@ export function consolidateDailyPriceHistory(history: PricePoint[]): PricePoint[
 
     // Convert back to array, sorted by date
     return Array.from(byDay.values()).sort((a, b) =>
-        new Date(a.date).getTime() - new Date(b.date).getTime()
+        new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 }
 

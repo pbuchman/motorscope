@@ -4,11 +4,11 @@
  * Transforms raw Gemini response data into CarListing objects.
  */
 
-import {CarListing, ListingStatus, Location, Seller, Vehicle} from "@/types";
-import {cleanVin, normalizeUrl} from "@/utils/formatters";
+import {CarListing, ListingStatus, Location, Seller, Vehicle} from '@/types';
+import {cleanVin, normalizeUrl} from '@/utils/formatters';
 
 /** Schema version for data compatibility */
-const SCHEMA_VERSION = "1.0.0";
+const SCHEMA_VERSION = '1.0.0';
 
 /**
  * Generate listing ID from VIN or URL
@@ -109,7 +109,7 @@ export function mapToCarListing(
     data: Record<string, unknown>,
     url: string,
     pageTitle: string,
-    scrapedImageUrl?: string | null
+    scrapedImageUrl?: string | null,
 ): Partial<CarListing> {
     const pricing = data.pricing as Record<string, unknown>;
     const dates = data.dates as Record<string, unknown> | undefined;
@@ -134,7 +134,7 @@ export function mapToCarListing(
             countryCode: location.countryCode,
         },
         title: (data.title as string) || pageTitle,
-        thumbnailUrl: scrapedImageUrl || "https://placehold.co/600x400?text=No+Image",
+        thumbnailUrl: scrapedImageUrl || 'https://placehold.co/600x400?text=No+Image',
         currentPrice: pricing.currentPrice as number,
         currency: pricing.currency as string,
         originalPrice: (pricing.originalPrice as number) || null,

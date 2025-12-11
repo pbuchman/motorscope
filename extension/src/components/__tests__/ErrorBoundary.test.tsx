@@ -37,7 +37,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <div>Child content</div>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByText('Child content')).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe('ErrorBoundary', () => {
                 <ErrorBoundary>
                     <div>First child</div>
                     <div>Second child</div>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByText('First child')).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByText('Something went wrong')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByRole('button', {name: /reload page/i})).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByRole('button', {name: /try again/i})).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByText(/unexpected error occurred/i)).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('ErrorBoundary', () => {
             const {rerender} = renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             // Error UI should be shown
@@ -118,7 +118,7 @@ describe('ErrorBoundary', () => {
             rerender(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={false}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             await user.click(tryAgainButton);
@@ -133,7 +133,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary fallback={<div>Custom error UI</div>}>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(screen.getByText('Custom error UI')).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('ErrorBoundary', () => {
             renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             expect(console.error).toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe('ErrorBoundary', () => {
             const {container} = renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             // Should have centered layout
@@ -170,7 +170,7 @@ describe('ErrorBoundary', () => {
             const {container} = renderWithProviders(
                 <ErrorBoundary>
                     <ThrowError shouldThrow={true}/>
-                </ErrorBoundary>
+                </ErrorBoundary>,
             );
 
             // Should have SVG icon

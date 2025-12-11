@@ -11,7 +11,7 @@ import DashboardFilters, {
     DEFAULT_SORT,
     FilterState,
     MakeModelOption,
-    SortOption
+    SortOption,
 } from '@/components/DashboardFilters';
 import {GoogleLogo, UserMenu} from '@/components/ui';
 import {Car, ExternalLink, LayoutGrid, List, Loader2, Search, Settings} from 'lucide-react';
@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
     const saveDashboardPreferences = useCallback((
         newFilters: FilterState,
         newSortBy: SortOption,
-        newViewMode: ViewMode
+        newViewMode: ViewMode,
     ) => {
         if (!isLoggedIn) return;
 
@@ -189,7 +189,7 @@ const Dashboard: React.FC = () => {
     const availableSources = useMemo(() => {
         // Get unique display names from listings
         const sourceNames = new Set(
-            listings.map(l => getMarketplaceDisplayName(l.source.platform))
+            listings.map(l => getMarketplaceDisplayName(l.source.platform)),
         );
 
         return Array.from(sourceNames)
@@ -445,7 +445,7 @@ const Dashboard: React.FC = () => {
                             <p className="text-sm text-slate-500 mb-4">
                                 {t('dashboard:showingResults', {
                                     shown: filteredAndSortedListings.length,
-                                    total: listings.length
+                                    total: listings.length,
                                 })}
                             </p>
                         )}

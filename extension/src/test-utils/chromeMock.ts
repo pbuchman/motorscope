@@ -46,15 +46,15 @@ export interface MockStorageData {
 }
 
 // Storage for registered listeners and mock state
-let messageListeners: ((
+const messageListeners: ((
     request: any,
     sender: MessageSender,
     sendResponse: (response?: any) => void
 ) => boolean | void)[] = [];
 
-let installedListeners: ((details: InstalledDetails) => void)[] = [];
-let startupListeners: (() => void)[] = [];
-let alarmListeners: ((alarm: Alarm) => void)[] = [];
+const installedListeners: ((details: InstalledDetails) => void)[] = [];
+const startupListeners: (() => void)[] = [];
+const alarmListeners: ((alarm: Alarm) => void)[] = [];
 
 // Mock storage state
 let sessionStorage: MockStorageData = {};
@@ -62,7 +62,7 @@ let localStorage: MockStorageData = {};
 let syncStorage: MockStorageData = {};
 
 // Mock alarms state
-let alarms: Map<string, Alarm> = new Map();
+const alarms: Map<string, Alarm> = new Map();
 
 // Create the mock chrome object
 function createChromeMock() {
@@ -258,35 +258,35 @@ function createChromeMock() {
             query: jest.fn(async () => []),
             update: jest.fn(async () => ({})),
             create: jest.fn(async (createProperties) => ({id: 1,
-        url: createProperties.url,
-        active: createProperties.active !== false,
-        index: 0,
-        pinned: false,
-        highlighted: false,
-        windowId: 1,
-        incognito: false,
-      })),
-      remove: jest.fn(async () => undefined),
+                url: createProperties.url,
+                active: createProperties.active !== false,
+                index: 0,
+                pinned: false,
+                highlighted: false,
+                windowId: 1,
+                incognito: false,
+            })),
+            remove: jest.fn(async () => undefined),
             sendMessage: jest.fn(async () => undefined),
-        onUpdated: {
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
-      },
-    },
+            onUpdated: {
+                addListener: jest.fn(),
+                removeListener: jest.fn(),
+            },
+        },
 
-    scripting: {
-      executeScript: jest.fn(async () => []),
-    },
+        scripting: {
+            executeScript: jest.fn(async () => []),
+        },
 
         notifications: {
             create: jest.fn(
                 (
                     notificationId: string,
                     options: NotificationOptions,
-                    callback?: (notificationId: string) => void
+                    callback?: (notificationId: string) => void,
                 ) => {
                     if (callback) callback(notificationId);
-                }
+                },
             ),
             clear: jest.fn((notificationId: string, callback?: (wasCleared: boolean) => void) => {
                 if (callback) callback(true);
@@ -362,7 +362,7 @@ export function getChromeMock(): typeof chromeMock {
  */
 export function triggerOnMessage(
     request: any,
-    sender: Partial<MessageSender> = {}
+    sender: Partial<MessageSender> = {},
 ): Promise<any> {
     return new Promise((resolve) => {
         const fullSender: MessageSender = {
@@ -393,7 +393,7 @@ export function triggerOnMessage(
  * Trigger chrome.runtime.onInstalled event
  */
 export function triggerOnInstalled(
-    details: Partial<InstalledDetails> = {}
+    details: Partial<InstalledDetails> = {},
 ): void {
     const fullDetails: InstalledDetails = {
         reason: 'install',

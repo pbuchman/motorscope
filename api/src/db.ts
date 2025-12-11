@@ -31,7 +31,7 @@ import type {
     GeminiHistoryDocument,
     ListingDocument,
     User,
-    UserSettings
+    UserSettings,
 } from './types.js';
 
 // Initialize Firestore with ADC
@@ -118,7 +118,7 @@ export async function getListingsByUserId(userId: string): Promise<ListingDocume
  */
 export async function getListingById(
     listingId: string,
-    userId: string
+    userId: string,
 ): Promise<ListingDocument | null> {
     const doc = await listingsCollection.doc(listingId).get();
 
@@ -141,7 +141,7 @@ export async function getListingById(
  */
 export async function saveListing(
     listing: CarListing,
-    userId: string
+    userId: string,
 ): Promise<ListingDocument> {
     const listingDoc: ListingDocument = {
         ...listing,
@@ -160,7 +160,7 @@ export async function saveListing(
  */
 export async function saveAllListings(
     listings: CarListing[],
-    userId: string
+    userId: string,
 ): Promise<ListingDocument[]> {
     // Get existing listings to determine what to delete
     const existingListings = await getListingsByUserId(userId);
@@ -198,7 +198,7 @@ export async function saveAllListings(
  */
 export async function deleteListing(
     listingId: string,
-    userId: string
+    userId: string,
 ): Promise<boolean> {
     const listing = await getListingById(listingId, userId);
 
@@ -271,7 +271,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
  */
 export async function saveUserSettings(
     userId: string,
-    settings: Partial<Omit<UserSettings, 'userId' | 'updatedAt'>>
+    settings: Partial<Omit<UserSettings, 'userId' | 'updatedAt'>>,
 ): Promise<UserSettings> {
     const existingSettings = await getUserSettings(userId);
 
@@ -297,7 +297,7 @@ export async function saveUserSettings(
  */
 export async function getGeminiHistory(
     userId: string,
-    limit: number = 100
+    limit: number = 100,
 ): Promise<GeminiCallHistoryEntry[]> {
     const snapshot = await geminiHistoryCollection
         .where('userId', '==', userId)
@@ -321,7 +321,7 @@ export async function getGeminiHistory(
  */
 export async function addGeminiHistoryEntry(
     entry: GeminiCallHistoryEntry,
-    userId: string
+    userId: string,
 ): Promise<GeminiHistoryDocument> {
     const historyDoc: GeminiHistoryDocument = {
         ...entry,
@@ -339,7 +339,7 @@ export async function addGeminiHistoryEntry(
  */
 export async function addGeminiHistoryEntries(
     entries: GeminiCallHistoryEntry[],
-    userId: string
+    userId: string,
 ): Promise<void> {
     if (entries.length === 0) return;
 
@@ -423,7 +423,7 @@ interface BlacklistedToken {
 export async function blacklistToken(
     tokenId: string,
     userId: string,
-    expiresAt: Date
+    expiresAt: Date,
 ): Promise<void> {
     const entry: BlacklistedToken = {
         tokenId,

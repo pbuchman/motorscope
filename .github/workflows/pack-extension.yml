@@ -1,4 +1,4 @@
-name: Build & Pack Chrome Extension
+name: Build, Test & Package
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-pack:
+  build-test-package:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,46 +16,108 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Install root dependencies
+        run: npm ci
 
-      - name: Build
-        run: |
-          npm run build
+      - name: Install API dependencies
+        working-directory: api
+        run: npm ci
 
-      - name: Package extension (zip + try to create .crx)
-        id: package
+      - name: Install Extension dependencies
+        working-directory: extension
+        run: npm ci
+
+      - name: Lint (API)
+        working-directory: api
+        run: npm run lint
+
+      - name: Lint (Extension)
+        working-directory: extension
+        run: npm run lint
+
+      - name: Type Check (API)
+        working-directory: api
+        run: npm run typecheck
+
+      - name: Type Check (Extension)
+        working-directory: extension
+        run: npm run typecheck
+
+      - name: Test (API)
+        working-directory: api
+        run: npm test
+
+      - name: Test (Extension)
+        working-directory: extension
+        run: npm test
+
+      - name: Build API
+        working-directory: api
+        run: tsc
+
+      - name: Build Extension
+        working-directory: extension
+        run: npx vite build
+
+      - name: Get short SHA
+        id: sha
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Extension (zip + crx)
+        id: package-extension
         run: |
           set -euo pipefail
-          OUT_DIR=""
-          for d in dist build extension public; do
-            if [ -d "$d" ]; then
-              OUT_DIR="$d"
-              break
-            fi
-          done
-          if [ -z "$OUT_DIR" ]; then
-            echo "No build output directory found (tried: dist, build, extension, public)."
-            exit 1
-          fi
-          echo "Using output directory: $OUT_DIR"
-          ART_DIR="$(pwd)/build_artifacts"
-          rm -rf "$ART_DIR"
+          ART_DIR="$(pwd)/artifacts"
           mkdir -p "$ART_DIR"
-          (cd "$OUT_DIR" && zip -r -X "$ART_DIR/extension.zip" .) || { echo "zip failed"; exit 1; }
-          if npx --yes crx@latest pack "$OUT_DIR" -o "$ART_DIR/extension.crx"; then
-            echo "CRX created at $ART_DIR/extension.crx"
+
+          # Package extension as zip
+          cd extension/dist
+          zip -r -X "$ART_DIR/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.zip" .
+          cd ../..
+
+          # Try to create CRX (may fail without key, that's ok)
+          if npx --yes crx@latest pack extension/dist -o "$ART_DIR/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.crx" 2>/dev/null; then
+            echo "CRX created successfully"
           else
-            echo "CRX creation failed (npx crx pack). Continuing with zip artifact only."
+            echo "CRX creation skipped (requires signing key)"
           fi
+
           echo "ARTIFACT_DIR=$ART_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Upload extension artifacts
+      - name: Package Backend
+        run: |
+          set -euo pipefail
+          ART_DIR="$(pwd)/artifacts"
+
+          # Create backend package with dist, package.json, and package-lock.json
+          cd api
+          mkdir -p backend-package
+          cp -r dist backend-package/
+          cp package.json backend-package/
+          cp package-lock.json backend-package/ 2>/dev/null || true
+
+          # Create zip
+          cd backend-package
+          zip -r "$ART_DIR/backend-${{ steps.sha.outputs.SHORT_SHA }}.zip" .
+          cd ..
+          rm -rf backend-package
+
+      - name: Upload Extension Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: moto-tracker-${{ github.sha }}
-          path: ${{ steps.package.outputs.ARTIFACT_DIR }}/*
+          name: motorscope-extension-${{ steps.sha.outputs.SHORT_SHA }}
+          path: |
+            artifacts/motorscope-*.zip
+            artifacts/motorscope-*.crx
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Backend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: motorscope-backend-${{ steps.sha.outputs.SHORT_SHA }}
+          path: artifacts/backend-*.zip
+          retention-days: 30
+          if-no-files-found: error

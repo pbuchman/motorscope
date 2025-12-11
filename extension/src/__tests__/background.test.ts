@@ -214,7 +214,7 @@ describe('Background Service Worker', () => {
             expect(chrome.alarms.clear).toHaveBeenCalledWith('motorscope_check_alarm');
             expect(chrome.alarms.create).toHaveBeenCalledWith(
                 'motorscope_check_alarm',
-                expect.objectContaining({delayInMinutes: expect.any(Number)})
+                expect.objectContaining({delayInMinutes: expect.any(Number)}),
             );
         });
 
@@ -238,7 +238,7 @@ describe('Background Service Worker', () => {
                     title: 'Test',
                     url: 'http://test.com',
                     error: 'err',
-                    timestamp: '2024-01-01'
+                    timestamp: '2024-01-01',
                 }],
             });
 
@@ -246,7 +246,7 @@ describe('Background Service Worker', () => {
             await new Promise(r => setTimeout(r, 100));
 
             const clearedCall = mockStorageSetCalls.find(
-                call => call.value?.refreshErrors?.length === 0
+                call => call.value?.refreshErrors?.length === 0,
             );
             expect(clearedCall).toBeDefined();
         });
@@ -282,7 +282,7 @@ describe('Background Service Worker', () => {
             await new Promise(r => setTimeout(r, 100));
 
             expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-                expect.objectContaining({type: 'AUTH_STATE_CHANGED', status: 'logged_in'})
+                expect.objectContaining({type: 'AUTH_STATE_CHANGED', status: 'logged_in'}),
             );
         });
 
@@ -294,7 +294,7 @@ describe('Background Service Worker', () => {
             await new Promise(r => setTimeout(r, 100));
 
             expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-                expect.objectContaining({type: 'AUTH_STATE_CHANGED', status: 'logged_out'})
+                expect.objectContaining({type: 'AUTH_STATE_CHANGED', status: 'logged_out'}),
             );
         });
 
@@ -411,7 +411,7 @@ describe('Background Service Worker', () => {
 
                 expect(chrome.alarms.create).toHaveBeenCalledWith(
                     'motorscope_auth_check',
-                    expect.objectContaining({periodInMinutes: expect.any(Number)})
+                    expect.objectContaining({periodInMinutes: expect.any(Number)}),
                 );
             });
 
@@ -468,7 +468,7 @@ describe('Background Service Worker', () => {
             await new Promise(r => setTimeout(r, 150));
 
             expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-                expect.objectContaining({type: 'REFRESH_STATUS_CHANGED'})
+                expect.objectContaining({type: 'REFRESH_STATUS_CHANGED'}),
             );
         });
     });

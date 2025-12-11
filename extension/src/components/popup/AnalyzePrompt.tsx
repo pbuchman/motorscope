@@ -19,13 +19,13 @@ interface AnalyzePromptProps {
 }
 
 export const AnalyzePrompt: React.FC<AnalyzePromptProps> = ({
-                                                                hasApiKey,
-                                                                isLoading,
-                                                                hasPageData,
-                                                                error,
-                                                                onAnalyze,
-                                                                onOpenSettings,
-                                                            }) => {
+    hasApiKey,
+    isLoading,
+    hasPageData,
+    error,
+    onAnalyze,
+    onOpenSettings,
+}) => {
     const {t} = useTranslation(['popup', 'settings']);
 
     return (

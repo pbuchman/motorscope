@@ -212,7 +212,7 @@ describe('JWT Utilities', () => {
             // Test with payload that might produce + or / in base64
             const token = createMockJwt({
                 userId: 'user_with_special_chars_äöü',
-                email: 'test+special@example.com'
+                email: 'test+special@example.com',
             });
 
             const decoded = decodeJwt(token);
