@@ -6,8 +6,8 @@
  */
 
 export {
-  parseCarDataWithGemini,
-  refreshListingWithGemini,
-  RateLimitError,
-  isRateLimitError,
+    parseCarDataWithGemini,
+    refreshListingWithGemini,
+    RateLimitError,
+    isRateLimitError,
 } from './gemini';

@@ -6,32 +6,32 @@
  */
 
 // Storage infrastructure
-export { STORAGE_KEYS } from './storageKeys';
+export {STORAGE_KEYS} from './storageKeys';
 
 // Extension settings
 export {
-  DEFAULT_SETTINGS,
-  getSettings,
-  saveSettings,
-  getGeminiApiKey,
-  saveGeminiApiKey,
-  getBackendUrl,
-  saveBackendUrl,
+    DEFAULT_SETTINGS,
+    getSettings,
+    saveSettings,
+    getGeminiApiKey,
+    saveGeminiApiKey,
+    getBackendUrl,
+    saveBackendUrl,
 } from './extensionSettings';
 
 // Gemini stats & history
 export {
-  getGeminiStats,
-  getGeminiHistory,
-  recordGeminiCall,
-  clearGeminiLogs,
+    getGeminiStats,
+    getGeminiHistory,
+    recordGeminiCall,
+    clearGeminiLogs,
 } from './geminiStats';
 
 // Refresh status
 export {
-  DEFAULT_REFRESH_STATUS,
-  getRefreshStatus,
-  saveRefreshStatus,
-  updateRefreshStatus,
+    DEFAULT_REFRESH_STATUS,
+    getRefreshStatus,
+    saveRefreshStatus,
+    updateRefreshStatus,
 } from './refreshStatus';
 

@@ -5,7 +5,7 @@
  * timezone-aware deduplication for chart display.
  */
 
-import { PricePoint } from '../types';
+import {PricePoint} from '../types';
 
 /**
  * Deduplicate price points by day in user's local timezone.
@@ -18,32 +18,32 @@ import { PricePoint } from '../types';
  * @returns Deduplicated array with one price point per local day
  */
 export function deduplicatePricePointsByLocalDay(priceHistory: PricePoint[]): PricePoint[] {
-  if (!priceHistory || priceHistory.length <= 1) {
-    return priceHistory || [];
-  }
+    if (!priceHistory || priceHistory.length <= 1) {
+        return priceHistory || [];
+    }
 
-  // Get user's timezone from browser
-  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Get user's timezone from browser
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  // Group by local day (YYYY-MM-DD in user's timezone)
-  const byDay = new Map<string, PricePoint[]>();
+    // Group by local day (YYYY-MM-DD in user's timezone)
+    const byDay = new Map<string, PricePoint[]>();
 
-  priceHistory.forEach((point) => {
-    // Convert UTC timestamp to local date string (YYYY-MM-DD)
-    const localDay = new Date(point.date).toLocaleDateString('sv-SE', {
-      timeZone: userTimezone,
+    priceHistory.forEach((point) => {
+        // Convert UTC timestamp to local date string (YYYY-MM-DD)
+        const localDay = new Date(point.date).toLocaleDateString('sv-SE', {
+            timeZone: userTimezone,
+        });
+
+        if (!byDay.has(localDay)) {
+            byDay.set(localDay, []);
+        }
+        byDay.get(localDay)!.push(point);
     });
 
-    if (!byDay.has(localDay)) {
-      byDay.set(localDay, []);
-    }
-    byDay.get(localDay)!.push(point);
-  });
-
-  // Keep last point per day, sorted chronologically
-  return Array.from(byDay.entries())
-    .sort(([dayA], [dayB]) => dayA.localeCompare(dayB))
-    .map(([, points]) => points[points.length - 1]);
+    // Keep last point per day, sorted chronologically
+    return Array.from(byDay.entries())
+        .sort(([dayA], [dayB]) => dayA.localeCompare(dayB))
+        .map(([, points]) => points[points.length - 1]);
 }
 
 /**
@@ -51,9 +51,9 @@ export function deduplicatePricePointsByLocalDay(priceHistory: PricePoint[]): Pr
  * in the user's browser timezone.
  */
 export function getLocalDateString(utcDateString: string): string {
-  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return new Date(utcDateString).toLocaleDateString('sv-SE', {
-    timeZone: userTimezone,
-  });
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return new Date(utcDateString).toLocaleDateString('sv-SE', {
+        timeZone: userTimezone,
+    });
 }
 

@@ -2,7 +2,8 @@
 
 ## Overview
 
-MotorScope is a Chrome extension built with React and TypeScript. It follows a layered architecture separating UI components, business logic services, and data access.
+MotorScope is a Chrome extension built with React and TypeScript. It follows a layered architecture separating UI
+components, business logic services, and data access.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -45,12 +46,14 @@ MotorScope is a Chrome extension built with React and TypeScript. It follows a l
 Located in `src/components/`, these are pure presentational components.
 
 **Organization:**
+
 - `ui/` - Shared atomic UI components (buttons, spinners, badges)
 - `popup/` - Components specific to the popup view
 - `dashboard/` - Components specific to the dashboard view
 - Root level - Page-level and complex components
 
 **Key Components:**
+
 - `ExtensionPopup` - Main popup UI, handles analyze flow
 - `Dashboard` - Full listing management view
 - `SettingsPage` - Configuration and API key management
@@ -59,11 +62,13 @@ Located in `src/components/`, these are pure presentational components.
 ### 2. State Management
 
 **AuthContext (`src/auth/AuthContext.tsx`)**
+
 - Manages authentication state (logged_in, logged_out, loading)
 - Provides login/logout functions
 - Stores user info and JWT token
 
 **AppContext (`src/context/AppContext.tsx`)**
+
 - Manages application data (listings, settings, refresh status)
 - Handles API calls for CRUD operations
 - Provides loading and error states
@@ -72,30 +77,33 @@ Located in `src/components/`, these are pure presentational components.
 
 Located in `src/hooks/`:
 
-| Hook | Purpose |
-|------|---------|
-| `useChromeMessaging` | Send/receive Chrome runtime messages |
-| `useMessageListener` | Subscribe to runtime messages |
-| `useStorageListener` | Subscribe to storage changes |
-| `useCurrentTab` | Get current browser tab info |
-| `usePageContent` | Scrape page content from current tab |
-| `useExtensionNavigation` | Navigate to extension pages |
+| Hook                     | Purpose                              |
+|--------------------------|--------------------------------------|
+| `useChromeMessaging`     | Send/receive Chrome runtime messages |
+| `useMessageListener`     | Subscribe to runtime messages        |
+| `useStorageListener`     | Subscribe to storage changes         |
+| `useCurrentTab`          | Get current browser tab info         |
+| `usePageContent`         | Scrape page content from current tab |
+| `useExtensionNavigation` | Navigate to extension pages          |
 
 ### 4. Services
 
 Located in `src/services/`:
 
 **Gemini Service (`gemini/`)**
+
 - AI-powered car data extraction
 - Handles Gemini API calls
 - Manages prompts and response parsing
 
 **Refresh Service (`refresh/`)**
+
 - Listing data refresh logic
 - Price history updates
 - Status change detection
 
 **Settings Service (`settings/`)**
+
 - Extension configuration management
 - Refresh status tracking
 - Gemini API statistics
@@ -103,11 +111,13 @@ Located in `src/services/`:
 ### 5. Data Layer
 
 **API Client (`src/api/client.ts`)**
+
 - Authenticated requests to backend
 - Handles JWT token injection
 - Error handling for auth failures
 
 **Chrome Storage (`src/services/extensionStorage.ts`)**
+
 - Wrapper around `chrome.storage` API
 - Session storage for runtime state
 - Local storage for persistent data
@@ -115,6 +125,7 @@ Located in `src/services/`:
 ## Data Flow
 
 ### Reading Data
+
 ```
 Component → Context Hook → API Client → Backend
               ↓
@@ -124,6 +135,7 @@ Component Re-render
 ```
 
 ### Writing Data
+
 ```
 User Action → Component Handler → Context Action → API Client → Backend
                                        ↓
@@ -133,6 +145,7 @@ User Action → Component Handler → Context Action → API Client → Backend
 ```
 
 ### Chrome Messaging
+
 ```
 Popup/Dashboard → sendMessage() → Background Script
                        ↓
@@ -156,11 +169,13 @@ useStorageListener → State Update → Re-render
 ## Configuration
 
 **Marketplace Config (`src/config/marketplaces.ts`)**
+
 - Defines supported car marketplaces
 - URL patterns for offer detection
 - Domain matching rules
 
 **Auth Config (`src/auth/config.ts`)**
+
 - OAuth client ID
 - Backend API URLs
 - Endpoint paths

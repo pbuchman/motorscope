@@ -2,203 +2,203 @@
  * Tests for Listing Sorter
  */
 
-import { sortListingsByRefreshPriority } from '../sorter';
-import { CarListing, ListingStatus } from '@/types';
+import {sortListingsByRefreshPriority} from '../sorter';
+import {CarListing, ListingStatus} from '@/types';
 
 // Helper to create a minimal listing for testing
 const createListing = (overrides: Partial<CarListing> = {}): CarListing => ({
-  id: `listing_${Math.random().toString(36).substring(7)}`,
-  schemaVersion: '1.0.0',
-  source: {
-    platform: 'otomoto.pl',
-    url: 'https://otomoto.pl/test',
-    listingId: 'test123',
-    countryCode: 'PL',
-  },
-  title: 'Test Car',
-  thumbnailUrl: 'https://example.com/image.jpg',
-  currentPrice: 100000,
-  currency: 'PLN',
-  originalPrice: null,
-  negotiable: null,
-  priceHistory: [],
-  vehicle: {
-    vin: null,
-    make: 'BMW',
-    model: '320d',
-    generation: null,
-    trim: null,
-    bodyType: null,
-    productionYear: 2020,
-    firstRegistrationYear: null,
-    mileage: { value: 50000, unit: 'km' },
-    engine: {
-      capacityCc: null,
-      fuelType: 'Diesel',
-      powerKw: null,
-      powerHp: 190,
-      engineCode: null,
-      euroStandard: null,
-      hybridType: null,
+    id: `listing_${Math.random().toString(36).substring(7)}`,
+    schemaVersion: '1.0.0',
+    source: {
+        platform: 'otomoto.pl',
+        url: 'https://otomoto.pl/test',
+        listingId: 'test123',
+        countryCode: 'PL',
     },
-    drivetrain: {
-      transmissionType: 'Automatic',
-      transmissionSubtype: null,
-      gearsCount: null,
-      driveType: null,
+    title: 'Test Car',
+    thumbnailUrl: 'https://example.com/image.jpg',
+    currentPrice: 100000,
+    currency: 'PLN',
+    originalPrice: null,
+    negotiable: null,
+    priceHistory: [],
+    vehicle: {
+        vin: null,
+        make: 'BMW',
+        model: '320d',
+        generation: null,
+        trim: null,
+        bodyType: null,
+        productionYear: 2020,
+        firstRegistrationYear: null,
+        mileage: {value: 50000, unit: 'km'},
+        engine: {
+            capacityCc: null,
+            fuelType: 'Diesel',
+            powerKw: null,
+            powerHp: 190,
+            engineCode: null,
+            euroStandard: null,
+            hybridType: null,
+        },
+        drivetrain: {
+            transmissionType: 'Automatic',
+            transmissionSubtype: null,
+            gearsCount: null,
+            driveType: null,
+        },
+        condition: {
+            isNew: false,
+            isImported: null,
+            accidentFreeDeclared: null,
+            serviceHistoryDeclared: null,
+        },
+        colorAndInterior: {
+            exteriorColor: null,
+            interiorColor: null,
+            upholsteryType: null,
+        },
+        registration: {
+            plateNumber: null,
+            originCountry: null,
+            registeredInCountryCode: null,
+        },
     },
-    condition: {
-      isNew: false,
-      isImported: null,
-      accidentFreeDeclared: null,
-      serviceHistoryDeclared: null,
+    location: {
+        city: null,
+        region: null,
+        postalCode: null,
+        countryCode: 'PL',
     },
-    colorAndInterior: {
-      exteriorColor: null,
-      interiorColor: null,
-      upholsteryType: null,
+    seller: {
+        type: null,
+        name: null,
+        phone: null,
+        isCompany: null,
     },
-    registration: {
-      plateNumber: null,
-      originCountry: null,
-      registeredInCountryCode: null,
-    },
-  },
-  location: {
-    city: null,
-    region: null,
-    postalCode: null,
-    countryCode: 'PL',
-  },
-  seller: {
-    type: null,
-    name: null,
-    phone: null,
-    isCompany: null,
-  },
-  status: ListingStatus.ACTIVE,
-  postedDate: null,
-  firstSeenAt: new Date().toISOString(),
-  lastSeenAt: undefined,
-  lastRefreshStatus: undefined,
-  lastRefreshError: undefined,
-  isArchived: false,
-  ...overrides,
+    status: ListingStatus.ACTIVE,
+    postedDate: null,
+    firstSeenAt: new Date().toISOString(),
+    lastSeenAt: undefined,
+    lastRefreshStatus: undefined,
+    lastRefreshError: undefined,
+    isArchived: false,
+    ...overrides,
 });
 
 describe('Listing Sorter', () => {
-  describe('sortListingsByRefreshPriority', () => {
-    it('should return empty array for empty input', () => {
-      const result = sortListingsByRefreshPriority([]);
-      expect(result).toEqual([]);
+    describe('sortListingsByRefreshPriority', () => {
+        it('should return empty array for empty input', () => {
+            const result = sortListingsByRefreshPriority([]);
+            expect(result).toEqual([]);
+        });
+
+        it('should return same array for single item', () => {
+            const listing = createListing();
+            const result = sortListingsByRefreshPriority([listing]);
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe(listing.id);
+        });
+
+        it('should prioritize never-refreshed items first', () => {
+            const neverRefreshed = createListing({
+                lastSeenAt: undefined,
+                lastRefreshStatus: undefined,
+            });
+            const refreshedSuccess = createListing({
+                lastSeenAt: new Date().toISOString(),
+                lastRefreshStatus: 'success',
+            });
+
+            const result = sortListingsByRefreshPriority([refreshedSuccess, neverRefreshed]);
+            expect(result[0].id).toBe(neverRefreshed.id);
+            expect(result[1].id).toBe(refreshedSuccess.id);
+        });
+
+        it('should prioritize success over error', () => {
+            const success = createListing({
+                lastSeenAt: new Date().toISOString(),
+                lastRefreshStatus: 'success',
+            });
+            const error = createListing({
+                lastSeenAt: new Date().toISOString(),
+                lastRefreshStatus: 'error',
+            });
+
+            const result = sortListingsByRefreshPriority([error, success]);
+            expect(result[0].id).toBe(success.id);
+            expect(result[1].id).toBe(error.id);
+        });
+
+        it('should sort by lastSeenAt (oldest first) among same status', () => {
+            const older = createListing({
+                lastSeenAt: '2025-12-01T10:00:00.000Z',
+                lastRefreshStatus: 'success',
+            });
+            const newer = createListing({
+                lastSeenAt: '2025-12-09T10:00:00.000Z',
+                lastRefreshStatus: 'success',
+            });
+
+            const result = sortListingsByRefreshPriority([newer, older]);
+            expect(result[0].id).toBe(older.id);
+            expect(result[1].id).toBe(newer.id);
+        });
+
+        it('should handle complex sorting with mixed statuses', () => {
+            const neverRefreshed = createListing({
+                id: 'never',
+                lastSeenAt: undefined,
+                lastRefreshStatus: undefined,
+            });
+            const oldSuccess = createListing({
+                id: 'old_success',
+                lastSeenAt: '2025-12-01T10:00:00.000Z',
+                lastRefreshStatus: 'success',
+            });
+            const newSuccess = createListing({
+                id: 'new_success',
+                lastSeenAt: '2025-12-09T10:00:00.000Z',
+                lastRefreshStatus: 'success',
+            });
+            const error = createListing({
+                id: 'error',
+                lastSeenAt: '2025-12-05T10:00:00.000Z',
+                lastRefreshStatus: 'error',
+            });
+
+            const result = sortListingsByRefreshPriority([newSuccess, error, neverRefreshed, oldSuccess]);
+
+            // Order should be: never -> old_success -> new_success -> error
+            expect(result.map(l => l.id)).toEqual(['never', 'old_success', 'new_success', 'error']);
+        });
+
+        it('should not mutate original array', () => {
+            const listings = [
+                createListing({lastSeenAt: new Date().toISOString(), lastRefreshStatus: 'success'}),
+                createListing({lastSeenAt: undefined, lastRefreshStatus: undefined}),
+            ];
+            const originalOrder = [...listings.map(l => l.id)];
+
+            sortListingsByRefreshPriority(listings);
+
+            expect(listings.map(l => l.id)).toEqual(originalOrder);
+        });
+
+        it('should handle items with only lastSeenAt but no lastRefreshStatus', () => {
+            const hasSeenAt = createListing({
+                lastSeenAt: new Date().toISOString(),
+                lastRefreshStatus: undefined,
+            });
+            const hasStatus = createListing({
+                lastSeenAt: undefined,
+                lastRefreshStatus: 'success',
+            });
+
+            const result = sortListingsByRefreshPriority([hasStatus, hasSeenAt]);
+            // Both should be considered "never refreshed" due to missing one field
+            expect(result).toHaveLength(2);
+        });
     });
-
-    it('should return same array for single item', () => {
-      const listing = createListing();
-      const result = sortListingsByRefreshPriority([listing]);
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe(listing.id);
-    });
-
-    it('should prioritize never-refreshed items first', () => {
-      const neverRefreshed = createListing({
-        lastSeenAt: undefined,
-        lastRefreshStatus: undefined,
-      });
-      const refreshedSuccess = createListing({
-        lastSeenAt: new Date().toISOString(),
-        lastRefreshStatus: 'success',
-      });
-
-      const result = sortListingsByRefreshPriority([refreshedSuccess, neverRefreshed]);
-      expect(result[0].id).toBe(neverRefreshed.id);
-      expect(result[1].id).toBe(refreshedSuccess.id);
-    });
-
-    it('should prioritize success over error', () => {
-      const success = createListing({
-        lastSeenAt: new Date().toISOString(),
-        lastRefreshStatus: 'success',
-      });
-      const error = createListing({
-        lastSeenAt: new Date().toISOString(),
-        lastRefreshStatus: 'error',
-      });
-
-      const result = sortListingsByRefreshPriority([error, success]);
-      expect(result[0].id).toBe(success.id);
-      expect(result[1].id).toBe(error.id);
-    });
-
-    it('should sort by lastSeenAt (oldest first) among same status', () => {
-      const older = createListing({
-        lastSeenAt: '2025-12-01T10:00:00.000Z',
-        lastRefreshStatus: 'success',
-      });
-      const newer = createListing({
-        lastSeenAt: '2025-12-09T10:00:00.000Z',
-        lastRefreshStatus: 'success',
-      });
-
-      const result = sortListingsByRefreshPriority([newer, older]);
-      expect(result[0].id).toBe(older.id);
-      expect(result[1].id).toBe(newer.id);
-    });
-
-    it('should handle complex sorting with mixed statuses', () => {
-      const neverRefreshed = createListing({
-        id: 'never',
-        lastSeenAt: undefined,
-        lastRefreshStatus: undefined,
-      });
-      const oldSuccess = createListing({
-        id: 'old_success',
-        lastSeenAt: '2025-12-01T10:00:00.000Z',
-        lastRefreshStatus: 'success',
-      });
-      const newSuccess = createListing({
-        id: 'new_success',
-        lastSeenAt: '2025-12-09T10:00:00.000Z',
-        lastRefreshStatus: 'success',
-      });
-      const error = createListing({
-        id: 'error',
-        lastSeenAt: '2025-12-05T10:00:00.000Z',
-        lastRefreshStatus: 'error',
-      });
-
-      const result = sortListingsByRefreshPriority([newSuccess, error, neverRefreshed, oldSuccess]);
-
-      // Order should be: never -> old_success -> new_success -> error
-      expect(result.map(l => l.id)).toEqual(['never', 'old_success', 'new_success', 'error']);
-    });
-
-    it('should not mutate original array', () => {
-      const listings = [
-        createListing({ lastSeenAt: new Date().toISOString(), lastRefreshStatus: 'success' }),
-        createListing({ lastSeenAt: undefined, lastRefreshStatus: undefined }),
-      ];
-      const originalOrder = [...listings.map(l => l.id)];
-
-      sortListingsByRefreshPriority(listings);
-
-      expect(listings.map(l => l.id)).toEqual(originalOrder);
-    });
-
-    it('should handle items with only lastSeenAt but no lastRefreshStatus', () => {
-      const hasSeenAt = createListing({
-        lastSeenAt: new Date().toISOString(),
-        lastRefreshStatus: undefined,
-      });
-      const hasStatus = createListing({
-        lastSeenAt: undefined,
-        lastRefreshStatus: 'success',
-      });
-
-      const result = sortListingsByRefreshPriority([hasStatus, hasSeenAt]);
-      // Both should be considered "never refreshed" due to missing one field
-      expect(result).toHaveLength(2);
-    });
-  });
 });
 

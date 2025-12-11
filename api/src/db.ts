@@ -164,7 +164,6 @@ export async function saveAllListings(
 ): Promise<ListingDocument[]> {
     // Get existing listings to determine what to delete
     const existingListings = await getListingsByUserId(userId);
-    const existingIds = new Set(existingListings.map((l) => l.id));
     const newIds = new Set(listings.map((l) => l.id));
 
     // Use batched writes for atomicity

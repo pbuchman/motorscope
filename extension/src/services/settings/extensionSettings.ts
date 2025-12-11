@@ -8,24 +8,24 @@
  * Backend URL is stored separately in chrome.storage.local (see localServerStorage.ts).
  */
 
-import { ExtensionSettings } from '@/types';
-import { getRemoteSettings, patchRemoteSettings } from '@/api/client';
+import {ExtensionSettings} from '@/types';
+import {getRemoteSettings, patchRemoteSettings} from '@/api/client';
 
 // ============================================================================
 // Defaults & Validation
 // ============================================================================
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  geminiApiKey: '',
-  checkFrequencyMinutes: 60,
+    geminiApiKey: '',
+    checkFrequencyMinutes: 60,
 };
 
 /** Clamp frequency to valid range: 10 seconds (0.167 min) to 1 month (43200 min) */
 function clampFrequency(value?: number): number {
-  const numeric = typeof value === 'number' && !Number.isNaN(value)
-    ? value
-    : DEFAULT_SETTINGS.checkFrequencyMinutes;
-  return Math.min(43200, Math.max(0.167, numeric));
+    const numeric = typeof value === 'number' && !Number.isNaN(value)
+        ? value
+        : DEFAULT_SETTINGS.checkFrequencyMinutes;
+    return Math.min(43200, Math.max(0.167, numeric));
 }
 
 // ============================================================================
@@ -37,31 +37,31 @@ function clampFrequency(value?: number): number {
  * Returns defaults if not authenticated or on error.
  */
 export async function getSettings(): Promise<ExtensionSettings> {
-  try {
-    const remoteSettings = await getRemoteSettings();
-    return {
-      geminiApiKey: remoteSettings.geminiApiKey || '',
-      checkFrequencyMinutes: clampFrequency(remoteSettings.checkFrequencyMinutes),
-    };
-  } catch (error) {
-    console.warn('Failed to fetch settings from API:', error);
-    return DEFAULT_SETTINGS;
-  }
+    try {
+        const remoteSettings = await getRemoteSettings();
+        return {
+            geminiApiKey: remoteSettings.geminiApiKey || '',
+            checkFrequencyMinutes: clampFrequency(remoteSettings.checkFrequencyMinutes),
+        };
+    } catch (error) {
+        console.warn('Failed to fetch settings from API:', error);
+        return DEFAULT_SETTINGS;
+    }
 }
 
 /**
  * Save all extension settings to the API.
  */
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {
-  try {
-    await patchRemoteSettings({
-      geminiApiKey: settings.geminiApiKey,
-      checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
-    });
-  } catch (error) {
-    console.warn('Failed to save settings to API:', error);
-    throw error;
-  }
+    try {
+        await patchRemoteSettings({
+            geminiApiKey: settings.geminiApiKey,
+            checkFrequencyMinutes: clampFrequency(settings.checkFrequencyMinutes),
+        });
+    } catch (error) {
+        console.warn('Failed to save settings to API:', error);
+        throw error;
+    }
 }
 
 // ============================================================================
@@ -72,26 +72,26 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
  * Get Gemini API key from the API.
  */
 export async function getGeminiApiKey(): Promise<string> {
-  const settings = await getSettings();
-  return settings.geminiApiKey;
+    const settings = await getSettings();
+    return settings.geminiApiKey;
 }
 
 /**
  * Save Gemini API key to the API.
  */
 export async function saveGeminiApiKey(key: string): Promise<void> {
-  await patchRemoteSettings({ geminiApiKey: key.trim() });
+    await patchRemoteSettings({geminiApiKey: key.trim()});
 }
 
 /**
  * Get backend URL from local storage.
  * @deprecated Use getBackendServerUrl from localServerStorage.ts instead
  */
-export { getBackendServerUrl as getBackendUrl } from '../../auth/localServerStorage';
+export {getBackendServerUrl as getBackendUrl} from '../../auth/localServerStorage';
 
 /**
  * Save backend URL to local storage.
  * @deprecated Use setBackendServerUrl from localServerStorage.ts instead
  */
-export { setBackendServerUrl as saveBackendUrl } from '../../auth/localServerStorage';
+export {setBackendServerUrl as saveBackendUrl} from '../../auth/localServerStorage';
 

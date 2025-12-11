@@ -9,7 +9,7 @@
  * Check if Chrome Identity API is available
  */
 export const hasIdentityApi = (): boolean => {
-  return typeof chrome !== 'undefined' && !!chrome.identity;
+    return typeof chrome !== 'undefined' && !!chrome.identity;
 };
 
 /**
@@ -25,28 +25,28 @@ export const hasIdentityApi = (): boolean => {
  * @throws Error if token cannot be obtained
  */
 export const getGoogleToken = async (interactive: boolean): Promise<string> => {
-  if (!hasIdentityApi()) {
-    throw new Error('Chrome Identity API not available');
-  }
+    if (!hasIdentityApi()) {
+        throw new Error('Chrome Identity API not available');
+    }
 
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive }, (token) => {
-      if (chrome.runtime.lastError) {
-        const errorMessage = chrome.runtime.lastError.message || 'Failed to get Google token';
-        console.log(`[GoogleAuth] getAuthToken failed (interactive: ${interactive}):`, errorMessage);
-        reject(new Error(errorMessage));
-        return;
-      }
+    return new Promise((resolve, reject) => {
+        chrome.identity.getAuthToken({interactive}, (token) => {
+            if (chrome.runtime.lastError) {
+                const errorMessage = chrome.runtime.lastError.message || 'Failed to get Google token';
+                console.log(`[GoogleAuth] getAuthToken failed (interactive: ${interactive}):`, errorMessage);
+                reject(new Error(errorMessage));
+                return;
+            }
 
-      if (!token) {
-        reject(new Error('No token returned from Chrome Identity API'));
-        return;
-      }
+            if (!token) {
+                reject(new Error('No token returned from Chrome Identity API'));
+                return;
+            }
 
-      console.log(`[GoogleAuth] Got token (interactive: ${interactive})`);
-      resolve(token);
+            console.log(`[GoogleAuth] Got token (interactive: ${interactive})`);
+            resolve(token);
+        });
     });
-  });
 };
 
 /**
@@ -54,7 +54,7 @@ export const getGoogleToken = async (interactive: boolean): Promise<string> => {
  * Used for initial login
  */
 export const getGoogleTokenInteractive = async (): Promise<string> => {
-  return getGoogleToken(true);
+    return getGoogleToken(true);
 };
 
 /**
@@ -63,12 +63,12 @@ export const getGoogleTokenInteractive = async (): Promise<string> => {
  * Returns null if silent auth fails (instead of throwing)
  */
 export const getGoogleTokenSilent = async (): Promise<string | null> => {
-  try {
-    return await getGoogleToken(false);
-  } catch (error) {
-    console.log('[GoogleAuth] Silent token acquisition failed:', error);
-    return null;
-  }
+    try {
+        return await getGoogleToken(false);
+    } catch (error) {
+        console.log('[GoogleAuth] Silent token acquisition failed:', error);
+        return null;
+    }
 };
 
 /**
@@ -78,16 +78,16 @@ export const getGoogleTokenSilent = async (): Promise<string | null> => {
  * @param token - The token to remove from cache
  */
 export const removeCachedGoogleToken = async (token: string): Promise<void> => {
-  if (!hasIdentityApi()) {
-    return;
-  }
+    if (!hasIdentityApi()) {
+        return;
+    }
 
-  return new Promise((resolve) => {
-    chrome.identity.removeCachedAuthToken({ token }, () => {
-      console.log('[GoogleAuth] Removed cached token');
-      resolve();
+    return new Promise((resolve) => {
+        chrome.identity.removeCachedAuthToken({token}, () => {
+            console.log('[GoogleAuth] Removed cached token');
+            resolve();
+        });
     });
-  });
 };
 
 /**
@@ -97,13 +97,13 @@ export const removeCachedGoogleToken = async (token: string): Promise<void> => {
  * @param token - The token to revoke
  */
 export const revokeGoogleToken = async (token: string): Promise<void> => {
-  try {
-    await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
-    console.log('[GoogleAuth] Token revoked with Google');
-  } catch (error) {
-    // Ignore errors - token might already be invalid
-    console.log('[GoogleAuth] Token revocation failed (may already be invalid):', error);
-  }
+    try {
+        await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
+        console.log('[GoogleAuth] Token revoked with Google');
+    } catch (error) {
+        // Ignore errors - token might already be invalid
+        console.log('[GoogleAuth] Token revocation failed (may already be invalid):', error);
+    }
 };
 
 /**
@@ -121,23 +121,23 @@ export const revokeGoogleToken = async (token: string): Promise<void> => {
  * or security incidents.
  */
 export const clearGoogleAuth = async (): Promise<void> => {
-  if (!hasIdentityApi()) {
-    return;
-  }
+    if (!hasIdentityApi()) {
+        return;
+    }
 
-  return new Promise((resolve) => {
-    // Get current token to clear it from Chrome's cache
-    chrome.identity.getAuthToken({ interactive: false }, async (token) => {
-      if (token) {
-        // Remove from Chrome's cache only - DO NOT revoke with Google
-        // Revoking with Google would invalidate the user's consent grant,
-        // causing them to see the consent screen again on next login
-        await removeCachedGoogleToken(token);
-        console.log('[GoogleAuth] Cleared cached token (consent preserved)');
-      }
-      resolve();
+    return new Promise((resolve) => {
+        // Get current token to clear it from Chrome's cache
+        chrome.identity.getAuthToken({interactive: false}, async (token) => {
+            if (token) {
+                // Remove from Chrome's cache only - DO NOT revoke with Google
+                // Revoking with Google would invalidate the user's consent grant,
+                // causing them to see the consent screen again on next login
+                await removeCachedGoogleToken(token);
+                console.log('[GoogleAuth] Cleared cached token (consent preserved)');
+            }
+            resolve();
+        });
     });
-  });
 };
 
 /**
@@ -149,21 +149,21 @@ export const clearGoogleAuth = async (): Promise<void> => {
  * After calling this, the user will see the full consent screen on next login.
  */
 export const disconnectGoogleAccount = async (): Promise<void> => {
-  if (!hasIdentityApi()) {
-    return;
-  }
+    if (!hasIdentityApi()) {
+        return;
+    }
 
-  return new Promise((resolve) => {
-    chrome.identity.getAuthToken({ interactive: false }, async (token) => {
-      if (token) {
-        // Remove from Chrome's cache
-        await removeCachedGoogleToken(token);
-        // Revoke consent with Google - user will see consent screen again
-        await revokeGoogleToken(token);
-        console.log('[GoogleAuth] Disconnected Google account (consent revoked)');
-      }
-      resolve();
+    return new Promise((resolve) => {
+        chrome.identity.getAuthToken({interactive: false}, async (token) => {
+            if (token) {
+                // Remove from Chrome's cache
+                await removeCachedGoogleToken(token);
+                // Revoke consent with Google - user will see consent screen again
+                await revokeGoogleToken(token);
+                console.log('[GoogleAuth] Disconnected Google account (consent revoked)');
+            }
+            resolve();
+        });
     });
-  });
 };
 

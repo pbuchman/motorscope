@@ -6,7 +6,7 @@
  */
 
 import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
+import {initReactI18next} from 'react-i18next';
 
 // Import English translation resources
 import commonEn from './locales/en/common.json';
@@ -28,56 +28,56 @@ import errorsPl from './locales/pl/errors.json';
 
 // Resource configuration
 const resources = {
-  en: {
-    common: commonEn,
-    dashboard: dashboardEn,
-    popup: popupEn,
-    settings: settingsEn,
-    listing: listingEn,
-    auth: authEn,
-    errors: errorsEn,
-  },
-  pl: {
-    common: commonPl,
-    dashboard: dashboardPl,
-    popup: popupPl,
-    settings: settingsPl,
-    listing: listingPl,
-    auth: authPl,
-    errors: errorsPl,
-  },
+    en: {
+        common: commonEn,
+        dashboard: dashboardEn,
+        popup: popupEn,
+        settings: settingsEn,
+        listing: listingEn,
+        auth: authEn,
+        errors: errorsEn,
+    },
+    pl: {
+        common: commonPl,
+        dashboard: dashboardPl,
+        popup: popupPl,
+        settings: settingsPl,
+        listing: listingPl,
+        auth: authPl,
+        errors: errorsPl,
+    },
 };
 
 // Available namespaces
 export const namespaces = [
-  'common',
-  'dashboard',
-  'popup',
-  'settings',
-  'listing',
-  'auth',
-  'errors',
+    'common',
+    'dashboard',
+    'popup',
+    'settings',
+    'listing',
+    'auth',
+    'errors',
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];
 
 // Initialize i18next
 i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: 'en', // Default language
-    fallbackLng: 'en', // Fallback language
-    defaultNS: 'common', // Default namespace
-    ns: namespaces,
+    .use(initReactI18next)
+    .init({
+        resources,
+        lng: 'en', // Default language
+        fallbackLng: 'en', // Fallback language
+        defaultNS: 'common', // Default namespace
+        ns: namespaces,
 
-    interpolation: {
-      escapeValue: false, // React already escapes values
-    },
+        interpolation: {
+            escapeValue: false, // React already escapes values
+        },
 
-    // Debug mode (disable in production)
-    debug: false,
-  });
+        // Debug mode (disable in production)
+        debug: false,
+    });
 
 export default i18n;
 

@@ -5,20 +5,20 @@
  * Lighter operation than full parsing - only extracts price and availability.
  */
 
-import { ListingStatus } from "@/types";
-import { createGeminiClient } from "./client";
-import { refreshSchema } from "./schemas";
-import { buildRefreshPrompt } from "./prompts";
-import { recordSuccess, recordError } from "./history";
-import { RateLimitError, isRateLimitError } from "./errors";
+import {ListingStatus} from "@/types";
+import {createGeminiClient} from "./client";
+import {refreshSchema} from "./schemas";
+import {buildRefreshPrompt} from "./prompts";
+import {recordError, recordSuccess} from "./history";
+import {isRateLimitError, RateLimitError} from "./errors";
 
 /**
  * Result of a listing refresh operation
  */
 export interface RefreshResult {
-  price: number;
-  currency: string;
-  status: ListingStatus;
+    price: number;
+    currency: string;
+    status: ListingStatus;
 }
 
 /**
@@ -32,76 +32,76 @@ export interface RefreshResult {
  * @throws Error for other failures
  */
 export async function refreshListingWithGemini(
-  url: string,
-  pageText: string,
-  pageTitle: string
+    url: string,
+    pageText: string,
+    pageTitle: string
 ): Promise<RefreshResult> {
-  if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
-    throw new Error("Page content is empty or invalid");
-  }
-
-  const ai = await createGeminiClient();
-  const prompt = buildRefreshPrompt(pageTitle, url, pageText);
-
-  let response;
-  try {
-    response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: refreshSchema,
-      },
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    await recordError(url, prompt, errorMessage);
-
-    // Wrap rate limit errors
-    if (isRateLimitError(errorMessage)) {
-      throw new RateLimitError(errorMessage);
+    if (!pageText || typeof pageText !== 'string' || pageText.trim().length === 0) {
+        throw new Error("Page content is empty or invalid");
     }
-    throw error;
-  }
 
-  if (!response.text) {
-    const errorMessage = "No response from AI";
-    await recordError(url, prompt, errorMessage);
-    throw new Error(errorMessage);
-  }
+    const ai = await createGeminiClient();
+    const prompt = buildRefreshPrompt(pageTitle, url, pageText);
 
-  let data;
-  try {
-    data = JSON.parse(response.text);
-  } catch (parseError) {
-    const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
-    await recordError(url, prompt, `JSON parse error: ${errorMessage}`);
-    throw parseError;
-  }
+    let response;
+    try {
+        response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: refreshSchema,
+            },
+        });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        await recordError(url, prompt, errorMessage);
 
-  // Build response object for logging
-  const fullResponse = {
-    text: response.text,
-    parsedData: data,
-    // @ts-ignore - SDK may expose these properties
-    usageMetadata: response.usageMetadata || null,
-    // @ts-ignore
-    modelVersion: response.modelVersion || "gemini-2.5-flash",
-  };
+        // Wrap rate limit errors
+        if (isRateLimitError(errorMessage)) {
+            throw new RateLimitError(errorMessage);
+        }
+        throw error;
+    }
 
-  await recordSuccess(url, prompt, fullResponse);
+    if (!response.text) {
+        const errorMessage = "No response from AI";
+        await recordError(url, prompt, errorMessage);
+        throw new Error(errorMessage);
+    }
 
-  // Determine listing status
-  let status = ListingStatus.ACTIVE;
-  if (data.isSold === true) {
-    status = ListingStatus.ENDED;
-  } else if (data.isAvailable === false) {
-    status = ListingStatus.ENDED;
-  }
+    let data;
+    try {
+        data = JSON.parse(response.text);
+    } catch (parseError) {
+        const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+        await recordError(url, prompt, `JSON parse error: ${errorMessage}`);
+        throw parseError;
+    }
 
-  return {
-    price: typeof data.price === 'number' && data.price > 0 ? data.price : 0,
-    currency: data.currency || 'PLN',
-    status,
-  };
+    // Build response object for logging
+    const fullResponse = {
+        text: response.text,
+        parsedData: data,
+        // @ts-ignore - SDK may expose these properties
+        usageMetadata: response.usageMetadata || null,
+        // @ts-ignore
+        modelVersion: response.modelVersion || "gemini-2.5-flash",
+    };
+
+    await recordSuccess(url, prompt, fullResponse);
+
+    // Determine listing status
+    let status = ListingStatus.ACTIVE;
+    if (data.isSold === true) {
+        status = ListingStatus.ENDED;
+    } else if (data.isAvailable === false) {
+        status = ListingStatus.ENDED;
+    }
+
+    return {
+        price: typeof data.price === 'number' && data.price > 0 ? data.price : 0,
+        currency: data.currency || 'PLN',
+        status,
+    };
 }

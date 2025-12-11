@@ -47,33 +47,34 @@ export interface GoogleTokenPayload {
  * @throws Error if token is invalid or expired
  */
 export async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPayload> {
+    let ticket;
     try {
-        const ticket = await oauthClient.verifyIdToken({
+        ticket = await oauthClient.verifyIdToken({
             idToken,
             audience: OAUTH_CLIENT_ID,
         });
-
-        const payload = ticket.getPayload();
-
-        if (!payload) {
-            throw new Error('Token payload is empty');
-        }
-
-        if (!payload.sub || !payload.email) {
-            throw new Error('Token missing required fields (sub, email)');
-        }
-
-        return {
-            sub: payload.sub,
-            email: payload.email,
-            email_verified: payload.email_verified,
-            name: payload.name,
-            picture: payload.picture,
-        };
     } catch (error) {
         console.error('Google token verification failed:', error);
         throw new Error('Invalid or expired Google token');
     }
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+        throw new Error('Token payload is empty');
+    }
+
+    if (!payload.sub || !payload.email) {
+        throw new Error('Token missing required fields (sub, email)');
+    }
+
+    return {
+        sub: payload.sub,
+        email: payload.email,
+        email_verified: payload.email_verified,
+        name: payload.name,
+        picture: payload.picture,
+    };
 }
 
 /**
@@ -87,40 +88,41 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPay
  * @throws Error if token is invalid or expired
  */
 export async function verifyGoogleAccessToken(accessToken: string): Promise<GoogleTokenPayload> {
+    let response;
     try {
-        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
             },
         });
-
-        if (!response.ok) {
-            throw new Error(`Google userinfo request failed: ${response.status}`);
-        }
-
-        const userInfo = await response.json() as {
-            sub?: string;
-            email?: string;
-            email_verified?: boolean;
-            name?: string;
-            picture?: string;
-        };
-
-        if (!userInfo.sub || !userInfo.email) {
-            throw new Error('User info missing required fields (sub, email)');
-        }
-
-        return {
-            sub: userInfo.sub,
-            email: userInfo.email,
-            email_verified: userInfo.email_verified,
-            name: userInfo.name,
-            picture: userInfo.picture,
-        };
     } catch (error) {
         console.error('Google access token verification failed:', error);
         throw new Error('Invalid or expired Google access token');
     }
+
+    if (!response.ok) {
+        throw new Error(`Google userinfo request failed: ${response.status}`);
+    }
+
+    const userInfo = await response.json() as {
+        sub?: string;
+        email?: string;
+        email_verified?: boolean;
+        name?: string;
+        picture?: string;
+    };
+
+    if (!userInfo.sub || !userInfo.email) {
+        throw new Error('User info missing required fields (sub, email)');
+    }
+
+    return {
+        sub: userInfo.sub,
+        email: userInfo.email,
+        email_verified: userInfo.email_verified,
+        name: userInfo.name,
+        picture: userInfo.picture,
+    };
 }
 
 // =============================================================================
@@ -172,8 +174,7 @@ export function verifyJwt(token: string): JwtPayload {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-        return decoded;
+        return jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
             throw new Error('Token has expired');
