@@ -144,7 +144,9 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
               return;
             }
 
-            // Extract text content from HTML
+            // Extract text content from HTML for AI analysis
+            // Note: This is NOT for DOM insertion - only for text extraction to send to Gemini API
+            // The HTML sanitization here is basic because we only need plain text, not secure HTML
             const textContent = pageData.html
               .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -210,6 +212,8 @@ async function fetchListingPageWithFetch(url: string): Promise<FetchPageResult> 
     const pageTitle = titleMatch ? titleMatch[1].trim() : '';
 
     // Strip HTML for text content (scripts, styles, tags)
+    // Note: This is NOT for DOM insertion - only for text extraction to send to Gemini API
+    // The HTML sanitization here is basic because we only need plain text, not secure HTML
     const textContent = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
