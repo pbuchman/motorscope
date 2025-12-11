@@ -40,8 +40,8 @@ jest.mock('../priceHistory', () => ({
 }));
 
 import { refreshSingleListing } from '../refreshListing';
-import { refreshListingWithGemini, RateLimitError } from '../../gemini';
-import { fetchListingPage, FetchError } from '../fetcher';
+import { refreshListingWithGemini } from '../../gemini';
+import { fetchListingPage } from '../fetcher';
 import { updateDailyPriceHistory, hasPriceChangedFromPreviousDay } from '../priceHistory';
 import { CarListing, ListingStatus } from '@/types';
 
@@ -419,4 +419,3 @@ describe('Refresh Listing Service', () => {
     });
   });
 });
-

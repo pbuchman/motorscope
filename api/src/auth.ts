@@ -7,19 +7,21 @@
  * - Request authentication middleware
  */
 
-import { Request, Response, NextFunction } from 'express';
+import {NextFunction, Request, Response} from 'express';
 import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
-import { JWT_SECRET, JWT_EXPIRATION, OAUTH_CLIENT_ID } from './config.js';
-import type { JwtPayload } from './types.js';
+import {OAuth2Client} from 'google-auth-library';
+import {JWT_EXPIRATION, JWT_SECRET, OAUTH_CLIENT_ID} from './config.js';
+import type {JwtPayload} from './types.js';
+import crypto from 'crypto';
+import {isTokenBlacklisted} from './db.js';
 
 // Extend Express Request type to include user info
 declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
+    namespace Express {
+        interface Request {
+            user?: JwtPayload;
+        }
     }
-  }
 }
 
 // Google OAuth client for token verification
@@ -30,11 +32,11 @@ const oauthClient = new OAuth2Client(OAUTH_CLIENT_ID);
 // =============================================================================
 
 export interface GoogleTokenPayload {
-  sub: string; // Unique Google user ID
-  email: string;
-  email_verified?: boolean;
-  name?: string;
-  picture?: string;
+    sub: string; // Unique Google user ID
+    email: string;
+    email_verified?: boolean;
+    name?: string;
+    picture?: string;
 }
 
 /**
@@ -45,33 +47,33 @@ export interface GoogleTokenPayload {
  * @throws Error if token is invalid or expired
  */
 export async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPayload> {
-  try {
-    const ticket = await oauthClient.verifyIdToken({
-      idToken,
-      audience: OAUTH_CLIENT_ID,
-    });
+    try {
+        const ticket = await oauthClient.verifyIdToken({
+            idToken,
+            audience: OAUTH_CLIENT_ID,
+        });
 
-    const payload = ticket.getPayload();
+        const payload = ticket.getPayload();
 
-    if (!payload) {
-      throw new Error('Token payload is empty');
+        if (!payload) {
+            throw new Error('Token payload is empty');
+        }
+
+        if (!payload.sub || !payload.email) {
+            throw new Error('Token missing required fields (sub, email)');
+        }
+
+        return {
+            sub: payload.sub,
+            email: payload.email,
+            email_verified: payload.email_verified,
+            name: payload.name,
+            picture: payload.picture,
+        };
+    } catch (error) {
+        console.error('Google token verification failed:', error);
+        throw new Error('Invalid or expired Google token');
     }
-
-    if (!payload.sub || !payload.email) {
-      throw new Error('Token missing required fields (sub, email)');
-    }
-
-    return {
-      sub: payload.sub,
-      email: payload.email,
-      email_verified: payload.email_verified,
-      name: payload.name,
-      picture: payload.picture,
-    };
-  } catch (error) {
-    console.error('Google token verification failed:', error);
-    throw new Error('Invalid or expired Google token');
-  }
 }
 
 /**
@@ -85,54 +87,51 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPay
  * @throws Error if token is invalid or expired
  */
 export async function verifyGoogleAccessToken(accessToken: string): Promise<GoogleTokenPayload> {
-  try {
-    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
+    try {
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
 
-    if (!response.ok) {
-      throw new Error(`Google userinfo request failed: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`Google userinfo request failed: ${response.status}`);
+        }
+
+        const userInfo = await response.json() as {
+            sub?: string;
+            email?: string;
+            email_verified?: boolean;
+            name?: string;
+            picture?: string;
+        };
+
+        if (!userInfo.sub || !userInfo.email) {
+            throw new Error('User info missing required fields (sub, email)');
+        }
+
+        return {
+            sub: userInfo.sub,
+            email: userInfo.email,
+            email_verified: userInfo.email_verified,
+            name: userInfo.name,
+            picture: userInfo.picture,
+        };
+    } catch (error) {
+        console.error('Google access token verification failed:', error);
+        throw new Error('Invalid or expired Google access token');
     }
-
-    const userInfo = await response.json() as {
-      sub?: string;
-      email?: string;
-      email_verified?: boolean;
-      name?: string;
-      picture?: string;
-    };
-
-    if (!userInfo.sub || !userInfo.email) {
-      throw new Error('User info missing required fields (sub, email)');
-    }
-
-    return {
-      sub: userInfo.sub,
-      email: userInfo.email,
-      email_verified: userInfo.email_verified,
-      name: userInfo.name,
-      picture: userInfo.picture,
-    };
-  } catch (error) {
-    console.error('Google access token verification failed:', error);
-    throw new Error('Invalid or expired Google access token');
-  }
 }
 
 // =============================================================================
 // JWT Token Operations
 // =============================================================================
 
-import crypto from 'crypto';
-import { isTokenBlacklisted } from './db.js';
-
 /**
  * Generate a unique JWT ID (jti)
  */
 function generateJti(): string {
-  return crypto.randomUUID();
+    return crypto.randomUUID();
 }
 
 /**
@@ -143,21 +142,21 @@ function generateJti(): string {
  * @returns Signed JWT token
  */
 export function generateJwt(userId: string, email: string): string {
-  if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured');
-  }
+    if (!JWT_SECRET) {
+        throw new Error('JWT_SECRET is not configured');
+    }
 
-  const jti = generateJti();
+    const jti = generateJti();
 
-  const payload: JwtPayload = {
-    userId,
-    email,
-    jti,
-  };
+    const payload: JwtPayload = {
+        userId,
+        email,
+        jti,
+    };
 
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRATION,
-  });
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: JWT_EXPIRATION,
+    });
 }
 
 /**
@@ -168,22 +167,22 @@ export function generateJwt(userId: string, email: string): string {
  * @throws Error if token is invalid or expired
  */
 export function verifyJwt(token: string): JwtPayload {
-  if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured');
-  }
+    if (!JWT_SECRET) {
+        throw new Error('JWT_SECRET is not configured');
+    }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    return decoded;
-  } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      throw new Error('Token has expired');
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        return decoded;
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            throw new Error('Token has expired');
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            throw new Error('Invalid token');
+        }
+        throw error;
     }
-    if (error instanceof jwt.JsonWebTokenError) {
-      throw new Error('Invalid token');
-    }
-    throw error;
-  }
 }
 
 /**
@@ -194,28 +193,28 @@ export function verifyJwt(token: string): JwtPayload {
  * @throws Error if token is invalid, expired, or blacklisted
  */
 export async function verifyJwtWithBlacklistCheck(token: string): Promise<JwtPayload> {
-  const payload = verifyJwt(token);
+    const payload = verifyJwt(token);
 
-  // Check if token is blacklisted (only if it has a jti)
-  if (payload.jti) {
-    const blacklisted = await isTokenBlacklisted(payload.jti);
-    if (blacklisted) {
-      throw new Error('Token has been revoked');
+    // Check if token is blacklisted (only if it has a jti)
+    if (payload.jti) {
+        const blacklisted = await isTokenBlacklisted(payload.jti);
+        if (blacklisted) {
+            throw new Error('Token has been revoked');
+        }
     }
-  }
 
-  return payload;
+    return payload;
 }
 
 /**
  * Extract expiration date from a JWT payload
  */
 export function getTokenExpiration(payload: JwtPayload): Date {
-  if (payload.exp) {
-    return new Date(payload.exp * 1000);
-  }
-  // Default to 24 hours from now if no exp
-  return new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (payload.exp) {
+        return new Date(payload.exp * 1000);
+    }
+    // Default to 24 hours from now if no exp
+    return new Date(Date.now() + 24 * 60 * 60 * 1000);
 }
 
 // =============================================================================
@@ -231,47 +230,47 @@ export function getTokenExpiration(payload: JwtPayload): Date {
  * On failure: Returns 401 Unauthorized
  */
 export function authMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
 ): void {
-  const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Authorization header is required',
-      statusCode: 401,
-    });
-    return;
-  }
+    if (!authHeader) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Authorization header is required',
+            statusCode: 401,
+        });
+        return;
+    }
 
-  // Extract token from "Bearer <token>"
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Authorization header must be: Bearer <token>',
-      statusCode: 401,
-    });
-    return;
-  }
+    // Extract token from "Bearer <token>"
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Authorization header must be: Bearer <token>',
+            statusCode: 401,
+        });
+        return;
+    }
 
-  const token = parts[1];
+    const token = parts[1];
 
-  // Use async verification with blacklist check
-  verifyJwtWithBlacklistCheck(token)
-    .then((payload) => {
-      req.user = payload;
-      next();
-    })
-    .catch((error) => {
-      const message = error instanceof Error ? error.message : 'Authentication failed';
-      res.status(401).json({
-        error: 'Unauthorized',
-        message,
-        statusCode: 401,
-      });
-    });
+    // Use async verification with blacklist check
+    verifyJwtWithBlacklistCheck(token)
+        .then((payload) => {
+            req.user = payload;
+            next();
+        })
+        .catch((error) => {
+            const message = error instanceof Error ? error.message : 'Authentication failed';
+            res.status(401).json({
+                error: 'Unauthorized',
+                message,
+                statusCode: 401,
+            });
+        });
 }
 

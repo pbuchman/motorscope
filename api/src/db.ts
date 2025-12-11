@@ -15,22 +15,30 @@
  * 2. Ensure "listings" collection has an index on "userId" (Ascending)
  */
 
-import { Firestore } from '@google-cloud/firestore';
+import {Firestore, Timestamp} from '@google-cloud/firestore';
 import {
-  GCP_PROJECT_ID,
-  FIRESTORE_DATABASE_ID,
-  FIRESTORE_USERS_COLLECTION,
-  FIRESTORE_LISTINGS_COLLECTION,
-  FIRESTORE_LISTINGS_USER_FIELD,
-  FIRESTORE_GEMINI_HISTORY_COLLECTION,
+    FIRESTORE_DATABASE_ID,
+    FIRESTORE_GEMINI_HISTORY_COLLECTION,
+    FIRESTORE_LISTINGS_COLLECTION,
+    FIRESTORE_LISTINGS_USER_FIELD,
+    FIRESTORE_TOKEN_BLACKLIST_COLLECTION,
+    FIRESTORE_USERS_COLLECTION,
+    GCP_PROJECT_ID,
 } from './config.js';
-import type { User, ListingDocument, CarListing, UserSettings, GeminiCallHistoryEntry, GeminiHistoryDocument } from './types.js';
+import type {
+    CarListing,
+    GeminiCallHistoryEntry,
+    GeminiHistoryDocument,
+    ListingDocument,
+    User,
+    UserSettings
+} from './types.js';
 
 // Initialize Firestore with ADC
 // Cloud Run automatically provides credentials via the service account
 const firestore = new Firestore({
-  projectId: GCP_PROJECT_ID,
-  databaseId: FIRESTORE_DATABASE_ID,
+    projectId: GCP_PROJECT_ID,
+    databaseId: FIRESTORE_DATABASE_ID,
 });
 
 // Collection references
@@ -45,11 +53,11 @@ const listingsCollection = firestore.collection(FIRESTORE_LISTINGS_COLLECTION);
  * Get a user by their internal ID
  */
 export async function getUserById(userId: string): Promise<User | null> {
-  const doc = await usersCollection.doc(userId).get();
-  if (!doc.exists) {
-    return null;
-  }
-  return doc.data() as User;
+    const doc = await usersCollection.doc(userId).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return doc.data() as User;
 }
 
 /**
@@ -57,23 +65,23 @@ export async function getUserById(userId: string): Promise<User | null> {
  * Used during authentication to upsert user on login
  */
 export async function upsertUser(user: User): Promise<User> {
-  const docRef = usersCollection.doc(user.id);
-  const existingDoc = await docRef.get();
+    const docRef = usersCollection.doc(user.id);
+    const existingDoc = await docRef.get();
 
-  if (existingDoc.exists) {
-    // Update existing user - only update lastLoginAt
-    await docRef.update({
-      lastLoginAt: user.lastLoginAt,
-      // Update displayName if provided and different
-      ...(user.displayName && { displayName: user.displayName }),
-    });
-    const updated = await docRef.get();
-    return updated.data() as User;
-  } else {
-    // Create new user
-    await docRef.set(user);
-    return user;
-  }
+    if (existingDoc.exists) {
+        // Update existing user - only update lastLoginAt
+        await docRef.update({
+            lastLoginAt: user.lastLoginAt,
+            // Update displayName if provided and different
+            ...(user.displayName && {displayName: user.displayName}),
+        });
+        const updated = await docRef.get();
+        return updated.data() as User;
+    } else {
+        // Create new user
+        await docRef.set(user);
+        return user;
+    }
 }
 
 // =============================================================================
@@ -88,62 +96,62 @@ export async function upsertUser(user: User): Promise<User> {
  * automatically created. No composite index required.
  */
 export async function getListingsByUserId(userId: string): Promise<ListingDocument[]> {
-  // Query listings where userId matches
-  // This uses the single-field index on FIRESTORE_LISTINGS_USER_FIELD
-  const snapshot = await listingsCollection
-    .where(FIRESTORE_LISTINGS_USER_FIELD, '==', userId)
-    .get();
+    // Query listings where userId matches
+    // This uses the single-field index on FIRESTORE_LISTINGS_USER_FIELD
+    const snapshot = await listingsCollection
+        .where(FIRESTORE_LISTINGS_USER_FIELD, '==', userId)
+        .get();
 
-  const listings: ListingDocument[] = [];
-  snapshot.forEach((doc) => {
-    listings.push({
-      ...doc.data() as ListingDocument,
-      docId: doc.id,
+    const listings: ListingDocument[] = [];
+    snapshot.forEach((doc) => {
+        listings.push({
+            ...doc.data() as ListingDocument,
+            docId: doc.id,
+        });
     });
-  });
 
-  return listings;
+    return listings;
 }
 
 /**
  * Get a single listing by ID for a specific user
  */
 export async function getListingById(
-  listingId: string,
-  userId: string
+    listingId: string,
+    userId: string
 ): Promise<ListingDocument | null> {
-  const doc = await listingsCollection.doc(listingId).get();
+    const doc = await listingsCollection.doc(listingId).get();
 
-  if (!doc.exists) {
-    return null;
-  }
+    if (!doc.exists) {
+        return null;
+    }
 
-  const listing = doc.data() as ListingDocument;
+    const listing = doc.data() as ListingDocument;
 
-  // Verify ownership
-  if (listing.userId !== userId) {
-    return null;
-  }
+    // Verify ownership
+    if (listing.userId !== userId) {
+        return null;
+    }
 
-  return { ...listing, docId: doc.id };
+    return {...listing, docId: doc.id};
 }
 
 /**
  * Save or update a single listing
  */
 export async function saveListing(
-  listing: CarListing,
-  userId: string
+    listing: CarListing,
+    userId: string
 ): Promise<ListingDocument> {
-  const listingDoc: ListingDocument = {
-    ...listing,
-    userId,
-  };
+    const listingDoc: ListingDocument = {
+        ...listing,
+        userId,
+    };
 
-  // Use listing.id as the document ID for easy lookup
-  await listingsCollection.doc(listing.id).set(listingDoc);
+    // Use listing.id as the document ID for easy lookup
+    await listingsCollection.doc(listing.id).set(listingDoc);
 
-  return listingDoc;
+    return listingDoc;
 }
 
 /**
@@ -151,56 +159,56 @@ export async function saveListing(
  * This replaces all listings for the user with the provided list
  */
 export async function saveAllListings(
-  listings: CarListing[],
-  userId: string
+    listings: CarListing[],
+    userId: string
 ): Promise<ListingDocument[]> {
-  // Get existing listings to determine what to delete
-  const existingListings = await getListingsByUserId(userId);
-  const existingIds = new Set(existingListings.map((l) => l.id));
-  const newIds = new Set(listings.map((l) => l.id));
+    // Get existing listings to determine what to delete
+    const existingListings = await getListingsByUserId(userId);
+    const existingIds = new Set(existingListings.map((l) => l.id));
+    const newIds = new Set(listings.map((l) => l.id));
 
-  // Use batched writes for atomicity
-  const batch = firestore.batch();
+    // Use batched writes for atomicity
+    const batch = firestore.batch();
 
-  // Delete listings that are no longer in the new list
-  for (const existing of existingListings) {
-    if (!newIds.has(existing.id)) {
-      batch.delete(listingsCollection.doc(existing.id));
+    // Delete listings that are no longer in the new list
+    for (const existing of existingListings) {
+        if (!newIds.has(existing.id)) {
+            batch.delete(listingsCollection.doc(existing.id));
+        }
     }
-  }
 
-  // Add or update listings
-  const savedListings: ListingDocument[] = [];
-  for (const listing of listings) {
-    const listingDoc: ListingDocument = {
-      ...listing,
-      userId,
-    };
-    batch.set(listingsCollection.doc(listing.id), listingDoc);
-    savedListings.push(listingDoc);
-  }
+    // Add or update listings
+    const savedListings: ListingDocument[] = [];
+    for (const listing of listings) {
+        const listingDoc: ListingDocument = {
+            ...listing,
+            userId,
+        };
+        batch.set(listingsCollection.doc(listing.id), listingDoc);
+        savedListings.push(listingDoc);
+    }
 
-  // Commit the batch
-  await batch.commit();
+    // Commit the batch
+    await batch.commit();
 
-  return savedListings;
+    return savedListings;
 }
 
 /**
  * Delete a listing by ID (with ownership check)
  */
 export async function deleteListing(
-  listingId: string,
-  userId: string
+    listingId: string,
+    userId: string
 ): Promise<boolean> {
-  const listing = await getListingById(listingId, userId);
+    const listing = await getListingById(listingId, userId);
 
-  if (!listing) {
-    return false;
-  }
+    if (!listing) {
+        return false;
+    }
 
-  await listingsCollection.doc(listingId).delete();
-  return true;
+    await listingsCollection.doc(listingId).delete();
+    return true;
 }
 
 // =============================================================================
@@ -212,14 +220,14 @@ export async function deleteListing(
  * Performs a simple list operation to verify the connection
  */
 export async function checkFirestoreHealth(): Promise<boolean> {
-  try {
-    // Try to list collections (lightweight operation)
-    await firestore.listCollections();
-    return true;
-  } catch (error) {
-    console.error('Firestore health check failed:', error);
-    return false;
-  }
+    try {
+        // Try to list collections (lightweight operation)
+        await firestore.listCollections();
+        return true;
+    } catch (error) {
+        console.error('Firestore health check failed:', error);
+        return false;
+    }
 }
 
 // =============================================================================
@@ -231,14 +239,14 @@ const geminiHistoryCollection = firestore.collection(FIRESTORE_GEMINI_HISTORY_CO
 
 /** Default settings for new users */
 const DEFAULT_SETTINGS: Omit<UserSettings, 'userId' | 'updatedAt'> = {
-  geminiApiKey: '',
-  checkFrequencyMinutes: 60,
-  geminiStats: {
-    allTimeTotalCalls: 0,
-    totalCalls: 0,
-    successCount: 0,
-    errorCount: 0,
-  },
+    geminiApiKey: '',
+    checkFrequencyMinutes: 60,
+    geminiStats: {
+        allTimeTotalCalls: 0,
+        totalCalls: 0,
+        successCount: 0,
+        errorCount: 0,
+    },
 };
 
 /**
@@ -246,38 +254,38 @@ const DEFAULT_SETTINGS: Omit<UserSettings, 'userId' | 'updatedAt'> = {
  * Returns default settings if none exist
  */
 export async function getUserSettings(userId: string): Promise<UserSettings> {
-  const doc = await settingsCollection.doc(userId).get();
+    const doc = await settingsCollection.doc(userId).get();
 
-  if (!doc.exists) {
-    return {
-      ...DEFAULT_SETTINGS,
-      userId,
-      updatedAt: new Date().toISOString(),
-    };
-  }
+    if (!doc.exists) {
+        return {
+            ...DEFAULT_SETTINGS,
+            userId,
+            updatedAt: new Date().toISOString(),
+        };
+    }
 
-  return doc.data() as UserSettings;
+    return doc.data() as UserSettings;
 }
 
 /**
  * Save or update user settings
  */
 export async function saveUserSettings(
-  userId: string,
-  settings: Partial<Omit<UserSettings, 'userId' | 'updatedAt'>>
+    userId: string,
+    settings: Partial<Omit<UserSettings, 'userId' | 'updatedAt'>>
 ): Promise<UserSettings> {
-  const existingSettings = await getUserSettings(userId);
+    const existingSettings = await getUserSettings(userId);
 
-  const updatedSettings: UserSettings = {
-    ...existingSettings,
-    ...settings,
-    userId,
-    updatedAt: new Date().toISOString(),
-  };
+    const updatedSettings: UserSettings = {
+        ...existingSettings,
+        ...settings,
+        userId,
+        updatedAt: new Date().toISOString(),
+    };
 
-  await settingsCollection.doc(userId).set(updatedSettings);
+    await settingsCollection.doc(userId).set(updatedSettings);
 
-  return updatedSettings;
+    return updatedSettings;
 }
 
 // =============================================================================
@@ -289,94 +297,91 @@ export async function saveUserSettings(
  * Returns the most recent entries, ordered by timestamp descending
  */
 export async function getGeminiHistory(
-  userId: string,
-  limit: number = 100
+    userId: string,
+    limit: number = 100
 ): Promise<GeminiCallHistoryEntry[]> {
-  const snapshot = await geminiHistoryCollection
-    .where('userId', '==', userId)
-    .orderBy('timestamp', 'desc')
-    .limit(limit)
-    .get();
+    const snapshot = await geminiHistoryCollection
+        .where('userId', '==', userId)
+        .orderBy('timestamp', 'desc')
+        .limit(limit)
+        .get();
 
-  const history: GeminiCallHistoryEntry[] = [];
-  snapshot.forEach((doc) => {
-    const data = doc.data() as GeminiHistoryDocument;
-    // Remove userId from returned data
-    const { userId: _uid, ...entry } = data;
-    history.push(entry);
-  });
+    const history: GeminiCallHistoryEntry[] = [];
+    snapshot.forEach((doc) => {
+        const data = doc.data() as GeminiHistoryDocument;
+        // Remove userId from returned data
+        const {userId: _uid, ...entry} = data;
+        history.push(entry);
+    });
 
-  return history;
+    return history;
 }
 
 /**
  * Add a new Gemini history entry
  */
 export async function addGeminiHistoryEntry(
-  entry: GeminiCallHistoryEntry,
-  userId: string
+    entry: GeminiCallHistoryEntry,
+    userId: string
 ): Promise<GeminiHistoryDocument> {
-  const historyDoc: GeminiHistoryDocument = {
-    ...entry,
-    userId,
-  };
+    const historyDoc: GeminiHistoryDocument = {
+        ...entry,
+        userId,
+    };
 
-  // Use the entry's id as the document ID
-  await geminiHistoryCollection.doc(entry.id).set(historyDoc);
+    // Use the entry's id as the document ID
+    await geminiHistoryCollection.doc(entry.id).set(historyDoc);
 
-  return historyDoc;
+    return historyDoc;
 }
 
 /**
  * Add multiple Gemini history entries (batch operation)
  */
 export async function addGeminiHistoryEntries(
-  entries: GeminiCallHistoryEntry[],
-  userId: string
+    entries: GeminiCallHistoryEntry[],
+    userId: string
 ): Promise<void> {
-  if (entries.length === 0) return;
+    if (entries.length === 0) return;
 
-  const batch = firestore.batch();
+    const batch = firestore.batch();
 
-  for (const entry of entries) {
-    const historyDoc: GeminiHistoryDocument = {
-      ...entry,
-      userId,
-    };
-    batch.set(geminiHistoryCollection.doc(entry.id), historyDoc);
-  }
+    for (const entry of entries) {
+        const historyDoc: GeminiHistoryDocument = {
+            ...entry,
+            userId,
+        };
+        batch.set(geminiHistoryCollection.doc(entry.id), historyDoc);
+    }
 
-  await batch.commit();
+    await batch.commit();
 }
 
 /**
  * Clear all Gemini history for a user
  */
 export async function clearGeminiHistory(userId: string): Promise<number> {
-  const snapshot = await geminiHistoryCollection
-    .where('userId', '==', userId)
-    .get();
+    const snapshot = await geminiHistoryCollection
+        .where('userId', '==', userId)
+        .get();
 
-  if (snapshot.empty) {
-    return 0;
-  }
+    if (snapshot.empty) {
+        return 0;
+    }
 
-  const batch = firestore.batch();
-  snapshot.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
+    const batch = firestore.batch();
+    snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
 
-  await batch.commit();
+    await batch.commit();
 
-  return snapshot.size;
+    return snapshot.size;
 }
 
 // =============================================================================
 // Token Blacklist Operations (for logout/token invalidation)
 // =============================================================================
-
-import { FIRESTORE_TOKEN_BLACKLIST_COLLECTION } from './config.js';
-import { Timestamp } from '@google-cloud/firestore';
 
 const tokenBlacklistCollection = firestore.collection(FIRESTORE_TOKEN_BLACKLIST_COLLECTION);
 
@@ -397,14 +402,14 @@ const tokenBlacklistCollection = firestore.collection(FIRESTORE_TOKEN_BLACKLIST_
  * when their `expireAt` timestamp is reached (within 24-72 hours typically).
  */
 interface BlacklistedToken {
-  /** JWT ID or hash - unique identifier for the token */
-  tokenId: string;
-  /** User ID who owned the token */
-  userId: string;
-  /** When the token was blacklisted (ISO string for readability) */
-  blacklistedAt: string;
-  /** When the token expires - Firestore Timestamp for TTL auto-deletion */
-  expireAt: Timestamp;
+    /** JWT ID or hash - unique identifier for the token */
+    tokenId: string;
+    /** User ID who owned the token */
+    userId: string;
+    /** When the token was blacklisted (ISO string for readability) */
+    blacklistedAt: string;
+    /** When the token expires - Firestore Timestamp for TTL auto-deletion */
+    expireAt: Timestamp;
 }
 
 /**
@@ -417,19 +422,19 @@ interface BlacklistedToken {
  * @param expiresAt - Token expiration timestamp
  */
 export async function blacklistToken(
-  tokenId: string,
-  userId: string,
-  expiresAt: Date
+    tokenId: string,
+    userId: string,
+    expiresAt: Date
 ): Promise<void> {
-  const entry: BlacklistedToken = {
-    tokenId,
-    userId,
-    blacklistedAt: new Date().toISOString(),
-    expireAt: Timestamp.fromDate(expiresAt),
-  };
+    const entry: BlacklistedToken = {
+        tokenId,
+        userId,
+        blacklistedAt: new Date().toISOString(),
+        expireAt: Timestamp.fromDate(expiresAt),
+    };
 
-  await tokenBlacklistCollection.doc(tokenId).set(entry);
-  console.log(`[DB] Token blacklisted for user ${userId}, expires at ${expiresAt.toISOString()}`);
+    await tokenBlacklistCollection.doc(tokenId).set(entry);
+    console.log(`[DB] Token blacklisted for user ${userId}, expires at ${expiresAt.toISOString()}`);
 }
 
 /**
@@ -439,8 +444,8 @@ export async function blacklistToken(
  * @returns true if token is blacklisted (invalid)
  */
 export async function isTokenBlacklisted(tokenId: string): Promise<boolean> {
-  const doc = await tokenBlacklistCollection.doc(tokenId).get();
-  return doc.exists;
+    const doc = await tokenBlacklistCollection.doc(tokenId).get();
+    return doc.exists;
 }
 
 /**
@@ -455,28 +460,28 @@ export async function isTokenBlacklisted(tokenId: string): Promise<boolean> {
  * @returns Number of tokens cleaned up
  */
 export async function cleanupExpiredBlacklistedTokens(): Promise<number> {
-  const now = Timestamp.now();
+    const now = Timestamp.now();
 
-  const snapshot = await tokenBlacklistCollection
-    .where('expireAt', '<', now)
-    .limit(500) // Process in batches
-    .get();
+    const snapshot = await tokenBlacklistCollection
+        .where('expireAt', '<', now)
+        .limit(500) // Process in batches
+        .get();
 
-  if (snapshot.empty) {
-    return 0;
-  }
+    if (snapshot.empty) {
+        return 0;
+    }
 
-  const batch = firestore.batch();
-  snapshot.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
+    const batch = firestore.batch();
+    snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
 
-  await batch.commit();
-  console.log(`[DB] Cleaned up ${snapshot.size} expired blacklisted tokens`);
+    await batch.commit();
+    console.log(`[DB] Cleaned up ${snapshot.size} expired blacklisted tokens`);
 
-  return snapshot.size;
+    return snapshot.size;
 }
 
 // Export firestore instance for advanced use cases
-export { firestore };
+export {firestore};
 

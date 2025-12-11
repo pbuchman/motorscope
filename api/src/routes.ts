@@ -5,26 +5,26 @@
  * All routes are mounted under /api prefix.
  */
 
-import { Router, Request, Response } from 'express';
-import { authMiddleware, verifyGoogleToken, verifyGoogleAccessToken, generateJwt } from './auth.js';
+import {Request, Response, Router} from 'express';
+import {authMiddleware, generateJwt, verifyGoogleAccessToken, verifyGoogleToken} from './auth.js';
 import {
-  upsertUser,
-  getListingsByUserId,
-  getListingById,
-  saveAllListings,
-  saveListing,
-  deleteListing,
-  checkFirestoreHealth,
-  getUserSettings,
-  saveUserSettings,
-  getGeminiHistory,
-  addGeminiHistoryEntries,
-  clearGeminiHistory,
-  blacklistToken,
-  cleanupExpiredBlacklistedTokens,
+    addGeminiHistoryEntries,
+    blacklistToken,
+    checkFirestoreHealth,
+    cleanupExpiredBlacklistedTokens,
+    clearGeminiHistory,
+    deleteListing,
+    getGeminiHistory,
+    getListingById,
+    getListingsByUserId,
+    getUserSettings,
+    saveAllListings,
+    saveListing,
+    saveUserSettings,
+    upsertUser,
 } from './db.js';
-import { sendError, sendSuccess, sendOperationSuccess, handleError } from './utils/response.js';
-import type { User, CarListing, AuthResponse, HealthResponse, UserSettings, GeminiCallHistoryEntry } from './types.js';
+import {handleError, sendError, sendOperationSuccess, sendSuccess} from './utils/response.js';
+import type {AuthResponse, CarListing, GeminiCallHistoryEntry, HealthResponse, User, UserSettings} from './types.js';
 
 const router = Router();
 
@@ -58,26 +58,26 @@ const router = Router();
  *               $ref: '#/components/schemas/HealthResponse'
  */
 router.get('/healthz', async (_req: Request, res: Response) => {
-  const firestoreOk = await checkFirestoreHealth();
+    const firestoreOk = await checkFirestoreHealth();
 
-  // Opportunistic cleanup of expired tokens (~10% of requests)
-  if (Math.random() < 0.1) {
-    cleanupExpiredBlacklistedTokens()
-      .then(count => {
-        if (count > 0) {
-          console.log(`[Healthz] Cleaned up ${count} expired blacklisted tokens`);
-        }
-      })
-      .catch(err => console.error('[Healthz] Token cleanup error:', err));
-  }
+    // Opportunistic cleanup of expired tokens (~10% of requests)
+    if (Math.random() < 0.1) {
+        cleanupExpiredBlacklistedTokens()
+            .then(count => {
+                if (count > 0) {
+                    console.log(`[Healthz] Cleaned up ${count} expired blacklisted tokens`);
+                }
+            })
+            .catch(err => console.error('[Healthz] Token cleanup error:', err));
+    }
 
-  const response: HealthResponse = {
-    status: firestoreOk ? 'ok' : 'error',
-    firestore: firestoreOk ? 'ok' : 'error',
-    timestamp: new Date().toISOString(),
-  };
+    const response: HealthResponse = {
+        status: firestoreOk ? 'ok' : 'error',
+        firestore: firestoreOk ? 'ok' : 'error',
+        timestamp: new Date().toISOString(),
+    };
 
-  sendSuccess(res, response, firestoreOk ? 200 : 503);
+    sendSuccess(res, response, firestoreOk ? 200 : 503);
 });
 
 // =============================================================================
@@ -126,57 +126,57 @@ router.get('/healthz', async (_req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/auth/google', async (req: Request, res: Response) => {
-  try {
-    const { accessToken, idToken } = req.body;
+    try {
+        const {accessToken, idToken} = req.body;
 
-    if (!accessToken && !idToken) {
-      sendError(res, 400, 'accessToken or idToken is required in request body');
-      return;
+        if (!accessToken && !idToken) {
+            sendError(res, 400, 'accessToken or idToken is required in request body');
+            return;
+        }
+
+        // Verify the Google token (prefer accessToken, fall back to idToken)
+        let googlePayload;
+        if (accessToken && typeof accessToken === 'string') {
+            googlePayload = await verifyGoogleAccessToken(accessToken);
+        } else if (idToken && typeof idToken === 'string') {
+            googlePayload = await verifyGoogleToken(idToken);
+        } else {
+            sendError(res, 400, 'Token must be a string');
+            return;
+        }
+
+
+        // Create internal user ID from Google sub (prefixed for future auth provider support)
+        const userId = `google_${googlePayload.sub}`;
+
+        // Upsert user in Firestore
+        const now = new Date().toISOString();
+        const user: User = {
+            id: userId,
+            email: googlePayload.email,
+            displayName: googlePayload.name,
+            createdAt: now,
+            lastLoginAt: now,
+        };
+
+        const savedUser = await upsertUser(user);
+        const token = generateJwt(savedUser.id, savedUser.email);
+
+        const response: AuthResponse = {
+            token,
+            user: {
+                id: savedUser.id,
+                email: savedUser.email,
+                displayName: savedUser.displayName,
+            },
+        };
+
+        sendSuccess(res, response);
+    } catch (error) {
+        console.error('Authentication error:', error);
+        const message = error instanceof Error ? error.message : 'Authentication failed';
+        sendError(res, 401, message);
     }
-
-    // Verify the Google token (prefer accessToken, fall back to idToken)
-    let googlePayload;
-    if (accessToken && typeof accessToken === 'string') {
-      googlePayload = await verifyGoogleAccessToken(accessToken);
-    } else if (idToken && typeof idToken === 'string') {
-      googlePayload = await verifyGoogleToken(idToken);
-    } else {
-      sendError(res, 400, 'Token must be a string');
-      return;
-    }
-
-
-    // Create internal user ID from Google sub (prefixed for future auth provider support)
-    const userId = `google_${googlePayload.sub}`;
-
-    // Upsert user in Firestore
-    const now = new Date().toISOString();
-    const user: User = {
-      id: userId,
-      email: googlePayload.email,
-      displayName: googlePayload.name,
-      createdAt: now,
-      lastLoginAt: now,
-    };
-
-    const savedUser = await upsertUser(user);
-    const token = generateJwt(savedUser.id, savedUser.email);
-
-    const response: AuthResponse = {
-      token,
-      user: {
-        id: savedUser.id,
-        email: savedUser.email,
-        displayName: savedUser.displayName,
-      },
-    };
-
-    sendSuccess(res, response);
-  } catch (error) {
-    console.error('Authentication error:', error);
-    const message = error instanceof Error ? error.message : 'Authentication failed';
-    sendError(res, 401, message);
-  }
 });
 
 /**
@@ -209,12 +209,12 @@ router.post('/auth/google', async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/auth/me', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { userId, email } = req.user!;
-    sendSuccess(res, { user: { id: userId, email } });
-  } catch (error) {
-    handleError(res, error, 'getting user info');
-  }
+    try {
+        const {userId, email} = req.user!;
+        sendSuccess(res, {user: {id: userId, email}});
+    } catch (error) {
+        handleError(res, error, 'getting user info');
+    }
 });
 
 /**
@@ -257,25 +257,25 @@ router.get('/auth/me', authMiddleware, async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/auth/logout', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { userId, jti, exp } = req.user!;
+    try {
+        const {userId, jti, exp} = req.user!;
 
-    if (!jti) {
-      // Token doesn't have a jti (old format) - client will clear it anyway
-      console.log(`[Auth] Logout for user ${userId} - token has no jti (old format)`);
-      sendOperationSuccess(res, 'Logged out successfully');
-      return;
+        if (!jti) {
+            // Token doesn't have a jti (old format) - client will clear it anyway
+            console.log(`[Auth] Logout for user ${userId} - token has no jti (old format)`);
+            sendOperationSuccess(res, 'Logged out successfully');
+            return;
+        }
+
+        // Calculate token expiration (default to 24h if not set)
+        const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await blacklistToken(jti, userId, expiresAt);
+
+        console.log(`[Auth] User ${userId} logged out, token blacklisted`);
+        sendOperationSuccess(res, 'Logged out successfully');
+    } catch (error) {
+        handleError(res, error, 'logging out');
     }
-
-    // Calculate token expiration (default to 24h if not set)
-    const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await blacklistToken(jti, userId, expiresAt);
-
-    console.log(`[Auth] User ${userId} logged out, token blacklisted`);
-    sendOperationSuccess(res, 'Logged out successfully');
-  } catch (error) {
-    handleError(res, error, 'logging out');
-  }
 });
 
 // =============================================================================
@@ -315,16 +315,16 @@ router.post('/auth/logout', authMiddleware, async (req: Request, res: Response) 
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/listings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const listings = await getListingsByUserId(userId);
+    try {
+        const userId = req.user!.userId;
+        const listings = await getListingsByUserId(userId);
 
-    // Remove internal fields before sending to client
-    const clientListings = listings.map(({ userId: _uid, docId: _docId, ...listing }) => listing);
-    sendSuccess(res, clientListings);
-  } catch (error) {
-    handleError(res, error, 'fetching listings');
-  }
+        // Remove internal fields before sending to client
+        const clientListings = listings.map(({userId: _uid, docId: _docId, ...listing}) => listing);
+        sendSuccess(res, clientListings);
+    } catch (error) {
+        handleError(res, error, 'fetching listings');
+    }
 });
 
 /**
@@ -372,23 +372,23 @@ router.get('/listings', authMiddleware, async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/listings/:id', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const listingId = req.params.id;
+    try {
+        const userId = req.user!.userId;
+        const listingId = req.params.id;
 
-    const listing = await getListingById(listingId, userId);
+        const listing = await getListingById(listingId, userId);
 
-    if (!listing) {
-      sendError(res, 404, 'Listing not found or not owned by user');
-      return;
+        if (!listing) {
+            sendError(res, 404, 'Listing not found or not owned by user');
+            return;
+        }
+
+        // Remove internal fields before sending to client
+        const {userId: _uid, docId: _docId, ...clientListing} = listing;
+        sendSuccess(res, clientListing);
+    } catch (error) {
+        handleError(res, error, 'fetching listing');
     }
-
-    // Remove internal fields before sending to client
-    const { userId: _uid, docId: _docId, ...clientListing } = listing;
-    sendSuccess(res, clientListing);
-  } catch (error) {
-    handleError(res, error, 'fetching listing');
-  }
 });
 
 /**
@@ -446,29 +446,29 @@ router.get('/listings/:id', authMiddleware, async (req: Request, res: Response) 
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put('/listings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const listings = req.body as unknown[];
+    try {
+        const userId = req.user!.userId;
+        const listings = req.body as unknown[];
 
-    if (!Array.isArray(listings)) {
-      sendError(res, 400, 'Request body must be an array of listings');
-      return;
+        if (!Array.isArray(listings)) {
+            sendError(res, 400, 'Request body must be an array of listings');
+            return;
+        }
+
+        // Validate each listing has required id field
+        for (const listing of listings) {
+            const item = listing as Record<string, unknown>;
+            if (!item.id || typeof item.id !== 'string') {
+                sendError(res, 400, 'Each listing must have a valid id field');
+                return;
+            }
+        }
+
+        const savedListings = await saveAllListings(listings as CarListing[], userId);
+        sendOperationSuccess(res, undefined, {count: savedListings.length});
+    } catch (error) {
+        handleError(res, error, 'saving listings');
     }
-
-    // Validate each listing has required id field
-    for (const listing of listings) {
-      const item = listing as Record<string, unknown>;
-      if (!item.id || typeof item.id !== 'string') {
-        sendError(res, 400, 'Each listing must have a valid id field');
-        return;
-      }
-    }
-
-    const savedListings = await saveAllListings(listings as CarListing[], userId);
-    sendOperationSuccess(res, undefined, { count: savedListings.length });
-  } catch (error) {
-    handleError(res, error, 'saving listings');
-  }
 });
 
 /**
@@ -516,23 +516,23 @@ router.put('/listings', authMiddleware, async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/listings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const listing = req.body as unknown as Record<string, unknown>;
+    try {
+        const userId = req.user!.userId;
+        const listing = req.body as unknown as Record<string, unknown>;
 
-    if (!listing.id || typeof listing.id !== 'string') {
-      sendError(res, 400, 'Listing must have a valid id field');
-      return;
+        if (!listing.id || typeof listing.id !== 'string') {
+            sendError(res, 400, 'Listing must have a valid id field');
+            return;
+        }
+
+        const savedListing = await saveListing(req.body as CarListing, userId);
+
+        // Remove internal fields before sending to client
+        const {userId: _uid, docId: _docId, ...clientListing} = savedListing;
+        sendSuccess(res, clientListing);
+    } catch (error) {
+        handleError(res, error, 'saving listing');
     }
-
-    const savedListing = await saveListing(req.body as CarListing, userId);
-
-    // Remove internal fields before sending to client
-    const { userId: _uid, docId: _docId, ...clientListing } = savedListing;
-    sendSuccess(res, clientListing);
-  } catch (error) {
-    handleError(res, error, 'saving listing');
-  }
 });
 
 /**
@@ -584,21 +584,21 @@ router.post('/listings', authMiddleware, async (req: Request, res: Response) => 
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/listings/:id', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const listingId = req.params.id;
+    try {
+        const userId = req.user!.userId;
+        const listingId = req.params.id;
 
-    const deleted = await deleteListing(listingId, userId);
+        const deleted = await deleteListing(listingId, userId);
 
-    if (!deleted) {
-      sendError(res, 404, 'Listing not found or not owned by user');
-      return;
+        if (!deleted) {
+            sendError(res, 404, 'Listing not found or not owned by user');
+            return;
+        }
+
+        sendOperationSuccess(res);
+    } catch (error) {
+        handleError(res, error, 'deleting listing');
     }
-
-    sendOperationSuccess(res);
-  } catch (error) {
-    handleError(res, error, 'deleting listing');
-  }
 });
 
 // =============================================================================
@@ -639,70 +639,70 @@ router.delete('/listings/:id', authMiddleware, async (req: Request, res: Respons
  * Settings response type for API (differs from stored UserSettings by using null instead of undefined)
  */
 interface SettingsResponse {
-  geminiApiKey: string;
-  checkFrequencyMinutes: number;
-  geminiStats: UserSettings['geminiStats'];
-  language: 'en' | 'pl';
-  lastRefreshTime: string | null;
-  nextRefreshTime: string | null;
-  lastRefreshCount: number;
-  dashboardFilters: UserSettings['dashboardFilters'] | null;
-  dashboardSort: string | null;
-  dashboardViewMode: string | null;
+    geminiApiKey: string;
+    checkFrequencyMinutes: number;
+    geminiStats: UserSettings['geminiStats'];
+    language: 'en' | 'pl';
+    lastRefreshTime: string | null;
+    nextRefreshTime: string | null;
+    lastRefreshCount: number;
+    dashboardFilters: UserSettings['dashboardFilters'] | null;
+    dashboardSort: string | null;
+    dashboardViewMode: string | null;
 }
 
 /**
  * Format settings for client response (removes internal fields, converts undefined to null)
  */
 function formatSettingsResponse(settings: UserSettings): SettingsResponse {
-  return {
-    geminiApiKey: settings.geminiApiKey,
-    checkFrequencyMinutes: settings.checkFrequencyMinutes,
-    geminiStats: settings.geminiStats,
-    language: settings.language ?? 'en',
-    lastRefreshTime: settings.lastRefreshTime ?? null,
-    nextRefreshTime: settings.nextRefreshTime ?? null,
-    lastRefreshCount: settings.lastRefreshCount ?? 0,
-    dashboardFilters: settings.dashboardFilters ?? null,
-    dashboardSort: settings.dashboardSort ?? null,
-    dashboardViewMode: settings.dashboardViewMode ?? null,
-  };
+    return {
+        geminiApiKey: settings.geminiApiKey,
+        checkFrequencyMinutes: settings.checkFrequencyMinutes,
+        geminiStats: settings.geminiStats,
+        language: settings.language ?? 'en',
+        lastRefreshTime: settings.lastRefreshTime ?? null,
+        nextRefreshTime: settings.nextRefreshTime ?? null,
+        lastRefreshCount: settings.lastRefreshCount ?? 0,
+        dashboardFilters: settings.dashboardFilters ?? null,
+        dashboardSort: settings.dashboardSort ?? null,
+        dashboardViewMode: settings.dashboardViewMode ?? null,
+    };
 }
 
 /**
  * Extract update fields from request body
  */
 function extractSettingsUpdate(body: Record<string, unknown>): Partial<UserSettings> {
-  const fields = [
-    'geminiApiKey',
-    'checkFrequencyMinutes',
-    'geminiStats',
-    'language',
-    'lastRefreshTime',
-    'nextRefreshTime',
-    'lastRefreshCount',
-    'dashboardFilters',
-    'dashboardSort',
-    'dashboardViewMode',
-  ] as const;
+    const fields = [
+        'geminiApiKey',
+        'checkFrequencyMinutes',
+        'geminiStats',
+        'language',
+        'lastRefreshTime',
+        'nextRefreshTime',
+        'lastRefreshCount',
+        'dashboardFilters',
+        'dashboardSort',
+        'dashboardViewMode',
+    ] as const;
 
-  const updateData: Partial<UserSettings> = {};
-  for (const field of fields) {
-    if (body[field] !== undefined) {
-      (updateData as Record<string, unknown>)[field] = body[field];
+    const updateData: Partial<UserSettings> = {};
+    for (const field of fields) {
+        if (body[field] !== undefined) {
+            (updateData as Record<string, unknown>)[field] = body[field];
+        }
     }
-  }
-  return updateData;
+    return updateData;
 }
 
 router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const settings = await getUserSettings(userId);
-    sendSuccess(res, formatSettingsResponse(settings));
-  } catch (error) {
-    handleError(res, error, 'fetching settings');
-  }
+    try {
+        const userId = req.user!.userId;
+        const settings = await getUserSettings(userId);
+        sendSuccess(res, formatSettingsResponse(settings));
+    } catch (error) {
+        handleError(res, error, 'fetching settings');
+    }
 });
 
 /**
@@ -745,14 +745,14 @@ router.get('/settings', authMiddleware, async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch('/settings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const updateData = extractSettingsUpdate(req.body);
-    const savedSettings = await saveUserSettings(userId, updateData);
-    sendSuccess(res, formatSettingsResponse(savedSettings));
-  } catch (error) {
-    handleError(res, error, 'updating settings');
-  }
+    try {
+        const userId = req.user!.userId;
+        const updateData = extractSettingsUpdate(req.body);
+        const savedSettings = await saveUserSettings(userId, updateData);
+        sendSuccess(res, formatSettingsResponse(savedSettings));
+    } catch (error) {
+        handleError(res, error, 'updating settings');
+    }
 });
 
 /**
@@ -794,14 +794,14 @@ router.patch('/settings', authMiddleware, async (req: Request, res: Response) =>
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const updateData = extractSettingsUpdate(req.body);
-    const savedSettings = await saveUserSettings(userId, updateData);
-    sendSuccess(res, formatSettingsResponse(savedSettings));
-  } catch (error) {
-    handleError(res, error, 'saving settings');
-  }
+    try {
+        const userId = req.user!.userId;
+        const updateData = extractSettingsUpdate(req.body);
+        const savedSettings = await saveUserSettings(userId, updateData);
+        sendSuccess(res, formatSettingsResponse(savedSettings));
+    } catch (error) {
+        handleError(res, error, 'saving settings');
+    }
 });
 
 // =============================================================================
@@ -849,14 +849,14 @@ router.put('/settings', authMiddleware, async (req: Request, res: Response) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
-    const history = await getGeminiHistory(userId, limit);
-    sendSuccess(res, history);
-  } catch (error) {
-    handleError(res, error, 'fetching Gemini history');
-  }
+    try {
+        const userId = req.user!.userId;
+        const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+        const history = await getGeminiHistory(userId, limit);
+        sendSuccess(res, history);
+    } catch (error) {
+        handleError(res, error, 'fetching Gemini history');
+    }
 });
 
 /**
@@ -914,27 +914,27 @@ router.get('/gemini-history', authMiddleware, async (req: Request, res: Response
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const body = req.body as unknown;
+    try {
+        const userId = req.user!.userId;
+        const body = req.body as unknown;
 
-    // Accept single entry or array
-    const rawEntries = Array.isArray(body) ? body : [body];
+        // Accept single entry or array
+        const rawEntries = Array.isArray(body) ? body : [body];
 
-    for (const entry of rawEntries) {
-      const item = entry as Record<string, unknown>;
-      if (!item.id || typeof item.id !== 'string') {
-        sendError(res, 400, 'Each history entry must have a valid id field');
-        return;
-      }
+        for (const entry of rawEntries) {
+            const item = entry as Record<string, unknown>;
+            if (!item.id || typeof item.id !== 'string') {
+                sendError(res, 400, 'Each history entry must have a valid id field');
+                return;
+            }
+        }
+
+        const entries = rawEntries as GeminiCallHistoryEntry[];
+        await addGeminiHistoryEntries(entries, userId);
+        sendOperationSuccess(res, undefined, {count: entries.length});
+    } catch (error) {
+        handleError(res, error, 'saving Gemini history');
     }
-
-    const entries = rawEntries as GeminiCallHistoryEntry[];
-    await addGeminiHistoryEntries(entries, userId);
-    sendOperationSuccess(res, undefined, { count: entries.length });
-  } catch (error) {
-    handleError(res, error, 'saving Gemini history');
-  }
 });
 
 /**
@@ -976,13 +976,13 @@ router.post('/gemini-history', authMiddleware, async (req: Request, res: Respons
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/gemini-history', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const deletedCount = await clearGeminiHistory(userId);
-    sendOperationSuccess(res, undefined, { deleted: deletedCount });
-  } catch (error) {
-    handleError(res, error, 'clearing Gemini history');
-  }
+    try {
+        const userId = req.user!.userId;
+        const deletedCount = await clearGeminiHistory(userId);
+        sendOperationSuccess(res, undefined, {deleted: deletedCount});
+    } catch (error) {
+        handleError(res, error, 'clearing Gemini history');
+    }
 });
 
 export default router;

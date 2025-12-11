@@ -3,29 +3,16 @@
  *
  * Exports all migration definitions from dedicated files.
  * Migrations are ordered by ID (date-prefixed).
+ *
+ * To add a new migration:
+ * 1. Create a new file with format: YYYYMMDD_description.ts
+ * 2. Export default a Migration object
+ * 3. Import and add to the migrations array below
  */
 
-import { Migration } from './types.js';
+import type {Migration} from './types.js';
+import statusSoldExpiredToEnded from './20241209_status_sold_expired_to_ended.js';
 
-// Import individual migrations
-import * as statusMigration from './20241209_status_sold_expired_to_ended.js';
-
-/**
- * Build Migration object from module exports
- */
-function buildMigration(module: { id: string; description: string; up: (db: import('@google-cloud/firestore').Firestore) => Promise<void> }): Migration {
-  return {
-    id: module.id,
-    description: module.description,
-    up: module.up,
-  };
-}
-
-/**
- * All registered migrations in execution order.
- * Add new migrations to this array in chronological order.
- */
 export const migrations: Migration[] = [
-  buildMigration(statusMigration),
+    statusSoldExpiredToEnded,
 ];
-

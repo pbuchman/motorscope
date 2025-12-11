@@ -5,6 +5,7 @@
  * This file runs after the test framework is installed in the environment.
  */
 
+import React from 'react';
 import '@testing-library/jest-dom';
 import { setupChromeMock, resetChromeMock } from './chromeMock';
 
@@ -50,12 +51,24 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   takeRecords: jest.fn(),
 }));
 
-// Suppress console.error for act() warnings during tests
-const originalError = console.error;
-console.error = (...args) => {
-  if (typeof args[0] === 'string' && args[0].includes('Warning:')) {
-    return;
-  }
-  originalError.call(console, ...args);
-};
+// Provide stable dimensions for Recharts ResponsiveContainer to avoid width/height warnings
+jest.mock('recharts', () => {
+  const actual = jest.requireActual<typeof import('recharts')>('recharts');
+  return {
+    ...actual,
+    ResponsiveContainer: ({ width = 800, height = 400, children }: { width?: number | string; height?: number | string; children: React.ReactNode | ((size: { width: number; height: number }) => React.ReactNode); }) => {
+      const resolvedWidth = typeof width === 'number' ? width : 800;
+      const resolvedHeight = typeof height === 'number' ? height : 400;
+      const content =
+        typeof children === 'function'
+          ? (children as (size: { width: number; height: number }) => React.ReactNode)({ width: resolvedWidth, height: resolvedHeight })
+          : children;
 
+      return React.createElement(
+        'div',
+        { style: { width: resolvedWidth, height: resolvedHeight } },
+        content,
+      );
+    },
+  };
+});

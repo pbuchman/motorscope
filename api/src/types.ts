@@ -10,86 +10,86 @@
 // =============================================================================
 
 export interface PricePoint {
-  date: string; // ISO String
-  price: number;
-  currency: string;
+    date: string; // ISO String
+    price: number;
+    currency: string;
 }
 
 export interface Mileage {
-  value: number | null;
-  unit: 'km' | 'mi' | null;
+    value: number | null;
+    unit: 'km' | 'mi' | null;
 }
 
 export interface Engine {
-  capacityCc: number | null;
-  fuelType: string | null;
-  powerKw: number | null;
-  powerHp: number | null;
-  engineCode: string | null;
-  euroStandard: string | null;
-  hybridType: string | null;
+    capacityCc: number | null;
+    fuelType: string | null;
+    powerKw: number | null;
+    powerHp: number | null;
+    engineCode: string | null;
+    euroStandard: string | null;
+    hybridType: string | null;
 }
 
 export interface Drivetrain {
-  transmissionType: string | null;
-  transmissionSubtype: string | null;
-  gearsCount: number | null;
-  driveType: string | null;
+    transmissionType: string | null;
+    transmissionSubtype: string | null;
+    gearsCount: number | null;
+    driveType: string | null;
 }
 
 export interface VehicleCondition {
-  isNew: boolean | null;
-  isImported: boolean | null;
-  accidentFreeDeclared: boolean | null;
-  serviceHistoryDeclared: boolean | null;
+    isNew: boolean | null;
+    isImported: boolean | null;
+    accidentFreeDeclared: boolean | null;
+    serviceHistoryDeclared: boolean | null;
 }
 
 export interface ColorAndInterior {
-  exteriorColor: string | null;
-  interiorColor: string | null;
-  upholsteryType: string | null;
+    exteriorColor: string | null;
+    interiorColor: string | null;
+    upholsteryType: string | null;
 }
 
 export interface Registration {
-  plateNumber: string | null;
-  originCountry: string | null;
-  registeredInCountryCode: string | null;
+    plateNumber: string | null;
+    originCountry: string | null;
+    registeredInCountryCode: string | null;
 }
 
 export interface Location {
-  city: string | null;
-  region: string | null;
-  postalCode: string | null;
-  countryCode: string | null;
+    city: string | null;
+    region: string | null;
+    postalCode: string | null;
+    countryCode: string | null;
 }
 
 export interface Seller {
-  type: string | null;
-  name: string | null;
-  phone: string | null;
-  isCompany: boolean | null;
+    type: string | null;
+    name: string | null;
+    phone: string | null;
+    isCompany: boolean | null;
 }
 
 export interface Vehicle {
-  vin: string | null;
-  make: string | null;
-  model: string | null;
-  generation: string | null;
-  trim: string | null;
-  bodyType: string | null;
-  productionYear: number | null;
-  firstRegistrationYear: number | null;
-  mileage: Mileage;
-  engine: Engine;
-  drivetrain: Drivetrain;
-  registration: Registration;
-  condition: VehicleCondition;
-  colorAndInterior: ColorAndInterior;
+    vin: string | null;
+    make: string | null;
+    model: string | null;
+    generation: string | null;
+    trim: string | null;
+    bodyType: string | null;
+    productionYear: number | null;
+    firstRegistrationYear: number | null;
+    mileage: Mileage;
+    engine: Engine;
+    drivetrain: Drivetrain;
+    registration: Registration;
+    condition: VehicleCondition;
+    colorAndInterior: ColorAndInterior;
 }
 
 export enum ListingStatus {
-  ACTIVE = 'ACTIVE',
-  ENDED = 'ENDED',
+    ACTIVE = 'ACTIVE',
+    ENDED = 'ENDED',
 }
 
 /**
@@ -97,44 +97,44 @@ export enum ListingStatus {
  * This is the main document structure stored in the listings collection.
  */
 export interface CarListing {
-  id: string; // Unique ID - VIN-based (vin_XXX) or URL-based (url_XXX)
-  schemaVersion: string; // Schema version for data compatibility
+    id: string; // Unique ID - VIN-based (vin_XXX) or URL-based (url_XXX)
+    schemaVersion: string; // Schema version for data compatibility
 
-  // Source info - where the listing was found
-  source: {
-    platform: string; // e.g., "otomoto.pl", "mobile.de"
-    url: string; // Full URL to the listing
-    listingId: string | null; // Platform-specific listing ID
-    countryCode: string | null; // Country code of the platform (PL, DE, etc.)
-  };
+    // Source info - where the listing was found
+    source: {
+        platform: string; // e.g., "otomoto.pl", "mobile.de"
+        url: string; // Full URL to the listing
+        listingId: string | null; // Platform-specific listing ID
+        countryCode: string | null; // Country code of the platform (PL, DE, etc.)
+    };
 
-  // Display info
-  title: string; // Listing title
-  thumbnailUrl: string; // Main image URL
+    // Display info
+    title: string; // Listing title
+    thumbnailUrl: string; // Main image URL
 
-  // Pricing
-  currentPrice: number; // Current asking price
-  currency: string; // Currency code (PLN, EUR, USD)
-  priceHistory: PricePoint[]; // Price change history
-  originalPrice: number | null; // Original price if discounted
-  negotiable: boolean | null; // Whether price is negotiable
+    // Pricing
+    currentPrice: number; // Current asking price
+    currency: string; // Currency code (PLN, EUR, USD)
+    priceHistory: PricePoint[]; // Price change history
+    originalPrice: number | null; // Original price if discounted
+    negotiable: boolean | null; // Whether price is negotiable
 
-  // Vehicle data - normalized structure
-  vehicle: Vehicle;
+    // Vehicle data - normalized structure
+    vehicle: Vehicle;
 
-  // Location & Seller
-  location: Location;
-  seller: Seller;
+    // Location & Seller
+    location: Location;
+    seller: Seller;
 
-  // Status & Tracking
-  status: ListingStatus;
-  postedDate: string | null; // When the listing was posted (ISO string)
-  firstSeenAt: string; // When we first saw this listing (ISO string)
-  lastSeenAt: string; // When we last checked this listing (ISO string)
+    // Status & Tracking
+    status: ListingStatus;
+    postedDate: string | null; // When the listing was posted (ISO string)
+    firstSeenAt: string; // When we first saw this listing (ISO string)
+    lastSeenAt: string; // When we last checked this listing (ISO string)
 
-  // Refresh status tracking
-  lastRefreshStatus?: 'success' | 'error' | 'pending';
-  lastRefreshError?: string;
+    // Refresh status tracking
+    lastRefreshStatus?: 'success' | 'error' | 'pending';
+    lastRefreshError?: string;
 }
 
 // =============================================================================
@@ -145,33 +145,33 @@ export interface CarListing {
  * User document shape stored in Firestore
  */
 export interface User {
-  /** Internal user ID (derived from Google sub) */
-  id: string;
+    /** Internal user ID (derived from Google sub) */
+    id: string;
 
-  /** User's email address */
-  email: string;
+    /** User's email address */
+    email: string;
 
-  /** User's display name (optional) */
-  displayName?: string;
+    /** User's display name (optional) */
+    displayName?: string;
 
-  /** Timestamp when the user was created */
-  createdAt: string;
+    /** Timestamp when the user was created */
+    createdAt: string;
 
-  /** Timestamp of last login */
-  lastLoginAt: string;
+    /** Timestamp of last login */
+    lastLoginAt: string;
 }
 
 /**
  * Gemini call history entry for statistics tracking
  */
 export interface GeminiCallHistoryEntry {
-  id: string;
-  url: string;
-  promptPreview: string;
-  rawResponse?: string;
-  error?: string;
-  status: 'success' | 'error';
-  timestamp: string;
+    id: string;
+    url: string;
+    promptPreview: string;
+    rawResponse?: string;
+    error?: string;
+    status: 'success' | 'error';
+    timestamp: string;
 }
 
 /**
@@ -179,18 +179,18 @@ export interface GeminiCallHistoryEntry {
  * Each history entry is stored as a separate document with userId
  */
 export interface GeminiHistoryDocument extends GeminiCallHistoryEntry {
-  /** User ID that owns this history entry */
-  userId: string;
+    /** User ID that owns this history entry */
+    userId: string;
 }
 
 /**
  * Gemini API usage statistics (aggregate counts only)
  */
 export interface GeminiStats {
-  allTimeTotalCalls: number;
-  totalCalls: number;
-  successCount: number;
-  errorCount: number;
+    allTimeTotalCalls: number;
+    totalCalls: number;
+    successCount: number;
+    errorCount: number;
 }
 
 /**
@@ -198,47 +198,47 @@ export interface GeminiStats {
  * Stored in a subcollection or separate collection per user
  */
 export interface UserSettings {
-  /** User ID that owns these settings */
-  userId: string;
+    /** User ID that owns these settings */
+    userId: string;
 
-  /** Gemini API key (encrypted or stored securely) */
-  geminiApiKey: string;
+    /** Gemini API key (encrypted or stored securely) */
+    geminiApiKey: string;
 
-  /** Check frequency in minutes */
-  checkFrequencyMinutes: number;
+    /** Check frequency in minutes */
+    checkFrequencyMinutes: number;
 
-  /** Gemini API usage statistics */
-  geminiStats: GeminiStats;
+    /** Gemini API usage statistics */
+    geminiStats: GeminiStats;
 
-  /** User's preferred language (defaults to 'en') */
-  language?: 'en' | 'pl';
+    /** User's preferred language (defaults to 'en') */
+    language?: 'en' | 'pl';
 
-  /** Last refresh timestamp (ISO string) - persists across browser sessions */
-  lastRefreshTime?: string | null;
+    /** Last refresh timestamp (ISO string) - persists across browser sessions */
+    lastRefreshTime?: string | null;
 
-  /** Next scheduled refresh timestamp (ISO string) - persists across browser sessions */
-  nextRefreshTime?: string | null;
+    /** Next scheduled refresh timestamp (ISO string) - persists across browser sessions */
+    nextRefreshTime?: string | null;
 
-  /** Number of listings refreshed in last run */
-  lastRefreshCount?: number;
+    /** Number of listings refreshed in last run */
+    lastRefreshCount?: number;
 
-  /** Dashboard filters - persisted user preferences */
-  dashboardFilters?: {
-    status: string;
-    archived: string;
-    makes: string[];
-    models: string[];
-    sources: string[];
-  };
+    /** Dashboard filters - persisted user preferences */
+    dashboardFilters?: {
+        status: string;
+        archived: string;
+        makes: string[];
+        models: string[];
+        sources: string[];
+    };
 
-  /** Dashboard sort preference */
-  dashboardSort?: string;
+    /** Dashboard sort preference */
+    dashboardSort?: string;
 
-  /** Dashboard view mode */
-  dashboardViewMode?: string;
+    /** Dashboard view mode */
+    dashboardViewMode?: string;
 
-  /** Last updated timestamp */
-  updatedAt: string;
+    /** Last updated timestamp */
+    updatedAt: string;
 }
 
 /**
@@ -246,62 +246,62 @@ export interface UserSettings {
  * Extends CarListing with userId for ownership
  */
 export interface ListingDocument extends CarListing {
-  /** User ID that owns this listing */
-  userId: string;
+    /** User ID that owns this listing */
+    userId: string;
 
-  /** Firestore document ID (same as listing.id) */
-  docId?: string;
+    /** Firestore document ID (same as listing.id) */
+    docId?: string;
 }
 
 /**
  * JWT payload structure
  */
 export interface JwtPayload {
-  /** User ID */
-  userId: string;
+    /** User ID */
+    userId: string;
 
-  /** User email */
-  email: string;
+    /** User email */
+    email: string;
 
-  /** JWT ID - unique identifier for this token (used for blacklisting) */
-  jti?: string;
+    /** JWT ID - unique identifier for this token (used for blacklisting) */
+    jti?: string;
 
-  /** Issued at timestamp */
-  iat?: number;
+    /** Issued at timestamp */
+    iat?: number;
 
-  /** Expiration timestamp */
-  exp?: number;
+    /** Expiration timestamp */
+    exp?: number;
 }
 
 /**
  * Authentication response from POST /api/auth/google
  */
 export interface AuthResponse {
-  /** JWT token for subsequent API calls */
-  token: string;
+    /** JWT token for subsequent API calls */
+    token: string;
 
-  /** User information */
-  user: {
-    id: string;
-    email: string;
-    displayName?: string;
-  };
+    /** User information */
+    user: {
+        id: string;
+        email: string;
+        displayName?: string;
+    };
 }
 
 /**
  * Health check response
  */
 export interface HealthResponse {
-  status: 'ok' | 'error';
-  firestore: 'ok' | 'error';
-  timestamp: string;
+    status: 'ok' | 'error';
+    firestore: 'ok' | 'error';
+    timestamp: string;
 }
 
 /**
  * Error response format
  */
 export interface ErrorResponse {
-  error: string;
-  message: string;
-  statusCode: number;
+    error: string;
+    message: string;
+    statusCode: number;
 }
