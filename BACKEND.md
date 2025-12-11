@@ -103,7 +103,7 @@ motorscope/
 | `currency` | string | Currency code (PLN, EUR, USD) |
 | `priceHistory` | array | Historical price data points |
 | `vehicle` | object | Vehicle details (VIN, make, model, etc.) |
-| `status` | enum | ACTIVE, SOLD, or EXPIRED |
+| `status` | enum | ACTIVE or ENDED |
 | ... | | See `types.ts` for full schema |
 
 #### `settings` Collection
@@ -190,7 +190,7 @@ All listing endpoints require `Authorization: Bearer <jwt-token>` header.
     "totalCalls": 25,
     "successCount": 24,
     "errorCount": 1,
-    "history": [...]
+    "history": []
   }
 }
 ```
@@ -534,4 +534,3 @@ gcloud secrets add-iam-policy-binding jwt-secret \
 3. **Token Expiration**: JWTs expire after 24 hours.
 4. **Firestore Rules**: Consider adding security rules as additional protection.
 5. **Non-root Container**: Docker runs as non-root user for security.
-

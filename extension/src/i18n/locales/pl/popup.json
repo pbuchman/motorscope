@@ -1,0 +1,42 @@
+{
+  "analyzing": {
+    "title": "Analizuję stronę...",
+    "subtitle": "AI wyodrębnia dane pojazdu"
+  },
+  "analyze": {
+    "title": "Gotowe do śledzenia",
+    "description": "Kliknij poniżej, aby przeanalizować to ogłoszenie i rozpocząć śledzenie ceny.",
+    "button": "Analizuj ogłoszenie",
+    "noPageData": "Nie udało się odczytać zawartości strony. Odśwież stronę.",
+    "noApiKey": "Skonfiguruj klucz API Gemini w Ustawieniach, aby analizować ogłoszenia."
+  },
+  "preview": {
+    "title": "Podgląd",
+    "subtitle": "Sprawdź wyodrębnione dane przed zapisaniem",
+    "confirmSave": "Potwierdź i zapisz",
+    "noVin": "Brak VIN",
+    "warnings": {
+      "noVin": "Nie wykryto numeru VIN. Śledzenie może być mniej dokładne.",
+      "noDate": "Nie znaleziono daty dodania. Bieżąca data zostanie użyta jako referencyjna."
+    }
+  },
+  "saved": {
+    "badge": "Śledzone",
+    "viewInDashboard": "Zobacz szczegóły w panelu"
+  },
+  "noListing": {
+    "notOnMarketplace": {
+      "title": "Nie jesteś na obsługiwanym serwisie",
+      "description": "Przejdź do jednego z poniższych serwisów, aby śledzić ogłoszenia:"
+    },
+    "notOfferPage": {
+      "title": "To nie jest strona ogłoszenia",
+      "description": "Przejdź do konkretnego ogłoszenia na {{marketplace}}, aby je śledzić.",
+      "hint": "Wskazówka: Otwórz stronę pojedynczej oferty, aby rozpocząć śledzenie."
+    }
+  },
+  "footer": {
+    "cloudSync": "Synchronizacja w chmurze"
+  }
+}
+

@@ -1,0 +1,42 @@
+{
+  "title": "Ustawienia",
+  "geminiApi": {
+    "title": "Klucz API Gemini",
+    "description": "Wymagany do wyodrębniania danych z ogłoszeń przy użyciu AI.",
+    "placeholder": "Wprowadź klucz API Gemini",
+    "getKey": "Pobierz darmowy klucz API",
+    "show": "Pokaż",
+    "hide": "Ukryj"
+  },
+  "refreshFrequency": {
+    "title": "Częstotliwość automatycznego odświeżania",
+    "description": "Jak często sprawdzać aktualizacje cen śledzonych ogłoszeń.",
+    "descriptionAlt": "Jak często ogłoszenia są automatycznie odświeżane w tle",
+    "minutes": "minut"
+  },
+  "backendServer": {
+    "description": "Serwer, na którym przechowywane są Twoje dane"
+  },
+  "signIn": "Zaloguj się",
+  "syncStatus": {
+    "noRecentActivity": "Brak ostatniej aktywności synchronizacji"
+  },
+  "save": {
+    "button": "Zapisz ustawienia",
+    "saving": "Zapisywanie...",
+    "success": "Ustawienia zostały zapisane!"
+  },
+  "geminiStats": {
+    "title": "Statystyki analizy Gemini AI",
+    "allTime": "Łącznie",
+    "session": "Sesja",
+    "refreshStats": "Odśwież statystyki",
+    "clearLogs": "Wyczyść logi",
+    "clearLogsConfirm": "Wyczyścić wszystkie logi Gemini i zresetować liczniki sesji?",
+    "filterAll": "Wszystkie",
+    "filterSuccess": "Sukces",
+    "filterErrors": "Błędy",
+    "noApiCalls": "Brak zarejestrowanych wywołań API"
+  }
+}
+

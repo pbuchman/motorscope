@@ -142,27 +142,95 @@ describe('JWT Utilities', () => {
       expect(result.payload).toBeNull();
     });
   });
+
+  describe('Edge Cases', () => {
+    it('should handle token expiring exactly now', () => {
+      const token = createMockJwt({}, 0);
+      expect(isJwtExpired(token)).toBe(true);
+    });
+
+    it('should handle token expiring within leeway threshold', () => {
+      const token = createMockJwt({}, 30); // 30 seconds from now
+      expect(isJwtExpired(token, 60)).toBe(true); // 60 second leeway
+      expect(isJwtExpired(token, 10)).toBe(false); // 10 second leeway
+    });
+
+    it('should handle very long expiration times', () => {
+      const token = createMockJwt({}, 365 * 24 * 60 * 60); // 1 year
+      expect(isJwtExpired(token)).toBe(false);
+      expect(getJwtTimeRemaining(token)).toBeGreaterThan(364 * 24 * 60 * 60);
+    });
+
+    it('should handle token with missing optional claims', () => {
+      const payload: JwtPayload = {
+        userId: 'user_123',
+        email: 'test@example.com',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const payloadB64 = btoa(JSON.stringify(payload));
+      const token = `${header}.${payloadB64}.signature`;
+
+      const decoded = decodeJwt(token);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.userId).toBe('user_123');
+    });
+
+    it('should reject token with missing required userId', () => {
+      const invalidPayload = {
+        email: 'test@example.com',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const payloadB64 = btoa(JSON.stringify(invalidPayload));
+      const token = `${header}.${payloadB64}.signature`;
+
+      const decoded = decodeJwt(token);
+      expect(decoded).toBeNull();
+    });
+
+    it('should reject token with missing required email', () => {
+      const invalidPayload = {
+        userId: 'user_123',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const payloadB64 = btoa(JSON.stringify(invalidPayload));
+      const token = `${header}.${payloadB64}.signature`;
+
+      const decoded = decodeJwt(token);
+      expect(decoded).toBeNull();
+    });
+
+    it('should handle URL-safe base64 encoding', () => {
+      // Test with payload that might produce + or / in base64
+      const token = createMockJwt({
+        userId: 'user_with_special_chars_äöü',
+        email: 'test+special@example.com'
+      });
+
+      const decoded = decodeJwt(token);
+      expect(decoded?.email).toBe('test+special@example.com');
+    });
+
+    it('should handle whitespace in token', () => {
+      const token = createMockJwt({});
+      // Whitespace should cause decode to fail or return valid token
+      // The function should not throw
+      expect(() => decodeJwt(' ' + token + ' ')).not.toThrow();
+    });
+  });
 });
 
-// Mock chrome.storage for storage tests
+// Mock storage for storage tests
 const mockStorage: Record<string, unknown> = {};
 
-const mockChromeStorage = {
-  local: {
-    get: jest.fn((key: string, callback: (result: Record<string, unknown>) => void) => {
-      callback({ [key]: mockStorage[key] });
-    }),
-    set: jest.fn((items: Record<string, unknown>, callback?: () => void) => {
-      Object.assign(mockStorage, items);
-      callback?.();
-    }),
-    remove: jest.fn((keys: string | string[], callback?: () => void) => {
-      const keysArray = Array.isArray(keys) ? keys : [keys];
-      keysArray.forEach(key => delete mockStorage[key]);
-      callback?.();
-    }),
-  },
-};
 
 // Note: Storage tests would need to mock chrome.storage
 // This is shown as an example structure

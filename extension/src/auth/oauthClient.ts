@@ -27,9 +27,9 @@ import {
   getStoredAuthData,
   clearAuthData,
   getStoredToken,
-  getStoredUser,
 } from './storage';
-import { DEFAULT_BACKEND_URL, API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH } from './config';
+import { API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH } from './config';
+import { getBackendServerUrl } from './localServerStorage';
 
 // Re-export types for convenience
 export type { User, AuthState } from './types';
@@ -42,9 +42,13 @@ export type UserProfile = User; // Alias for backward compatibility
 /**
  * Call backend /auth/logout endpoint to invalidate the token
  * Returns true if successful, false otherwise (we still clear local state either way)
+ *
+ * @param token - The JWT token to invalidate
+ * @param backendUrl - Optional specific backend URL (used when changing servers)
  */
-const invalidateTokenOnBackend = async (token: string): Promise<boolean> => {
-  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_LOGOUT_ENDPOINT_PATH}`;
+const invalidateTokenOnBackend = async (token: string, backendUrl?: string): Promise<boolean> => {
+  const baseUrl = backendUrl || await getBackendServerUrl();
+  const url = `${baseUrl}${API_PREFIX}${AUTH_LOGOUT_ENDPOINT_PATH}`;
 
   try {
     console.log('[OAuth] Calling backend logout endpoint...');
@@ -76,7 +80,8 @@ const invalidateTokenOnBackend = async (token: string): Promise<boolean> => {
  * Backend verifies token and returns JWT + user profile
  */
 const authenticateWithBackend = async (googleToken: string): Promise<BackendAuthResponse> => {
-  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
+  const backendUrl = await getBackendServerUrl();
+  const url = `${backendUrl}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
 
   console.log('[OAuth] Calling backend auth endpoint...');
 
@@ -107,7 +112,8 @@ const authenticateWithBackend = async (googleToken: string): Promise<BackendAuth
  * Useful for detecting server-side session invalidation.
  */
 const verifySessionWithBackend = async (token: string): Promise<boolean> => {
-  const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${AUTH_ME_ENDPOINT_PATH}`;
+  const backendUrl = await getBackendServerUrl();
+  const url = `${backendUrl}${API_PREFIX}${AUTH_ME_ENDPOINT_PATH}`;
 
   try {
     const response = await fetch(url, {
@@ -324,14 +330,16 @@ export const loginWithProvider = async (): Promise<{ user: User; token: string }
  * IMPORTANT: Does NOT revoke Google consent.
  * User will see account picker (not consent screen) on next login.
  * For full account disconnection, use disconnect() instead.
+ *
+ * @param backendUrl - Optional specific backend URL (used when changing servers to logout from old server)
  */
-export const logout = async (): Promise<void> => {
+export const logout = async (backendUrl?: string): Promise<void> => {
   console.log('[OAuth] Logging out...');
 
   // First, try to invalidate the token on the backend
   const token = await getStoredToken();
   if (token) {
-    await invalidateTokenOnBackend(token);
+    await invalidateTokenOnBackend(token, backendUrl);
   }
 
   // Clear Google auth from Chrome's cache (does NOT revoke consent)

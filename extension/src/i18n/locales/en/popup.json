@@ -1,0 +1,42 @@
+{
+  "analyzing": {
+    "title": "Analyzing Page...",
+    "subtitle": "AI is extracting vehicle specs"
+  },
+  "analyze": {
+    "title": "Ready to Track",
+    "description": "Click below to analyze this car listing and start tracking its price.",
+    "button": "Analyze Listing",
+    "noPageData": "Could not read page content. Please refresh the page.",
+    "noApiKey": "Please configure your Gemini API key in Settings to analyze listings."
+  },
+  "preview": {
+    "title": "Preview",
+    "subtitle": "Review the extracted data before saving",
+    "confirmSave": "Confirm & Save",
+    "noVin": "No VIN",
+    "warnings": {
+      "noVin": "VIN not detected. Tracking may be less accurate.",
+      "noDate": "Posted date not found. Using current date as reference."
+    }
+  },
+  "saved": {
+    "badge": "Tracked",
+    "viewInDashboard": "View Details in Dashboard"
+  },
+  "noListing": {
+    "notOnMarketplace": {
+      "title": "Not on a supported marketplace",
+      "description": "Navigate to one of these marketplaces to track car listings:"
+    },
+    "notOfferPage": {
+      "title": "Not a listing page",
+      "description": "Navigate to a specific car listing on {{marketplace}} to track it.",
+      "hint": "Tip: Open an individual offer page to start tracking."
+    }
+  },
+  "footer": {
+    "cloudSync": "Cloud Sync"
+  }
+}
+

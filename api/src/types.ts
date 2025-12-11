@@ -89,8 +89,7 @@ export interface Vehicle {
 
 export enum ListingStatus {
   ACTIVE = 'ACTIVE',
-  SOLD = 'SOLD',
-  EXPIRED = 'EXPIRED',
+  ENDED = 'ENDED',
 }
 
 /**
@@ -211,6 +210,9 @@ export interface UserSettings {
   /** Gemini API usage statistics */
   geminiStats: GeminiStats;
 
+  /** User's preferred language (defaults to 'en') */
+  language?: 'en' | 'pl';
+
   /** Last refresh timestamp (ISO string) - persists across browser sessions */
   lastRefreshTime?: string | null;
 
@@ -303,4 +305,3 @@ export interface ErrorResponse {
   message: string;
   statusCode: number;
 }
-

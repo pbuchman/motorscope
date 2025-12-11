@@ -63,6 +63,10 @@ declare namespace chrome {
         items: { [key: string]: any },
         callback?: () => void
       ): void;
+      export function remove(
+        keys: string | string[],
+        callback?: () => void
+      ): void;
     }
     export namespace session {
       export function get(

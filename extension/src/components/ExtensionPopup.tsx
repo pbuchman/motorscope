@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, AlertCircle, X } from 'lucide-react';
 
 // Hooks
@@ -48,6 +49,8 @@ import { CarListing } from '@/types';
  * Main popup component
  */
 const ExtensionPopup: React.FC = () => {
+  const { t } = useTranslation(['popup', 'common', 'errors']);
+
   // Context hooks
   const { listings, add, remove, error: listingsError, clearError } = useListings();
   const { settings, isLoading: settingsLoading, reload: reloadSettings } = useSettings();
@@ -121,7 +124,7 @@ const ExtensionPopup: React.FC = () => {
       const contentToAnalyze = freshContent || pageData;
 
       if (!contentToAnalyze) {
-        setError('Could not read page content. Refresh the page and try again.');
+        setError(t('errors:listing.noPageContent'));
         return;
       }
 
@@ -136,7 +139,7 @@ const ExtensionPopup: React.FC = () => {
       setShowVinWarning(!listingData.vehicle?.vin);
       setShowDateWarning(!listingData.postedDate);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to extract car data.';
+      const errorMessage = e instanceof Error ? e.message : t('errors:listing.failedToExtract');
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -153,10 +156,10 @@ const ExtensionPopup: React.FC = () => {
       setShowVinWarning(false);
       setShowDateWarning(false);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to save listing.';
+      const errorMessage = e instanceof Error ? e.message : t('errors:listing.failedToSave');
       setError(errorMessage);
     }
-  }, [previewData, add]);
+  }, [previewData, add, t]);
 
   // Cancel preview handler
   const handleCancelPreview = useCallback(() => {
@@ -176,7 +179,7 @@ const ExtensionPopup: React.FC = () => {
   const renderContent = () => {
     // Auth loading
     if (auth.status === 'loading') {
-      return <LoadingSpinner message="Loading..." className="py-8" />;
+      return <LoadingSpinner message={t('common:loading')} className="py-8" />;
     }
 
     // Not logged in
@@ -213,15 +216,25 @@ const ExtensionPopup: React.FC = () => {
       return (
         <div className="flex flex-col items-center animate-pulse">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-          <p className="text-slate-600 font-medium">Analyzing Page...</p>
-          <p className="text-slate-400 text-xs mt-2">AI is extracting vehicle specs</p>
+          <p className="text-slate-600 font-medium">{t('popup:analyzing.title')}</p>
+          <p className="text-slate-400 text-xs mt-2">{t('popup:analyzing.subtitle')}</p>
         </div>
       );
     }
 
     // Already tracked
     if (savedItem) {
-      return <SavedItemView listing={savedItem} onUntrack={handleUnbookmark} />;
+      return (
+        <SavedItemView
+          listing={savedItem}
+          onUntrack={handleUnbookmark}
+          onViewInDashboard={() => {
+            // Open dashboard with listing parameter to auto-open detail modal
+            const dashboardUrl = chrome.runtime.getURL(`index.html?view=dashboard&listing=${encodeURIComponent(savedItem.id)}`);
+            chrome.tabs.create({ url: dashboardUrl });
+          }}
+        />
+      );
     }
 
     // Ready to analyze
@@ -269,7 +282,7 @@ const ExtensionPopup: React.FC = () => {
         <span className="text-[10px] text-slate-400 truncate flex-1">{currentUrl}</span>
         {isLoggedIn && (
           <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">
-            ☁️ Cloud Sync
+            ☁️ {t('popup:footer.cloudSync')}
           </span>
         )}
       </div>

@@ -1,17 +1,15 @@
 /**
  * Extension Settings Service
  *
- * Manages core extension configuration: API key, backend URL, check frequency.
+ * Manages core extension configuration: API key, check frequency.
  * All settings are fetched from and saved to the backend API.
  * NO local storage is used for settings.
  *
- * Backend URL is the only exception - it's needed to know where to make API calls,
- * so it has a hardcoded default.
+ * Backend URL is stored separately in chrome.storage.local (see localServerStorage.ts).
  */
 
-import { ExtensionSettings } from '../../types';
-import { DEFAULT_BACKEND_URL } from '../../auth/config';
-import { getRemoteSettings, patchRemoteSettings } from '../../api/client';
+import { ExtensionSettings } from '@/types';
+import { getRemoteSettings, patchRemoteSettings } from '@/api/client';
 
 // ============================================================================
 // Defaults & Validation
@@ -20,7 +18,6 @@ import { getRemoteSettings, patchRemoteSettings } from '../../api/client';
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   geminiApiKey: '',
   checkFrequencyMinutes: 60,
-  backendUrl: DEFAULT_BACKEND_URL,
 };
 
 /** Clamp frequency to valid range: 10 seconds (0.167 min) to 1 month (43200 min) */
@@ -45,7 +42,6 @@ export async function getSettings(): Promise<ExtensionSettings> {
     return {
       geminiApiKey: remoteSettings.geminiApiKey || '',
       checkFrequencyMinutes: clampFrequency(remoteSettings.checkFrequencyMinutes),
-      backendUrl: DEFAULT_BACKEND_URL, // Backend URL is always the default
     };
   } catch (error) {
     console.warn('Failed to fetch settings from API:', error);
@@ -88,18 +84,14 @@ export async function saveGeminiApiKey(key: string): Promise<void> {
 }
 
 /**
- * Get backend URL - always returns the default.
- * The backend URL is hardcoded since we need it to make API calls.
+ * Get backend URL from local storage.
+ * @deprecated Use getBackendServerUrl from localServerStorage.ts instead
  */
-export async function getBackendUrl(): Promise<string> {
-  return DEFAULT_BACKEND_URL;
-}
+export { getBackendServerUrl as getBackendUrl } from '../../auth/localServerStorage';
 
 /**
- * Save backend URL - no-op since backend URL is hardcoded.
- * @deprecated Backend URL cannot be changed.
+ * Save backend URL to local storage.
+ * @deprecated Use setBackendServerUrl from localServerStorage.ts instead
  */
-export async function saveBackendUrl(_url: string): Promise<void> {
-  console.warn('saveBackendUrl is deprecated - backend URL is hardcoded');
-}
+export { setBackendServerUrl as saveBackendUrl } from '../../auth/localServerStorage';
 

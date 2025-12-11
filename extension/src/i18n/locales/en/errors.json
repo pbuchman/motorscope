@@ -1,0 +1,31 @@
+{
+  "generic": "An error occurred. Please try again.",
+  "unexpected": "An unexpected error occurred",
+  "network": "Network error. Please check your connection.",
+  "failedToLoadSection": "Failed to load this section",
+  "auth": {
+    "notAuthenticated": "Please sign in to continue.",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "signInToTrack": "Please sign in to track listings",
+    "signInToManage": "Please sign in to manage listings",
+    "signInToRefresh": "Please sign in to refresh listings",
+    "mustBeLoggedIn": "Must be logged in to update settings"
+  },
+  "api": {
+    "geminiError": "Failed to analyze listing. Please check your API key.",
+    "rateLimited": "Rate limit reached. Please try again later."
+  },
+  "listing": {
+    "failedToRefresh": "Failed to refresh",
+    "loginRequired": "Login required - please log in to the marketplace site",
+    "failedToSave": "Failed to save listing.",
+    "failedToRemove": "Failed to remove listing.",
+    "failedToExtract": "Failed to extract car data.",
+    "noPageContent": "Could not read page content. Refresh the page and try again."
+  },
+  "http": {
+    "error": "HTTP error: {{status}}"
+  },
+  "confirmDelete": "Are you sure you want to stop tracking this car?"
+}
+

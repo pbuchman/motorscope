@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { PricePoint } from '../types';
 import { formatEuropeanDateShort, formatEuropeanDateTime } from '../utils/formatters';
+import { deduplicatePricePointsByLocalDay } from '../utils/priceHistory';
 
 interface PriceChartProps {
   history: PricePoint[];
@@ -9,7 +11,15 @@ interface PriceChartProps {
 }
 
 const PriceChart: React.FC<PriceChartProps> = ({ history, currency }) => {
-  const data = history.map(h => ({
+  const { t } = useTranslation('dashboard');
+
+  // Deduplicate price points by local day to avoid showing multiple points on the same day
+  const deduplicatedHistory = useMemo(
+    () => deduplicatePricePointsByLocalDay(history),
+    [history]
+  );
+
+  const data = deduplicatedHistory.map(h => ({
     date: formatEuropeanDateShort(h.date),
     price: h.price,
     fullDate: formatEuropeanDateTime(h.date),
@@ -17,8 +27,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ history, currency }) => {
 
   if (data.length < 2) {
     return (
-      <div className="h-48 flex items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-gray-100">
-        Not enough data for history chart yet.
+      <div className="h-48 flex flex-col items-center justify-center text-center bg-gray-50 rounded-lg border border-gray-100 px-4">
+        <p className="text-gray-500 text-sm font-medium mb-1">{t('priceHistory.emptyTitle')}</p>
+        <p className="text-gray-400 text-xs">{t('priceHistory.emptyDescription')}</p>
       </div>
     );
   }

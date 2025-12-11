@@ -1,0 +1,42 @@
+{
+  "title": "Settings",
+  "geminiApi": {
+    "title": "Gemini API Key",
+    "description": "Required for AI-powered data extraction from car listings.",
+    "placeholder": "Enter your Gemini API key",
+    "getKey": "Get your free API key",
+    "show": "Show",
+    "hide": "Hide"
+  },
+  "refreshFrequency": {
+    "title": "Auto-Refresh Frequency",
+    "description": "How often to check for price updates on tracked listings.",
+    "descriptionAlt": "How often listings are automatically refreshed in the background",
+    "minutes": "minutes"
+  },
+  "backendServer": {
+    "description": "Server where your data is stored"
+  },
+  "signIn": "Sign in",
+  "syncStatus": {
+    "noRecentActivity": "No recent sync activity"
+  },
+  "save": {
+    "button": "Save Settings",
+    "saving": "Saving...",
+    "success": "Settings saved successfully!"
+  },
+  "geminiStats": {
+    "title": "Gemini AI Analysis Stats",
+    "allTime": "All-time",
+    "session": "Session",
+    "refreshStats": "Refresh stats",
+    "clearLogs": "Clear logs",
+    "clearLogsConfirm": "Clear all Gemini logs and reset session counts?",
+    "filterAll": "All",
+    "filterSuccess": "Success",
+    "filterErrors": "Errors",
+    "noApiCalls": "No API calls recorded yet"
+  }
+}
+

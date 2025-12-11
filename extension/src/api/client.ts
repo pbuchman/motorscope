@@ -4,12 +4,13 @@
  * Handles all API calls to the backend for listing operations.
  * Automatically includes authentication token in requests.
  *
- * Backend URL is hardcoded - all settings come from API.
+ * Backend URL is loaded from chrome.storage.local on each request.
  */
 
 import { CarListing, GeminiStats, GeminiCallHistoryEntry } from '../types';
 import { getToken } from '../auth/oauthClient';
-import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, DEFAULT_BACKEND_URL, API_PREFIX } from '../auth/config';
+import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, API_PREFIX } from '../auth/config';
+import { getBackendServerUrl } from '../auth/localServerStorage';
 
 const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
 
@@ -30,8 +31,9 @@ export class ApiError extends Error {
 /**
  * Build full API URL from base URL and endpoint
  */
-const buildApiUrl = (endpoint: string): string => {
-  return `${DEFAULT_BACKEND_URL}${API_PREFIX}${endpoint}`;
+const buildApiUrl = async (endpoint: string): Promise<string> => {
+  const backendUrl = await getBackendServerUrl();
+  return `${backendUrl}${API_PREFIX}${endpoint}`;
 };
 
 /**
@@ -51,7 +53,7 @@ const apiRequest = async <T>(
     throw new ApiError('Not authenticated', 401, true);
   }
 
-  const url = buildApiUrl(endpoint);
+  const url = await buildApiUrl(endpoint);
 
   const response = await fetch(url, {
     ...options,
@@ -132,7 +134,8 @@ export const deleteRemoteListing = async (
  * @returns Health status
  */
 export const checkBackendHealth = async (): Promise<{ status: string; firestore: string }> => {
-  const response = await fetch(buildApiUrl('/healthz'));
+  const url = await buildApiUrl('/healthz');
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error('Backend health check failed');
   }
@@ -147,6 +150,8 @@ export interface RemoteSettings {
   geminiApiKey: string;
   checkFrequencyMinutes: number;
   geminiStats: GeminiStats;
+  // User preferences
+  language?: 'en' | 'pl';
   // Refresh schedule - persisted across browser sessions
   lastRefreshTime?: string | null;
   nextRefreshTime?: string | null;

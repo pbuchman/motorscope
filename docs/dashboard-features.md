@@ -28,8 +28,7 @@ The Dashboard provides a comprehensive view of all tracked car listings with fil
 #### Status Filter
 - **All**: Show all listings
 - **Active**: Only currently active listings
-- **Sold**: Only sold listings
-- **Expired**: Only expired/removed listings
+- **Ended**: Only ended (sold/expired) listings
 
 #### Archive Filter
 - **Active only** (default): Hide archived listings
@@ -83,10 +82,10 @@ Archived listings are:
 
 ### 5. Final Price Display
 
-For listings with status SOLD or EXPIRED:
+For listings with status ENDED:
 - Shows "Final Price" badge
 - Price change indicators (↓ Drop / ↑ Rise) are hidden
-- Helps track what price cars actually sold for
+- Helps track what price cars actually ended at
 
 ## UI Components
 
@@ -211,4 +210,3 @@ interface DashboardPreferences {
 2. **Archive sold/expired**: Keep history clean while retaining data
 3. **Compact view for scanning**: Quick price comparison across many listings
 4. **Grid view for analysis**: Detailed view with price charts
-

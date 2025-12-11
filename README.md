@@ -9,7 +9,14 @@
 
 MotorScope is a Chrome extension that helps you collect and track data from car listing platforms. It uses Google Gemini AI to extract vehicle information and monitor price changes over time.
 
-> 📝 **Note**: This extension was tested with **Otomoto.pl**. Some features require you to be logged in to the platform.
+## 🌐 Supported Marketplaces
+
+| Marketplace | Country | Status |
+|-------------|---------|--------|
+| [OTOMOTO](https://otomoto.pl) | Poland 🇵🇱 | ✅ Fully tested |
+| [Autoplac](https://autoplac.pl) | Poland 🇵🇱 | ✅ Supported |
+
+> 📝 **Note**: Some features may require you to be logged in to the marketplace platform.
 
 ## 🎯 Why MotorScope?
 
@@ -17,15 +24,27 @@ Tracking car prices manually is tedious. MotorScope automates the process:
 - **Collect historical price data** automatically - no more manual spreadsheets
 - **Track multiple listings** from a single dashboard
 - **Get notified** when prices change
+- **Archive listings** to keep a record of expired or sold vehicles
 
 ## ✨ Features
 
+### Core Features
 - **🖱️ One-click Tracking**: Open the extension popup on any car listing to start tracking
 - **🤖 AI-Powered Extraction**: Uses Gemini 2.5 Flash to parse page content into structured data (VIN, mileage, engine specs, seller info)
 - **📈 Automated Price History**: Builds historical price data over time with interactive charts - track price drops and increases
-- **📊 Dashboard**: Centralized view of all tracked vehicles with search and filtering
 - **🔄 Background Refresh**: Periodically checks for price updates on tracked listings
-- **💾 Local Storage**: All data stored locally in browser - no external servers
+
+### Dashboard Features
+- **📊 Grid & Compact Views**: Switch between detailed grid cards and compact list view
+- **🔍 Advanced Filtering**: Filter by status (Active/Sold/Expired), archive status, make, model, and marketplace source
+- **📋 Listing Details**: Click on any listing to view comprehensive details in an overlay modal
+- **🏷️ Source Tags**: See which marketplace each listing comes from at a glance
+- **📉 Price Comparison**: Compact view shows total price change since first tracked
+- **🗄️ Archive System**: Archive listings to exclude them from auto-refresh while keeping the data
+
+### Data Management
+- **💾 Cloud Sync**: Data synchronized with backend (when logged in with Google)
+- **🔐 Google Authentication**: Secure sign-in to sync data across devices
 
 ## 🗃️ Data Schema
 
@@ -118,33 +137,44 @@ After installing the extension:
 
 ```
 motorscope/
-├── components/          # React UI components
-│   ├── CarCard.tsx      # Individual car listing card
-│   ├── Dashboard.tsx    # Main dashboard view
-│   ├── ExtensionPopup.tsx # Browser action popup
-│   ├── PriceChart.tsx   # Price history visualization
-│   └── SettingsPage.tsx # Extension settings
-├── content-scripts/     # Page injection scripts
-│   └── otomoto-main.ts  # Otomoto.pl specific features
-├── services/            # Business logic
-│   ├── geminiService.ts # AI data extraction
-│   ├── settingsService.ts # User preferences
-│   └── storageService.ts # Local data persistence
-├── utils/               # Helper functions
-│   └── formatters.ts    # Data formatting utilities
-├── docs/                # Documentation
-│   └── car-listing-schema.json # Data schema
-├── background.ts        # Service worker
-├── App.tsx              # Main React app
-└── manifest.json        # Chrome extension manifest
+├── extension/               # Chrome extension source
+│   ├── src/
+│   │   ├── components/      # React UI components
+│   │   │   ├── CarCard.tsx          # Grid view car card
+│   │   │   ├── CarCardCompact.tsx   # Compact list view card
+│   │   │   ├── Dashboard.tsx        # Main dashboard view
+│   │   │   ├── DashboardFilters.tsx # Filter controls
+│   │   │   ├── ListingDetailModal.tsx # Detailed listing overlay
+│   │   │   ├── PriceChart.tsx       # Price history chart
+│   │   │   └── SettingsPage.tsx     # Extension settings
+│   │   ├── config/
+│   │   │   └── marketplaces.ts      # Supported marketplace configs
+│   │   ├── services/        # Business logic
+│   │   │   ├── geminiService.ts     # AI data extraction
+│   │   │   └── storageService.ts    # Data persistence
+│   │   ├── auth/            # Authentication
+│   │   ├── api/             # API client
+│   │   ├── utils/           # Helper functions
+│   │   ├── background.ts    # Service worker
+│   │   └── App.tsx          # Main React app
+│   ├── manifest.json        # Chrome extension manifest
+│   └── docs/                # Extension documentation
+├── api/                     # Backend API server
+│   └── src/
+│       ├── index.ts         # Express server entry
+│       ├── routes.ts        # API routes
+│       └── auth.ts          # Authentication handlers
+├── docs/                    # Project documentation
+└── scripts/                 # Utility scripts
 ```
 
-## 🔒 Privacy
+## 🔒 Privacy & Security
 
-- ✅ All data is stored locally in your browser
-- ✅ API calls are made directly to Google Gemini (no proxy server)
-- ✅ No tracking or analytics
-- ✅ No user data collection
+- ✅ API calls to Gemini are made directly from your browser
+- ✅ No third-party tracking or analytics
+- ✅ Google Sign-in uses secure OAuth 2.0 flow
+- ✅ Backend only stores listing data you choose to track
+- ✅ All communication with backend is over HTTPS
 
 ## 🤝 Contributing
 

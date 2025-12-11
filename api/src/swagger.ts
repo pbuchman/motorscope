@@ -196,7 +196,7 @@ const schemas = {
       vehicle: { $ref: '#/components/schemas/Vehicle' },
       location: { $ref: '#/components/schemas/Location' },
       seller: { $ref: '#/components/schemas/Seller' },
-      status: { type: 'string', enum: ['ACTIVE', 'SOLD', 'EXPIRED'] },
+      status: { type: 'string', enum: ['ACTIVE', 'ENDED'] },
       postedDate: { type: 'string', format: 'date-time', nullable: true },
       firstSeenAt: { type: 'string', format: 'date-time' },
       lastSeenAt: { type: 'string', format: 'date-time' },
@@ -233,6 +233,7 @@ const schemas = {
       geminiApiKey: { type: 'string' },
       checkFrequencyMinutes: { type: 'integer', example: 60 },
       geminiStats: { $ref: '#/components/schemas/GeminiStats' },
+      language: { type: 'string', enum: ['en', 'pl'], example: 'en' },
       lastRefreshTime: { type: 'string', format: 'date-time', nullable: true },
       nextRefreshTime: { type: 'string', format: 'date-time', nullable: true },
       lastRefreshCount: { type: 'integer', nullable: true },
@@ -247,6 +248,7 @@ const schemas = {
       geminiApiKey: { type: 'string' },
       checkFrequencyMinutes: { type: 'integer' },
       geminiStats: { $ref: '#/components/schemas/GeminiStats' },
+      language: { type: 'string', enum: ['en', 'pl'] },
       lastRefreshTime: { type: 'string', format: 'date-time', nullable: true },
       nextRefreshTime: { type: 'string', format: 'date-time', nullable: true },
       lastRefreshCount: { type: 'integer' },
@@ -369,4 +371,3 @@ export function setupSwagger(app: Express): void {
 }
 
 export { swaggerSpec };
-
