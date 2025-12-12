@@ -362,6 +362,22 @@ describe('Background Service Worker', () => {
             );
             expect(refreshAlarmCalls.length).toBe(0);
         });
+
+        it('should trigger immediate refresh when nextRefreshTime is in the past', async () => {
+            mockGetTokenValue = 'mock-jwt-token';
+            // Set nextRefreshTime to 10 minutes in the past
+            const pastTime = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            mockStorageValue = createMockRefreshStatus({nextRefreshTime: pastTime});
+
+            // Clear previous fetch calls
+            (global.fetch as jest.Mock).mockClear();
+
+            await triggerOnMessage({type: 'INITIALIZE_ALARM'});
+            await new Promise(r => setTimeout(r, 150));
+
+            // Should have triggered a refresh (fetch should be called for listings)
+            expect(global.fetch).toHaveBeenCalled();
+        });
     });
 
     // ==========================================================================

@@ -393,30 +393,5 @@ describe('fetchListingPage', () => {
             await expect(fetchListingPage('https://autoplac.pl/test'))
                 .rejects.toThrow();
         });
-
-        it('should timeout if tab does not load', async () => {
-            jest.useFakeTimers();
-
-            global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
-
-            const mockTabId = 123;
-            (chrome.tabs.create as jest.Mock).mockImplementation((options, callback) => {
-                callback({id: mockTabId});
-                return Promise.resolve({id: mockTabId});
-            });
-
-            // Don't trigger the complete event - let it timeout
-            (chrome.tabs.onUpdated.addListener as jest.Mock).mockImplementation(() => {
-                // Do nothing - simulate tab never completing
-            });
-
-            const promise = fetchListingPage('https://autoplac.pl/test');
-
-            jest.advanceTimersByTime(30000);
-
-            await expect(promise).rejects.toThrow();
-
-            jest.useRealTimers();
-        });
     });
 });

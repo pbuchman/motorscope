@@ -519,24 +519,38 @@ const initializeAlarm = async (): Promise<void> => {
         }
     }
 
-    // Check if there's a stored nextRefreshTime that's still in the future
+    // Check if there's a stored nextRefreshTime
     if (refreshStatus.nextRefreshTime) {
         const nextRefreshDate = new Date(refreshStatus.nextRefreshTime);
         const now = new Date();
 
         if (nextRefreshDate > now) {
+            // Next refresh is still in the future - schedule for remaining time
             const remainingMs = nextRefreshDate.getTime() - now.getTime();
             const remainingMinutes = remainingMs / (1000 * 60);
 
-            console.log(`Restoring scheduled refresh in ${Math.round(remainingMinutes)} minutes`);
+            console.log(`[BG] Restoring scheduled refresh in ${Math.round(remainingMinutes)} minutes`);
 
             await chrome.alarms.clear(CHECK_ALARM_NAME);
             chrome.alarms.create(CHECK_ALARM_NAME, {delayInMinutes: Math.max(0.1, remainingMinutes)});
             return;
+        } else {
+            // Next refresh time is in the past - we're behind schedule
+            // This happens when user was logged out or browser was closed
+            // Trigger immediate refresh
+            const overdueMs = now.getTime() - nextRefreshDate.getTime();
+            const overdueMinutes = Math.round(overdueMs / (1000 * 60));
+            console.log(`[BG] Scheduled refresh is ${overdueMinutes} minutes overdue, triggering immediate refresh`);
+
+            // Run refresh immediately (don't await - let it run in background)
+            runBackgroundRefresh().catch(err => {
+                console.error('[BG] Failed to run overdue refresh:', err);
+            });
+            return;
         }
     }
 
-    console.log(`No valid stored refresh time, scheduling for ${settings.checkFrequencyMinutes} minutes`);
+    console.log(`[BG] No valid stored refresh time, scheduling for ${settings.checkFrequencyMinutes} minutes`);
     await scheduleAlarm(settings.checkFrequencyMinutes);
 };
 
