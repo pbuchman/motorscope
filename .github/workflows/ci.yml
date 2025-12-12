@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, development]
 
+# Cancel duplicate runs - keeps only the latest
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test-package:
     name: Build, Test & Package
@@ -70,19 +75,16 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
 
-          # Package Extension as zip
           cd extension/dist
           zip -r "../../artifacts/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.zip" .
           cd ../..
 
-          # Try to create CRX (may fail without signing key)
           if npx --yes crx@latest pack extension/dist -o "artifacts/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.crx" 2>/dev/null; then
             echo "CRX created successfully"
           else
             echo "CRX creation skipped (requires signing key)"
           fi
 
-          # Package Backend (dist + package files for deployment)
           mkdir -p backend-package
           cp -r api/dist backend-package/
           cp api/package.json backend-package/
