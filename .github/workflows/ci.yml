@@ -29,9 +29,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci --include=optional
+      - name: Clean install dependencies
+        run: |
+          npm cache clean --force
+          npm ci --include=optional
+        env:
+          npm_config_platform: linux
+          npm_config_arch: x64
 
       - name: Lint API
         working-directory: api
