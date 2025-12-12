@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - development
+
+# Cancel duplicate runs - keeps only the latest
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Build, Test & Package
+    runs-on: ubuntu-latest
+    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # Don't use npm cache - it causes issues with native optional deps
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci
+          npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --save-optional
+
+      - name: Lint API
+        working-directory: api
+        run: npm run lint
+
+      - name: Lint Extension
+        working-directory: extension
+        run: npm run lint
+
+      - name: Type Check API
+        working-directory: api
+        run: npm run typecheck
+
+      - name: Type Check Extension
+        working-directory: extension
+        run: npm run typecheck
+
+      - name: Test API
+        working-directory: api
+        run: npm test
+
+      - name: Test Extension
+        working-directory: extension
+        run: npm test
+
+      - name: Build API
+        working-directory: api
+        run: tsc
+
+      - name: Install extension native deps
+        working-directory: extension
+        run: |
+          mkdir -p node_modules
+          npm install lightningcss lightningcss-linux-x64-gnu --legacy-peer-deps
+
+      - name: Build Extension
+        run: npm --workspace=extension exec vite build
+
+      - name: Get short SHA
+        id: sha
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Package artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          cd extension/dist
+          zip -r "../../artifacts/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.zip" .
+          cd ../..
+
+          if npx --yes crx@latest pack extension/dist -o "artifacts/motorscope-${{ steps.sha.outputs.SHORT_SHA }}.crx" 2>/dev/null; then
+            echo "CRX created successfully"
+          else
+            echo "CRX creation skipped (requires signing key)"
+          fi
+
+          mkdir -p backend-package
+          cp -r api/dist backend-package/
+          cp api/package.json backend-package/
+          cd backend-package
+          zip -r "../artifacts/backend-${{ steps.sha.outputs.SHORT_SHA }}.zip" .
+          cd ..
+          rm -rf backend-package
+
+      - name: Upload Extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: motorscope-${{ steps.sha.outputs.SHORT_SHA }}
+          path: |
+            artifacts/motorscope-*.zip
+            artifacts/motorscope-*.crx
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ steps.sha.outputs.SHORT_SHA }}
+          path: artifacts/backend-*.zip
+          retention-days: 30
+          if-no-files-found: error

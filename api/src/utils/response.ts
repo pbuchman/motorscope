@@ -5,21 +5,21 @@
  * Eliminates duplication of error/success response structure across routes.
  */
 
-import type { Response } from 'express';
-import type { ErrorResponse } from '../types.js';
+import type {Response} from 'express';
+import type {ErrorResponse} from '../types.js';
 
 /**
  * HTTP status code to error name mapping
  */
 const HTTP_STATUS_NAMES: Record<number, string> = {
-  400: 'Bad Request',
-  401: 'Unauthorized',
-  403: 'Forbidden',
-  404: 'Not Found',
-  409: 'Conflict',
-  422: 'Unprocessable Entity',
-  500: 'Internal Server Error',
-  503: 'Service Unavailable',
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    409: 'Conflict',
+    422: 'Unprocessable Entity',
+    500: 'Internal Server Error',
+    503: 'Service Unavailable',
 };
 
 /**
@@ -30,12 +30,12 @@ const HTTP_STATUS_NAMES: Record<number, string> = {
  * @param message - Human-readable error message
  */
 export function sendError(res: Response, statusCode: number, message: string): void {
-  const errorResponse: ErrorResponse = {
-    error: HTTP_STATUS_NAMES[statusCode] || 'Error',
-    message,
-    statusCode,
-  };
-  res.status(statusCode).json(errorResponse);
+    const errorResponse: ErrorResponse = {
+        error: HTTP_STATUS_NAMES[statusCode] || 'Error',
+        message,
+        statusCode,
+    };
+    res.status(statusCode).json(errorResponse);
 }
 
 /**
@@ -46,7 +46,7 @@ export function sendError(res: Response, statusCode: number, message: string): v
  * @param statusCode - HTTP status code (default: 200)
  */
 export function sendSuccess<T>(res: Response, data: T, statusCode: number = 200): void {
-  res.status(statusCode).json(data);
+    res.status(statusCode).json(data);
 }
 
 /**
@@ -57,18 +57,18 @@ export function sendSuccess<T>(res: Response, data: T, statusCode: number = 200)
  * @param extra - Optional additional fields to include
  */
 export function sendOperationSuccess(
-  res: Response,
-  message?: string,
-  extra?: Record<string, unknown>
+    res: Response,
+    message?: string,
+    extra?: Record<string, unknown>,
 ): void {
-  const response: Record<string, unknown> = { success: true };
-  if (message) {
-    response.message = message;
-  }
-  if (extra) {
-    Object.assign(response, extra);
-  }
-  res.status(200).json(response);
+    const response: Record<string, unknown> = {success: true};
+    if (message) {
+        response.message = message;
+    }
+    if (extra) {
+        Object.assign(response, extra);
+    }
+    res.status(200).json(response);
 }
 
 /**
@@ -80,7 +80,7 @@ export function sendOperationSuccess(
  * @param context - Context string for logging (e.g., "fetching listings")
  */
 export function handleError(res: Response, error: unknown, context: string): void {
-  console.error(`Error ${context}:`, error);
-  sendError(res, 500, `Failed to ${context.replace(/ing$/, '').replace(/^fetch/, 'fetch ')}`);
+    console.error(`Error ${context}:`, error);
+    sendError(res, 500, `Failed to ${context.replace(/ing$/, '').replace(/^fetch/, 'fetch ')}`);
 }
 

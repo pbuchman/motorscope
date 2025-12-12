@@ -1,31 +1,31 @@
 # MotorScope API Dockerfile
-# Multi-stage build for Node.js 24 application
-# Optimized for Google Cloud Run deployment
+# Multi-stage build for Node.js 20 LTS application
+# Optimized for Google Cloud Build and Cloud Run deployment
 
 # =============================================================================
 # Stage 1: Build
 # =============================================================================
-FROM node:24-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files for dependency installation
-COPY package.json ./
+COPY package.json package-lock.json* ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm install
+RUN npm ci || npm install
 
 # Copy source code
 COPY tsconfig.json ./
 COPY src/ ./src/
 
-# Build TypeScript to JavaScript
-RUN npm run build
+# Build TypeScript to JavaScript (skip lint/typecheck - done in CI)
+RUN npx tsc
 
 # =============================================================================
 # Stage 2: Production
 # =============================================================================
-FROM node:24-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
@@ -33,10 +33,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy package files
-COPY package.json ./
+COPY package.json package-lock.json* ./
 
 # Install production dependencies only
-RUN npm install --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
@@ -51,10 +52,11 @@ RUN chown -R nodejs:nodejs /app
 # Switch to non-root user
 USER nodejs
 
-# Expose port (Cloud Run uses PORT env var, default 8080)
+# Cloud Run uses PORT env var (default 8080)
 EXPOSE 8080
 
-# Health check
+# Note: Cloud Run has built-in health checks, HEALTHCHECK is ignored
+# but kept for local Docker testing
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/api/healthz || exit 1
 

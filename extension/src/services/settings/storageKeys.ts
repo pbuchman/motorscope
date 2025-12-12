@@ -6,8 +6,8 @@
  */
 
 export const STORAGE_KEYS = {
-  // Runtime state (session storage only)
-  refreshStatus: 'motorscope_refresh_status',
+    // Runtime state (session storage only)
+    refreshStatus: 'motorscope_refresh_status',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];

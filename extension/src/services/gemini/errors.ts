@@ -9,19 +9,19 @@
  * Used to signal the background refresh service to back off.
  */
 export class RateLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RateLimitError';
-  }
+    constructor(message: string) {
+        super(message);
+        this.name = 'RateLimitError';
+    }
 }
 
 /**
  * Check if an error message indicates rate limiting
  */
 export function isRateLimitError(errorMessage: string): boolean {
-  return errorMessage.includes('429') ||
-         errorMessage.toLowerCase().includes('rate limit') ||
-         errorMessage.toLowerCase().includes('quota exceeded') ||
-         errorMessage.toLowerCase().includes('resource exhausted');
+    return errorMessage.includes('429') ||
+        errorMessage.toLowerCase().includes('rate limit') ||
+        errorMessage.toLowerCase().includes('quota exceeded') ||
+        errorMessage.toLowerCase().includes('resource exhausted');
 }
 

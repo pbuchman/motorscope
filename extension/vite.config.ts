@@ -20,7 +20,7 @@ const copyExtensionFiles = () => {
             // Ensure content-scripts directory exists in dist
             const contentScriptsDir = resolve(__dirname, 'dist', 'content-scripts');
             if (!fs.existsSync(contentScriptsDir)) {
-                fs.mkdirSync(contentScriptsDir, { recursive: true });
+                fs.mkdirSync(contentScriptsDir, {recursive: true});
             }
         }
     };

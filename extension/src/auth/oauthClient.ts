@@ -13,26 +13,21 @@
  * 4. If silent fails: Require interactive login
  */
 
-import { User, AuthState, BackendAuthResponse } from './types';
-import { validateJwt, isJwtExpired } from './jwt';
+import {AuthState, BackendAuthResponse, User} from './types';
+import {isJwtExpired, validateJwt} from './jwt';
 import {
-  getGoogleTokenInteractive,
-  getGoogleTokenSilent,
-  clearGoogleAuth,
-  disconnectGoogleAccount,
-  removeCachedGoogleToken,
+    clearGoogleAuth,
+    disconnectGoogleAccount,
+    getGoogleTokenInteractive,
+    getGoogleTokenSilent,
+    removeCachedGoogleToken,
 } from './googleAuth';
-import {
-  storeAuthData,
-  getStoredAuthData,
-  clearAuthData,
-  getStoredToken,
-} from './storage';
-import { API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH } from './config';
-import { getBackendServerUrl } from './localServerStorage';
+import {clearAuthData, getStoredAuthData, getStoredToken, storeAuthData} from './storage';
+import {API_PREFIX, AUTH_ENDPOINT_PATH, AUTH_LOGOUT_ENDPOINT_PATH, AUTH_ME_ENDPOINT_PATH} from './config';
+import {getBackendServerUrl} from './localServerStorage';
 
 // Re-export types for convenience
-export type { User, AuthState } from './types';
+export type {User, AuthState} from './types';
 export type UserProfile = User; // Alias for backward compatibility
 
 // =============================================================================
@@ -47,32 +42,32 @@ export type UserProfile = User; // Alias for backward compatibility
  * @param backendUrl - Optional specific backend URL (used when changing servers)
  */
 const invalidateTokenOnBackend = async (token: string, backendUrl?: string): Promise<boolean> => {
-  const baseUrl = backendUrl || await getBackendServerUrl();
-  const url = `${baseUrl}${API_PREFIX}${AUTH_LOGOUT_ENDPOINT_PATH}`;
+    const baseUrl = backendUrl || await getBackendServerUrl();
+    const url = `${baseUrl}${API_PREFIX}${AUTH_LOGOUT_ENDPOINT_PATH}`;
 
-  try {
-    console.log('[OAuth] Calling backend logout endpoint...');
+    try {
+        console.log('[OAuth] Calling backend logout endpoint...');
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
 
-    if (response.ok) {
-      console.log('[OAuth] Token invalidated on backend');
-      return true;
+        if (response.ok) {
+            console.log('[OAuth] Token invalidated on backend');
+            return true;
+        }
+
+        console.log('[OAuth] Backend logout returned:', response.status);
+        return false;
+    } catch (error) {
+        // Network error - still proceed with local logout
+        console.log('[OAuth] Backend logout failed (network error):', error);
+        return false;
     }
-
-    console.log('[OAuth] Backend logout returned:', response.status);
-    return false;
-  } catch (error) {
-    // Network error - still proceed with local logout
-    console.log('[OAuth] Backend logout failed (network error):', error);
-    return false;
-  }
 };
 
 /**
@@ -80,28 +75,28 @@ const invalidateTokenOnBackend = async (token: string, backendUrl?: string): Pro
  * Backend verifies token and returns JWT + user profile
  */
 const authenticateWithBackend = async (googleToken: string): Promise<BackendAuthResponse> => {
-  const backendUrl = await getBackendServerUrl();
-  const url = `${backendUrl}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
+    const backendUrl = await getBackendServerUrl();
+    const url = `${backendUrl}${API_PREFIX}${AUTH_ENDPOINT_PATH}`;
 
-  console.log('[OAuth] Calling backend auth endpoint...');
+    console.log('[OAuth] Calling backend auth endpoint...');
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ accessToken: googleToken }),
-  });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({accessToken: googleToken}),
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Authentication failed' }));
-    throw new Error(error.message || `Authentication failed: ${response.status}`);
-  }
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({message: 'Authentication failed'}));
+        throw new Error(error.message || `Authentication failed: ${response.status}`);
+    }
 
-  const authResponse: BackendAuthResponse = await response.json();
-  console.log('[OAuth] Backend authentication successful');
+    const authResponse: BackendAuthResponse = await response.json();
+    console.log('[OAuth] Backend authentication successful');
 
-  return authResponse;
+    return authResponse;
 };
 
 /**
@@ -112,29 +107,29 @@ const authenticateWithBackend = async (googleToken: string): Promise<BackendAuth
  * Useful for detecting server-side session invalidation.
  */
 const verifySessionWithBackend = async (token: string): Promise<boolean> => {
-  const backendUrl = await getBackendServerUrl();
-  const url = `${backendUrl}${API_PREFIX}${AUTH_ME_ENDPOINT_PATH}`;
+    const backendUrl = await getBackendServerUrl();
+    const url = `${backendUrl}${API_PREFIX}${AUTH_ME_ENDPOINT_PATH}`;
 
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
 
-    if (response.ok) {
-      console.log('[OAuth] Backend session verified');
-      return true;
+        if (response.ok) {
+            console.log('[OAuth] Backend session verified');
+            return true;
+        }
+
+        console.log('[OAuth] Backend session invalid:', response.status);
+        return false;
+    } catch (error) {
+        // Network error - assume session is valid to allow offline usage
+        console.log('[OAuth] Backend verification failed (network error), assuming valid');
+        return true;
     }
-
-    console.log('[OAuth] Backend session invalid:', response.status);
-    return false;
-  } catch (error) {
-    // Network error - assume session is valid to allow offline usage
-    console.log('[OAuth] Backend verification failed (network error), assuming valid');
-    return true;
-  }
 };
 
 // =============================================================================
@@ -150,45 +145,45 @@ const verifySessionWithBackend = async (token: string): Promise<boolean> => {
  * - If no data: returns logged_out
  */
 export const getAuthState = async (): Promise<AuthState> => {
-  const storedData = await getStoredAuthData();
+    const storedData = await getStoredAuthData();
 
-  if (!storedData) {
-    console.log('[OAuth] No stored auth data');
+    if (!storedData) {
+        console.log('[OAuth] No stored auth data');
+        return {
+            status: 'logged_out',
+            user: null,
+            token: null,
+        };
+    }
+
+    const {token, user} = storedData;
+    const validation = validateJwt(token);
+
+    if (!validation.valid) {
+        console.log('[OAuth] Stored JWT is invalid or expired');
+        // Don't clear data here - let the caller decide whether to try silent login
+        return {
+            status: 'logged_out',
+            user: null,
+            token: null,
+        };
+    }
+
+    console.log('[OAuth] Stored JWT is valid');
     return {
-      status: 'logged_out',
-      user: null,
-      token: null,
+        status: 'logged_in',
+        user,
+        token,
     };
-  }
-
-  const { token, user } = storedData;
-  const validation = validateJwt(token);
-
-  if (!validation.valid) {
-    console.log('[OAuth] Stored JWT is invalid or expired');
-    // Don't clear data here - let the caller decide whether to try silent login
-    return {
-      status: 'logged_out',
-      user: null,
-      token: null,
-    };
-  }
-
-  console.log('[OAuth] Stored JWT is valid');
-  return {
-    status: 'logged_in',
-    user,
-    token,
-  };
 };
 
 /**
  * Check if stored JWT is expired (but might be refreshable via silent login)
  */
 export const isTokenExpired = async (): Promise<boolean> => {
-  const token = await getStoredToken();
-  if (!token) return true;
-  return isJwtExpired(token);
+    const token = await getStoredToken();
+    if (!token) return true;
+    return isJwtExpired(token);
 };
 
 /**
@@ -203,39 +198,39 @@ export const isTokenExpired = async (): Promise<boolean> => {
  * @returns Auth result with user and token, or null if silent login fails
  */
 export const trySilentLogin = async (): Promise<{ user: User; token: string } | null> => {
-  console.log('[OAuth] Attempting silent login...');
+    console.log('[OAuth] Attempting silent login...');
 
-  const googleToken = await getGoogleTokenSilent();
+    const googleToken = await getGoogleTokenSilent();
 
-  if (!googleToken) {
-    console.log('[OAuth] Silent login failed - no Google token available');
-    return null;
-  }
-
-  try {
-    const authResponse = await authenticateWithBackend(googleToken);
-    await storeAuthData(authResponse.token, authResponse.user);
-    console.log('[OAuth] Silent login successful');
-    return {
-      user: authResponse.user,
-      token: authResponse.token,
-    };
-  } catch (error) {
-    console.error('[OAuth] Silent backend auth failed:', error);
-
-    // CRITICAL: Clear the bad token from Chrome's cache so that
-    // subsequent interactive login can get a fresh token instead of
-    // Chrome returning the same invalid cached token
-    console.log('[OAuth] Clearing invalid token from Chrome cache...');
-    try {
-      await removeCachedGoogleToken(googleToken);
-      console.log('[OAuth] Cleared invalid token');
-    } catch (clearError) {
-      console.log('[OAuth] Could not clear token:', clearError);
+    if (!googleToken) {
+        console.log('[OAuth] Silent login failed - no Google token available');
+        return null;
     }
 
-    return null;
-  }
+    try {
+        const authResponse = await authenticateWithBackend(googleToken);
+        await storeAuthData(authResponse.token, authResponse.user);
+        console.log('[OAuth] Silent login successful');
+        return {
+            user: authResponse.user,
+            token: authResponse.token,
+        };
+    } catch (error) {
+        console.error('[OAuth] Silent backend auth failed:', error);
+
+        // CRITICAL: Clear the bad token from Chrome's cache so that
+        // subsequent interactive login can get a fresh token instead of
+        // Chrome returning the same invalid cached token
+        console.log('[OAuth] Clearing invalid token from Chrome cache...');
+        try {
+            await removeCachedGoogleToken(googleToken);
+            console.log('[OAuth] Cleared invalid token');
+        } catch (clearError) {
+            console.log('[OAuth] Could not clear token:', clearError);
+        }
+
+        return null;
+    }
 };
 
 /**
@@ -257,66 +252,66 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * @throws Error if login fails
  */
 export const loginWithProvider = async (): Promise<{ user: User; token: string }> => {
-  console.log('[OAuth] Starting interactive login...');
+    console.log('[OAuth] Starting interactive login...');
 
-  const maxAttempts = 5;
-  const initialDelayMs = 1000;
-  let lastError: Error | null = null;
+    const maxAttempts = 5;
+    const initialDelayMs = 1000;
+    let lastError: Error | null = null;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      // Get Google token (may show consent screen on first attempt)
-      const googleToken = await getGoogleTokenInteractive();
-      console.log(`[OAuth] Attempt ${attempt}: Got Google token, length: ${googleToken.length}`);
-
-      // Wait for token propagation (especially important for fresh tokens)
-      const waitMs = attempt === 1 ? initialDelayMs : initialDelayMs * 0.5;
-      console.log(`[OAuth] Waiting ${waitMs}ms for token propagation...`);
-      await delay(waitMs);
-
-      // Try to authenticate with backend
-      const authResponse = await authenticateWithBackend(googleToken);
-
-      // Success! Store auth data
-      await storeAuthData(authResponse.token, authResponse.user);
-      console.log('[OAuth] Interactive login successful:', authResponse.user.email);
-
-      return {
-        user: authResponse.user,
-        token: authResponse.token,
-      };
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`[OAuth] Attempt ${attempt}/${maxAttempts} failed:`, lastError.message);
-
-      // Don't retry on network errors
-      if (lastError.message.includes('network') || lastError.message.includes('fetch failed')) {
-        throw lastError;
-      }
-
-      // If not the last attempt, clear the token cache and try again
-      if (attempt < maxAttempts) {
-        console.log('[OAuth] Clearing cached token before retry...');
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          // Get the current token silently and clear it
-          const cachedToken = await getGoogleTokenSilent();
-          if (cachedToken) {
-            await removeCachedGoogleToken(cachedToken);
-            console.log('[OAuth] Cleared cached token');
-          }
-        } catch (clearError) {
-          console.log('[OAuth] Could not clear cached token:', clearError);
+            // Get Google token (may show consent screen on first attempt)
+            const googleToken = await getGoogleTokenInteractive();
+            console.log(`[OAuth] Attempt ${attempt}: Got Google token, length: ${googleToken.length}`);
+
+            // Wait for token propagation (especially important for fresh tokens)
+            const waitMs = attempt === 1 ? initialDelayMs : initialDelayMs * 0.5;
+            console.log(`[OAuth] Waiting ${waitMs}ms for token propagation...`);
+            await delay(waitMs);
+
+            // Try to authenticate with backend
+            const authResponse = await authenticateWithBackend(googleToken);
+
+            // Success! Store auth data
+            await storeAuthData(authResponse.token, authResponse.user);
+            console.log('[OAuth] Interactive login successful:', authResponse.user.email);
+
+            return {
+                user: authResponse.user,
+                token: authResponse.token,
+            };
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            console.log(`[OAuth] Attempt ${attempt}/${maxAttempts} failed:`, lastError.message);
+
+            // Don't retry on network errors
+            if (lastError.message.includes('network') || lastError.message.includes('fetch failed')) {
+                throw lastError;
+            }
+
+            // If not the last attempt, clear the token cache and try again
+            if (attempt < maxAttempts) {
+                console.log('[OAuth] Clearing cached token before retry...');
+                try {
+                    // Get the current token silently and clear it
+                    const cachedToken = await getGoogleTokenSilent();
+                    if (cachedToken) {
+                        await removeCachedGoogleToken(cachedToken);
+                        console.log('[OAuth] Cleared cached token');
+                    }
+                } catch (clearError) {
+                    console.log('[OAuth] Could not clear cached token:', clearError);
+                }
+
+                // Wait before retrying
+                const retryDelayMs = 800 * Math.pow(1.5, attempt - 1);
+                console.log(`[OAuth] Waiting ${Math.round(retryDelayMs)}ms before retry...`);
+                await delay(retryDelayMs);
+            }
         }
-
-        // Wait before retrying
-        const retryDelayMs = 800 * Math.pow(1.5, attempt - 1);
-        console.log(`[OAuth] Waiting ${Math.round(retryDelayMs)}ms before retry...`);
-        await delay(retryDelayMs);
-      }
     }
-  }
 
-  throw lastError || new Error('Login failed after multiple attempts');
+    throw lastError || new Error('Login failed after multiple attempts');
 };
 
 /**
@@ -334,28 +329,28 @@ export const loginWithProvider = async (): Promise<{ user: User; token: string }
  * @param backendUrl - Optional specific backend URL (used when changing servers to logout from old server)
  */
 export const logout = async (backendUrl?: string): Promise<void> => {
-  console.log('[OAuth] Logging out...');
+    console.log('[OAuth] Logging out...');
 
-  // First, try to invalidate the token on the backend
-  const token = await getStoredToken();
-  if (token) {
-    await invalidateTokenOnBackend(token, backendUrl);
-  }
+    // First, try to invalidate the token on the backend
+    const token = await getStoredToken();
+    if (token) {
+        await invalidateTokenOnBackend(token, backendUrl);
+    }
 
-  // Clear Google auth from Chrome's cache (does NOT revoke consent)
-  await clearGoogleAuth();
+    // Clear Google auth from Chrome's cache (does NOT revoke consent)
+    await clearGoogleAuth();
 
-  // Clear stored auth data
-  await clearAuthData();
+    // Clear stored auth data
+    await clearAuthData();
 
-  console.log('[OAuth] Logout complete');
+    console.log('[OAuth] Logout complete');
 };
 
 /**
  * Get the stored backend JWT token
  */
 export const getToken = async (): Promise<string | null> => {
-  return getStoredToken();
+    return getStoredToken();
 };
 
 /**
@@ -367,54 +362,54 @@ export const getToken = async (): Promise<string | null> => {
  * 3. Otherwise → return logged_out
  */
 export const initializeAuth = async (): Promise<AuthState> => {
-  console.log('[OAuth] Initializing auth state...');
+    console.log('[OAuth] Initializing auth state...');
 
-  // First check stored state
-  const storedData = await getStoredAuthData();
+    // First check stored state
+    const storedData = await getStoredAuthData();
 
-  if (!storedData) {
-    console.log('[OAuth] No stored auth data, returning logged_out');
+    if (!storedData) {
+        console.log('[OAuth] No stored auth data, returning logged_out');
+        return {
+            status: 'logged_out',
+            user: null,
+            token: null,
+        };
+    }
+
+    const {token, user} = storedData;
+    const validation = validateJwt(token);
+
+    // If JWT is still valid, use it
+    if (validation.valid) {
+        console.log('[OAuth] Stored JWT is valid');
+        return {
+            status: 'logged_in',
+            user,
+            token,
+        };
+    }
+
+    // JWT expired - try silent login
+    console.log('[OAuth] Stored JWT expired, trying silent login...');
+    const silentResult = await trySilentLogin();
+
+    if (silentResult) {
+        return {
+            status: 'logged_in',
+            user: silentResult.user,
+            token: silentResult.token,
+        };
+    }
+
+    // Silent login failed - clear stale data and return logged_out
+    console.log('[OAuth] Silent login failed, clearing auth data');
+    await clearAuthData();
+
     return {
-      status: 'logged_out',
-      user: null,
-      token: null,
+        status: 'logged_out',
+        user: null,
+        token: null,
     };
-  }
-
-  const { token, user } = storedData;
-  const validation = validateJwt(token);
-
-  // If JWT is still valid, use it
-  if (validation.valid) {
-    console.log('[OAuth] Stored JWT is valid');
-    return {
-      status: 'logged_in',
-      user,
-      token,
-    };
-  }
-
-  // JWT expired - try silent login
-  console.log('[OAuth] Stored JWT expired, trying silent login...');
-  const silentResult = await trySilentLogin();
-
-  if (silentResult) {
-    return {
-      status: 'logged_in',
-      user: silentResult.user,
-      token: silentResult.token,
-    };
-  }
-
-  // Silent login failed - clear stale data and return logged_out
-  console.log('[OAuth] Silent login failed, clearing auth data');
-  await clearAuthData();
-
-  return {
-    status: 'logged_out',
-    user: null,
-    token: null,
-  };
 };
 
 /**
@@ -424,11 +419,11 @@ export const initializeAuth = async (): Promise<AuthState> => {
  * Returns true if valid, false if invalid or no session.
  */
 export const verifySession = async (): Promise<boolean> => {
-  const token = await getStoredToken();
-  if (!token) {
-    return false;
-  }
-  return verifySessionWithBackend(token);
+    const token = await getStoredToken();
+    if (!token) {
+        return false;
+    }
+    return verifySessionWithBackend(token);
 };
 
 /**
@@ -442,13 +437,13 @@ export const verifySession = async (): Promise<boolean> => {
  * Use for "Remove account" or security-related actions.
  */
 export const disconnect = async (): Promise<void> => {
-  console.log('[OAuth] Disconnecting Google account...');
+    console.log('[OAuth] Disconnecting Google account...');
 
-  // Revoke Google consent entirely
-  await disconnectGoogleAccount();
+    // Revoke Google consent entirely
+    await disconnectGoogleAccount();
 
-  // Clear stored auth data
-  await clearAuthData();
+    // Clear stored auth data
+    await clearAuthData();
 
-  console.log('[OAuth] Disconnect complete');
+    console.log('[OAuth] Disconnect complete');
 };

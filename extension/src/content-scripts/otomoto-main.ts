@@ -95,7 +95,7 @@ const findButtonByText = (container: Element | Document, text: string): HTMLButt
  */
 const getReactFiber = (element: HTMLElement): ReactFiber | null => {
     const key = Object.keys(element).find(k =>
-        k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')
+        k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
     );
     return key ? (element as unknown as Record<string, ReactFiber>)[key] : null;
 };

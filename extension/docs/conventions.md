@@ -2,15 +2,15 @@
 
 ## File Naming
 
-| Type | Convention | Example |
-|------|------------|---------|
-| React Components | PascalCase | `CarCard.tsx`, `PriceChart.tsx` |
-| Hooks | camelCase with `use` prefix | `usePageContent.ts`, `useCurrentTab.ts` |
-| Services | camelCase | `geminiService.ts`, `refreshService.ts` |
-| Utilities | camelCase | `formatters.ts` |
-| Types | camelCase or PascalCase | `types.ts`, `CarListing` |
-| Config | camelCase | `marketplaces.ts`, `config.ts` |
-| Tests | `*.test.ts` or `*.test.tsx` | `auth.test.ts` |
+| Type             | Convention                  | Example                                 |
+|------------------|-----------------------------|-----------------------------------------|
+| React Components | PascalCase                  | `CarCard.tsx`, `PriceChart.tsx`         |
+| Hooks            | camelCase with `use` prefix | `usePageContent.ts`, `useCurrentTab.ts` |
+| Services         | camelCase                   | `geminiService.ts`, `refreshService.ts` |
+| Utilities        | camelCase                   | `formatters.ts`                         |
+| Types            | camelCase or PascalCase     | `types.ts`, `CarListing`                |
+| Config           | camelCase                   | `marketplaces.ts`, `config.ts`          |
+| Tests            | `*.test.ts` or `*.test.tsx` | `auth.test.ts`                          |
 
 ## Export Style
 
@@ -20,24 +20,29 @@ Use named exports for most modules:
 
 ```typescript
 // Good - named exports
-export const usePageContent = () => { ... };
-export const formatEuropeanDateTime = () => { ... };
-export { GoogleLogo } from './GoogleLogo';
+export const usePageContent = () => { ...
+};
+export const formatEuropeanDateTime = () => { ...
+};
+export {GoogleLogo} from './GoogleLogo';
 ```
 
 ### Default Exports
 
 Use default exports only for:
+
 - Top-level page components
 - Lazy-loaded route components
 
 ```typescript
 // App.tsx
-const App: React.FC = () => { ... };
+const App: React.FC = () => { ...
+};
 export default App;
 
 // Components loaded via lazy()
-const Dashboard: React.FC = () => { ... };
+const Dashboard: React.FC = () => { ...
+};
 export default Dashboard;
 ```
 
@@ -47,28 +52,29 @@ Organize imports in this order, with blank lines between groups:
 
 ```typescript
 // 1. React and core libraries
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 
 // 2. Third-party libraries
-import { Loader2, Settings, Car } from 'lucide-react';
+import {Loader2, Settings, Car} from 'lucide-react';
 
 // 3. Internal imports using @/ alias - contexts/hooks first
-import { useAuth } from '@/auth/AuthContext';
-import { useListings } from '@/context/AppContext';
-import { usePageContent } from '@/hooks';
+import {useAuth} from '@/auth/AuthContext';
+import {useListings} from '@/context/AppContext';
+import {usePageContent} from '@/hooks';
 
 // 4. Internal imports using @/ alias - components
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import {LoadingSpinner} from '@/components/ui/LoadingSpinner';
 import CarCard from '@/components/CarCard';
 
 // 5. Internal imports using @/ alias - services/utils/types
-import { formatEuropeanDateTime } from '@/utils/formatters';
-import { CarListing } from '@/types';
+import {formatEuropeanDateTime} from '@/utils/formatters';
+import {CarListing} from '@/types';
 ```
 
 ## Path Aliases
 
 The project uses `@/` as an alias for `src/`. This is configured in both:
+
 - `tsconfig.json` - for TypeScript/IDE support
 - `vite.config.ts` - for build resolution
 
@@ -76,21 +82,21 @@ The project uses `@/` as an alias for `src/`. This is configured in both:
 
 ```typescript
 // ✅ Good - use @/ alias
-import { CarListing } from '@/types';
-import { useAuth } from '@/auth/AuthContext';
+import {CarListing} from '@/types';
+import {useAuth} from '@/auth/AuthContext';
 import CarCard from '@/components/CarCard';
 
 // ❌ Avoid - relative paths (except for sibling files in same folder)
-import { CarListing } from '../../types';
-import { useAuth } from '../auth/AuthContext';
+import {CarListing} from '../../types';
+import {useAuth} from '../auth/AuthContext';
 ```
 
 **Exception:** Use relative imports for files in the same directory:
 
 ```typescript
 // In src/components/popup/index.ts - OK to use relative
-export { LoginView } from './LoginView';
-export { PreviewCard } from './PreviewCard';
+export {LoginView} from './LoginView';
+export {PreviewCard} from './PreviewCard';
 ```
 
 ## Component Structure
@@ -101,13 +107,15 @@ All components should be functional components with hooks:
 
 ```typescript
 // Good
-const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
-  const [state, setState] = useState();
-  // ...
+const MyComponent: React.FC<Props> = ({prop1, prop2}) => {
+    const [state, setState] = useState();
+    // ...
 };
 
 // Bad - class components
-class MyComponent extends React.Component { ... }
+class MyComponent extends React.Component {
+...
+}
 ```
 
 ### Component File Structure
@@ -124,29 +132,41 @@ import React from 'react';
 
 // Types (if not imported)
 interface Props {
-  // ...
+    // ...
 }
 
 // Helper functions (if small, otherwise move to utils)
-const helperFunction = () => { ... };
+const helperFunction = () => { ...
+};
 
 // Component
-export const ComponentName: React.FC<Props> = ({ ... }) => {
-  // Hooks first
-  const [state, setState] = useState();
-  const contextValue = useContext(MyContext);
+export const ComponentName: React.FC<Props> = ({...}) => {
+    // Hooks first
+    const [state, setState] = useState();
+    const contextValue = useContext(MyContext);
 
-  // Derived values
-  const derivedValue = useMemo(() => ..., [deps]);
+    // Derived values
+    const derivedValue = useMemo(() =>
+...,
+    [deps]
+)
+    ;
 
-  // Callbacks
-  const handleClick = useCallback(() => ..., [deps]);
+    // Callbacks
+    const handleClick = useCallback(() =>
+...,
+    [deps]
+)
+    ;
 
-  // Effects
-  useEffect(() => { ... }, [deps]);
+    // Effects
+    useEffect(() => { ...
+    }, [deps]);
 
-  // Render
-  return ( ... );
+    // Render
+    return (
+... )
+    ;
 };
 ```
 
@@ -164,8 +184,8 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
  * @returns Description of return value
  */
 export const useHookName = (param: Type): ReturnType => {
-  // Implementation
-};
+        // Implementation
+    };
 ```
 
 ### Hook Rules
@@ -177,10 +197,10 @@ export const useHookName = (param: Type): ReturnType => {
 ```typescript
 // Good - object return
 return {
-  data,
-  isLoading,
-  error,
-  refresh,
+    data,
+    isLoading,
+    error,
+    refresh,
 };
 
 // Avoid for complex returns
@@ -201,11 +221,13 @@ const [searchTerm, setSearchTerm] = useState('');
 ### Context
 
 Use context for:
+
 - Authentication state
 - Global app data (listings, settings)
 - Theme/preferences
 
 Do NOT use context for:
+
 - Form state
 - UI state (modals, dropdowns)
 - Data that only one component needs
@@ -213,20 +235,21 @@ Do NOT use context for:
 ### Memoization
 
 Use `useMemo` and `useCallback` when:
+
 - Computing derived data from large arrays
 - Preventing unnecessary child re-renders
 - Passing callbacks to memoized children
 
 ```typescript
 // Good - expensive computation
-const filteredListings = useMemo(() => 
-  listings.filter(l => l.status === filter),
-  [listings, filter]
+const filteredListings = useMemo(() =>
+        listings.filter(l => l.status === filter),
+    [listings, filter]
 );
 
 // Good - callback passed to child
 const handleRemove = useCallback((id: string) => {
-  remove(id);
+    remove(id);
 }, [remove]);
 
 // Unnecessary - simple values
@@ -241,9 +264,9 @@ Define interfaces for component props:
 
 ```typescript
 interface CarCardProps {
-  listing: CarListing;
-  onRemove: (id: string) => void;
-  isRefreshing: boolean;
+    listing: CarListing;
+    onRemove: (id: string) => void;
+    isRefreshing: boolean;
 }
 ```
 
@@ -263,8 +286,8 @@ const data = response.json() as CarListing;
 
 ```typescript
 interface Props {
-  required: string;
-  optional?: number;  // May be undefined
+    required: string;
+    optional?: number;  // May be undefined
 }
 ```
 
@@ -278,8 +301,8 @@ Use Tailwind utility classes:
 // Good
 <div className="flex items-center gap-2 p-4 bg-white rounded-lg shadow">
 
-// Avoid inline styles
-<div style={{ display: 'flex', padding: '16px' }}>
+    // Avoid inline styles
+    <div style={{display: 'flex', padding: '16px'}}>
 ```
 
 ### Conditional Classes
@@ -288,12 +311,12 @@ Use Tailwind utility classes:
 // Good - template literal
 <div className={`btn ${isActive ? 'btn-active' : 'btn-inactive'}`}>
 
-// Good - join
-<div className={[
-  'btn',
-  isActive && 'btn-active',
-  isDisabled && 'btn-disabled',
-].filter(Boolean).join(' ')}>
+    // Good - join
+    <div className={[
+        'btn',
+        isActive && 'btn-active',
+        isDisabled && 'btn-disabled',
+    ].filter(Boolean).join(' ')}>
 ```
 
 ## Error Handling
@@ -302,11 +325,11 @@ Use Tailwind utility classes:
 
 ```typescript
 try {
-  const result = await apiCall();
-  setData(result);
+    const result = await apiCall();
+    setData(result);
 } catch (e: unknown) {
-  const message = e instanceof Error ? e.message : 'An error occurred';
-  setError(message);
+    const message = e instanceof Error ? e.message : 'An error occurred';
+    setError(message);
 }
 ```
 
@@ -316,7 +339,7 @@ Wrap major sections with ErrorBoundary:
 
 ```tsx
 <ErrorBoundary>
-  <MainContent />
+    <MainContent/>
 </ErrorBoundary>
 ```
 
@@ -340,9 +363,10 @@ Wrap major sections with ErrorBoundary:
  * @throws {Error} If Gemini API fails
  */
 export const parseCarDataWithGemini = async (
-  url: string,
-  content: string
-): Promise<CarListing> => { ... };
+        url: string,
+        content: string
+    ): Promise<CarListing> => { ...
+    };
 ```
 
 ## Adding New Features

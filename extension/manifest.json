@@ -13,9 +13,19 @@
     "notifications",
     "identity"
   ],
+  "host_permissions": [
+    "https://otomoto.pl/*",
+    "https://www.otomoto.pl/*",
+    "https://autoplac.pl/*",
+    "https://www.autoplac.pl/*"
+  ],
   "oauth2": {
     "client_id": "663051224718-09r9kev3ubbtdkasigdjfvr581vkvlvd.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
   },
   "icons": {
     "16": "icon.png",
@@ -38,8 +48,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"],
-      "js": ["content-scripts/otomoto.js"],
+      "matches": [
+        "https://www.otomoto.pl/*",
+        "https://otomoto.pl/*"
+      ],
+      "js": [
+        "content-scripts/otomoto.js"
+      ],
       "run_at": "document_idle",
       "world": "MAIN"
     }

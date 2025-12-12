@@ -10,14 +10,14 @@
 
 /** Predefined backend server options (base URLs without /api) */
 export const BACKEND_SERVER_OPTIONS = [
-  {
-    label: 'Development (Cloud)',
-    value: 'https://motorscope-dev-663051224718.europe-west1.run.app',
-  },
-  {
-    label: 'Local',
-    value: 'http://localhost:8080',
-  },
+    {
+        label: 'Development (Cloud)',
+        value: 'https://motorscope-dev-663051224718.europe-west1.run.app',
+    },
+    {
+        label: 'Local',
+        value: 'http://localhost:8080',
+    },
 ] as const;
 
 /** Default backend server (Development Cloud) */

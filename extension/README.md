@@ -1,6 +1,7 @@
 # MotorScope Chrome Extension
 
-A Chrome extension for tracking car listings across supported marketplaces. Monitor price changes, save vehicle specs, and sync across devices.
+A Chrome extension for tracking car listings across supported marketplaces. Monitor price changes, save vehicle specs,
+and sync across devices.
 
 ## Project Structure
 
@@ -141,21 +142,25 @@ npm test
 ## Entry Points
 
 ### Popup (`?view=popup`)
+
 - Opens when clicking the extension icon
 - Allows analyzing and saving car listings
 - Shows tracked item details if on a saved listing
 
 ### Dashboard (`?view=dashboard`)
+
 - Full-page view of all tracked listings
 - Filter, sort, and search functionality
 - Grid and compact view modes
 
 ### Settings (`?view=settings`)
+
 - Configure Gemini API key
 - Set refresh frequency
 - View API usage statistics
 
 ### Background Script
+
 - Handles periodic listing refreshes
 - Manages Chrome alarms
 - Syncs data with backend API

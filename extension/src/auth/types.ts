@@ -12,10 +12,10 @@
  * User profile stored after successful authentication
  */
 export interface User {
-  id: string;
-  email: string;
-  displayName?: string;
-  picture?: string;
+    id: string;
+    email: string;
+    displayName?: string;
+    picture?: string;
 }
 
 // =============================================================================
@@ -26,19 +26,19 @@ export interface User {
  * JWT payload structure (decoded from backend JWT)
  */
 export interface JwtPayload {
-  userId: string;
-  email: string;
-  iat: number;  // Issued at (Unix timestamp)
-  exp: number;  // Expiration (Unix timestamp)
+    userId: string;
+    email: string;
+    iat: number;  // Issued at (Unix timestamp)
+    exp: number;  // Expiration (Unix timestamp)
 }
 
 /**
  * Result of JWT validation
  */
 export interface JwtValidationResult {
-  valid: boolean;
-  expired: boolean;
-  payload: JwtPayload | null;
+    valid: boolean;
+    expired: boolean;
+    payload: JwtPayload | null;
 }
 
 // =============================================================================
@@ -54,9 +54,9 @@ export type AuthStatus = 'loading' | 'logged_out' | 'logged_in';
  * Full authentication state
  */
 export interface AuthState {
-  status: AuthStatus;
-  user: User | null;
-  token: string | null;
+    status: AuthStatus;
+    user: User | null;
+    token: string | null;
 }
 
 /**
@@ -64,9 +64,9 @@ export interface AuthState {
  * Session storage is cleared when browser closes or user logs out.
  */
 export interface StoredAuthData {
-  token: string;
-  user: User;
-  storedAt: number; // Unix timestamp when stored
+    token: string;
+    user: User;
+    storedAt: number; // Unix timestamp when stored
 }
 
 // =============================================================================
@@ -77,9 +77,9 @@ export interface StoredAuthData {
  * Complete storage schema for auth-related data
  */
 export interface AuthStorageSchema {
-  authToken: string | null;
-  userProfile: User | null;
-  authStoredAt: number | null;
+    authToken: string | null;
+    userProfile: User | null;
+    authStoredAt: number | null;
 }
 
 // =============================================================================
@@ -90,16 +90,16 @@ export interface AuthStorageSchema {
  * Response from backend /auth/google endpoint
  */
 export interface BackendAuthResponse {
-  token: string;
-  user: User;
+    token: string;
+    user: User;
 }
 
 /**
  * Error response from backend
  */
 export interface BackendErrorResponse {
-  error: string;
-  message: string;
-  statusCode: number;
+    error: string;
+    message: string;
+    statusCode: number;
 }
 

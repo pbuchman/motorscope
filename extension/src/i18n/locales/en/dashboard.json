@@ -2,6 +2,7 @@
   "title": "MotorScope Dashboard",
   "tracking": "Tracking {{count}} vehicle",
   "tracking_plural": "Tracking {{count}} vehicles",
+  "tracking_0": "Not tracking any vehicles",
   "searchPlaceholder": "Search make, model, VIN...",
   "filters": {
     "label": "Filters",

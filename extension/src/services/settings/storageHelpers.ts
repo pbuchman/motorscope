@@ -6,15 +6,15 @@
  * All persistent data comes from API - NO local storage.
  */
 
-import { extensionStorage } from '../extensionStorage';
+import {extensionStorage} from '../extensionStorage';
 
 /**
  * Get a value from session storage with a typed default fallback.
  * Handles null/undefined uniformly.
  */
 export async function getWithDefault<T>(key: string, defaultValue: T): Promise<T> {
-  const value = await extensionStorage.get<T>(key);
-  return value ?? defaultValue;
+    const value = await extensionStorage.get<T>(key);
+    return value ?? defaultValue;
 }
 
 /**
@@ -22,6 +22,6 @@ export async function getWithDefault<T>(key: string, defaultValue: T): Promise<T
  * Thin wrapper for consistency and potential future enhancements (logging, validation).
  */
 export async function setStorage<T>(key: string, value: T): Promise<void> {
-  await extensionStorage.set(key, value);
+    await extensionStorage.set(key, value);
 }
 

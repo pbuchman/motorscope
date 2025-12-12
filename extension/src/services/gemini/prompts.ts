@@ -8,11 +8,11 @@
  * Build prompt for full car listing extraction
  */
 export function buildParsePrompt(
-  pageTitle: string,
-  url: string,
-  pageText: string
+    pageTitle: string,
+    url: string,
+    pageText: string,
 ): string {
-  return `
+    return `
 Extract car listing data from this webpage into the JSON schema.
 
 Page Title: ${pageTitle}
@@ -43,11 +43,11 @@ Key extraction rules:
  * Build prompt for listing refresh (price/status only)
  */
 export function buildRefreshPrompt(
-  pageTitle: string,
-  url: string,
-  pageText: string
+    pageTitle: string,
+    url: string,
+    pageText: string,
 ): string {
-  return `
+    return `
     Analyze the following car listing page and extract the current price and availability status.
 
     Page Title: ${pageTitle}

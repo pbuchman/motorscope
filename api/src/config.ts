@@ -100,22 +100,22 @@ export const IS_PRODUCTION = NODE_ENV === 'production';
  * Call this at startup to fail fast if misconfigured
  */
 export function validateConfig(): void {
-  const errors: string[] = [];
+    const errors: string[] = [];
 
-  if (IS_PRODUCTION) {
-    if (!JWT_SECRET) {
-      errors.push('JWT_SECRET environment variable is required in production');
+    if (IS_PRODUCTION) {
+        if (!JWT_SECRET) {
+            errors.push('JWT_SECRET environment variable is required in production');
+        }
+        if (!OAUTH_CLIENT_ID) {
+            errors.push('OAUTH_CLIENT_ID environment variable is required in production');
+        }
+        if (!ALLOWED_ORIGIN_EXTENSION) {
+            errors.push('ALLOWED_ORIGIN_EXTENSION environment variable is required in production');
+        }
     }
-    if (!OAUTH_CLIENT_ID) {
-      errors.push('OAUTH_CLIENT_ID environment variable is required in production');
-    }
-    if (!ALLOWED_ORIGIN_EXTENSION) {
-      errors.push('ALLOWED_ORIGIN_EXTENSION environment variable is required in production');
-    }
-  }
 
-  if (errors.length > 0) {
-    throw new Error(`Configuration errors:\n${errors.join('\n')}`);
-  }
+    if (errors.length > 0) {
+        throw new Error(`Configuration errors:\n${errors.join('\n')}`);
+    }
 }
 

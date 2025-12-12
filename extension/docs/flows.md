@@ -19,6 +19,7 @@
 ```
 
 **Key Files:**
+
 - `src/auth/AuthContext.tsx` - State management
 - `src/auth/oauthClient.ts` - OAuth flow implementation
 - `src/auth/storage.ts` - Token persistence
@@ -78,6 +79,7 @@ User clicks "Analyze & Add to Watchlist"
 ```
 
 **Key Files:**
+
 - `src/hooks/usePageContent.ts` - Page scraping
 - `src/services/gemini/parse.ts` - Gemini prompting
 - `src/components/popup/PreviewCard.tsx` - Preview UI
@@ -146,6 +148,7 @@ User changes filter/sort
 ```
 
 **Filter Options:**
+
 - Status (Active, Sold, Expired)
 - Archive status
 - Make (multi-select)
@@ -181,6 +184,7 @@ User clicks refresh on a card
 ```
 
 **Key Files:**
+
 - `src/services/refresh/refreshListing.ts` - Refresh logic
 - `src/services/refresh/priceHistory.ts` - Price tracking
 - `src/components/CarCard.tsx` - Refresh UI
@@ -220,6 +224,7 @@ Chrome alarm triggers (every N minutes)
 ```
 
 **Key Files:**
+
 - `src/background.ts` - Service worker
 - `src/services/refresh/sorter.ts` - Priority sorting
 

@@ -7,10 +7,10 @@
  * Backend URL is loaded from chrome.storage.local on each request.
  */
 
-import { CarListing, GeminiStats, GeminiCallHistoryEntry } from '../types';
-import { getToken } from '../auth/oauthClient';
-import { LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH, API_PREFIX } from '../auth/config';
-import { getBackendServerUrl } from '../auth/localServerStorage';
+import {CarListing, GeminiCallHistoryEntry, GeminiStats} from '../types';
+import {getToken} from '../auth/oauthClient';
+import {API_PREFIX, LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH} from '../auth/config';
+import {getBackendServerUrl} from '../auth/localServerStorage';
 
 const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
 
@@ -18,22 +18,22 @@ const GEMINI_HISTORY_ENDPOINT_PATH = '/gemini-history';
  * API Error class for handling backend errors
  */
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number,
-    public isAuthError: boolean = false
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
+    constructor(
+        message: string,
+        public statusCode: number,
+        public isAuthError: boolean = false,
+    ) {
+        super(message);
+        this.name = 'ApiError';
+    }
 }
 
 /**
  * Build full API URL from base URL and endpoint
  */
 const buildApiUrl = async (endpoint: string): Promise<string> => {
-  const backendUrl = await getBackendServerUrl();
-  return `${backendUrl}${API_PREFIX}${endpoint}`;
+    const backendUrl = await getBackendServerUrl();
+    return `${backendUrl}${API_PREFIX}${endpoint}`;
 };
 
 /**
@@ -44,37 +44,37 @@ const buildApiUrl = async (endpoint: string): Promise<string> => {
  * @returns Response data
  */
 const apiRequest = async <T>(
-  endpoint: string,
-  options: RequestInit = {}
+    endpoint: string,
+    options: RequestInit = {},
 ): Promise<T> => {
-  const token = await getToken();
+    const token = await getToken();
 
-  if (!token) {
-    throw new ApiError('Not authenticated', 401, true);
-  }
+    if (!token) {
+        throw new ApiError('Not authenticated', 401, true);
+    }
 
-  const url = await buildApiUrl(endpoint);
+    const url = await buildApiUrl(endpoint);
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...options.headers,
+        },
+    });
 
-  if (!response.ok) {
-    const isAuthError = response.status === 401;
-    const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new ApiError(
-      errorData.message || `Request failed: ${response.status}`,
-      response.status,
-      isAuthError
-    );
-  }
+    if (!response.ok) {
+        const isAuthError = response.status === 401;
+        const errorData = await response.json().catch(() => ({message: 'Request failed'}));
+        throw new ApiError(
+            errorData.message || `Request failed: ${response.status}`,
+            response.status,
+            isAuthError,
+        );
+    }
 
-  return response.json();
+    return response.json();
 };
 
 /**
@@ -83,7 +83,7 @@ const apiRequest = async <T>(
  * @returns Array of car listings
  */
 export const getRemoteListings = async (): Promise<CarListing[]> => {
-  return apiRequest<CarListing[]>(LISTINGS_ENDPOINT_PATH);
+    return apiRequest<CarListing[]>(LISTINGS_ENDPOINT_PATH);
 };
 
 /**
@@ -93,12 +93,12 @@ export const getRemoteListings = async (): Promise<CarListing[]> => {
  * @returns Success response
  */
 export const saveRemoteListings = async (
-  listings: CarListing[]
+    listings: CarListing[],
 ): Promise<{ success: boolean; count: number }> => {
-  return apiRequest<{ success: boolean; count: number }>(LISTINGS_ENDPOINT_PATH, {
-    method: 'PUT',
-    body: JSON.stringify(listings),
-  });
+    return apiRequest<{ success: boolean; count: number }>(LISTINGS_ENDPOINT_PATH, {
+        method: 'PUT',
+        body: JSON.stringify(listings),
+    });
 };
 
 /**
@@ -108,10 +108,10 @@ export const saveRemoteListings = async (
  * @returns Saved listing
  */
 export const saveRemoteListing = async (listing: CarListing): Promise<CarListing> => {
-  return apiRequest<CarListing>(LISTINGS_ENDPOINT_PATH, {
-    method: 'POST',
-    body: JSON.stringify(listing),
-  });
+    return apiRequest<CarListing>(LISTINGS_ENDPOINT_PATH, {
+        method: 'POST',
+        body: JSON.stringify(listing),
+    });
 };
 
 /**
@@ -121,11 +121,11 @@ export const saveRemoteListing = async (listing: CarListing): Promise<CarListing
  * @returns Success response
  */
 export const deleteRemoteListing = async (
-  listingId: string
+    listingId: string,
 ): Promise<{ success: boolean }> => {
-  return apiRequest<{ success: boolean }>(`${LISTINGS_ENDPOINT_PATH}/${listingId}`, {
-    method: 'DELETE',
-  });
+    return apiRequest<{ success: boolean }>(`${LISTINGS_ENDPOINT_PATH}/${listingId}`, {
+        method: 'DELETE',
+    });
 };
 
 /**
@@ -134,12 +134,12 @@ export const deleteRemoteListing = async (
  * @returns Health status
  */
 export const checkBackendHealth = async (): Promise<{ status: string; firestore: string }> => {
-  const url = await buildApiUrl('/healthz');
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Backend health check failed');
-  }
-  return response.json();
+    const url = await buildApiUrl('/healthz');
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error('Backend health check failed');
+    }
+    return response.json();
 };
 
 // =============================================================================
@@ -147,32 +147,32 @@ export const checkBackendHealth = async (): Promise<{ status: string; firestore:
 // =============================================================================
 
 export interface RemoteSettings {
-  geminiApiKey: string;
-  checkFrequencyMinutes: number;
-  geminiStats: GeminiStats;
-  // User preferences
-  language?: 'en' | 'pl';
-  // Refresh schedule - persisted across browser sessions
-  lastRefreshTime?: string | null;
-  nextRefreshTime?: string | null;
-  lastRefreshCount?: number;
-  // Dashboard preferences
-  dashboardFilters?: {
-    status: string;
-    archived: string;
-    makes: string[];
-    models: string[];
-    sources: string[];
-  };
-  dashboardSort?: string;
-  dashboardViewMode?: string;
+    geminiApiKey: string;
+    checkFrequencyMinutes: number;
+    geminiStats: GeminiStats;
+    // User preferences
+    language?: 'en' | 'pl';
+    // Refresh schedule - persisted across browser sessions
+    lastRefreshTime?: string | null;
+    nextRefreshTime?: string | null;
+    lastRefreshCount?: number;
+    // Dashboard preferences
+    dashboardFilters?: {
+        status: string;
+        archived: string;
+        makes: string[];
+        models: string[];
+        sources: string[];
+    };
+    dashboardSort?: string;
+    dashboardViewMode?: string;
 }
 
 /**
  * Get user settings from the backend
  */
 export const getRemoteSettings = async (): Promise<RemoteSettings> => {
-  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH);
+    return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH);
 };
 
 /**
@@ -183,10 +183,10 @@ export const getRemoteSettings = async (): Promise<RemoteSettings> => {
  * @returns Full settings after update
  */
 export const patchRemoteSettings = async (settings: Partial<RemoteSettings>): Promise<RemoteSettings> => {
-  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
-    method: 'PATCH',
-    body: JSON.stringify(settings),
-  });
+    return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
+        method: 'PATCH',
+        body: JSON.stringify(settings),
+    });
 };
 
 /**
@@ -196,10 +196,10 @@ export const patchRemoteSettings = async (settings: Partial<RemoteSettings>): Pr
  * @deprecated Prefer patchRemoteSettings() for partial updates
  */
 export const saveRemoteSettings = async (settings: Partial<RemoteSettings>): Promise<RemoteSettings> => {
-  return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
-    method: 'PATCH', // Use PATCH even for this legacy function
-    body: JSON.stringify(settings),
-  });
+    return apiRequest<RemoteSettings>(SETTINGS_ENDPOINT_PATH, {
+        method: 'PATCH', // Use PATCH even for this legacy function
+        body: JSON.stringify(settings),
+    });
 };
 
 // =============================================================================
@@ -210,27 +210,27 @@ export const saveRemoteSettings = async (settings: Partial<RemoteSettings>): Pro
  * Get Gemini API call history from the backend
  */
 export const getRemoteGeminiHistory = async (limit: number = 100): Promise<GeminiCallHistoryEntry[]> => {
-  return apiRequest<GeminiCallHistoryEntry[]>(`${GEMINI_HISTORY_ENDPOINT_PATH}?limit=${limit}`);
+    return apiRequest<GeminiCallHistoryEntry[]>(`${GEMINI_HISTORY_ENDPOINT_PATH}?limit=${limit}`);
 };
 
 /**
  * Add Gemini history entries to the backend
  */
 export const addRemoteGeminiHistory = async (
-  entries: GeminiCallHistoryEntry | GeminiCallHistoryEntry[]
+    entries: GeminiCallHistoryEntry | GeminiCallHistoryEntry[],
 ): Promise<{ success: boolean; count: number }> => {
-  return apiRequest<{ success: boolean; count: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
-    method: 'POST',
-    body: JSON.stringify(entries),
-  });
+    return apiRequest<{ success: boolean; count: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
+        method: 'POST',
+        body: JSON.stringify(entries),
+    });
 };
 
 /**
  * Clear all Gemini history on the backend
  */
 export const clearRemoteGeminiHistory = async (): Promise<{ success: boolean; deleted: number }> => {
-  return apiRequest<{ success: boolean; deleted: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
-    method: 'DELETE',
-  });
+    return apiRequest<{ success: boolean; deleted: number }>(GEMINI_HISTORY_ENDPOINT_PATH, {
+        method: 'DELETE',
+    });
 };
 
