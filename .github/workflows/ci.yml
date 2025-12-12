@@ -3,15 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - main
-      - development
+      - '**'
   pull_request:
-    types: [opened, synchronize]
-    branches:
-      - main
-      - development
+    types:
+      - synchronize
 
-# Cancel duplicate runs - keeps only the latest
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -20,7 +16,6 @@ jobs:
   build-test-package:
     name: Build, Test & Package
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
       - name: Checkout
