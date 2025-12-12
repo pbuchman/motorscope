@@ -9,24 +9,24 @@ import {beforeEach, describe, expect, it, jest} from '@jest/globals';
 import {Express, NextFunction, Request, Response} from 'express';
 
 // Create mock functions with proper typing
-const mockUpsertUser = jest.fn<() => Promise<any>>();
-const mockGetListingsByUserId = jest.fn<() => Promise<any>>();
-const mockGetListingById = jest.fn<() => Promise<any>>();
-const mockSaveAllListings = jest.fn<() => Promise<any>>();
-const mockSaveListing = jest.fn<() => Promise<any>>();
-const mockDeleteListing = jest.fn<() => Promise<any>>();
-const mockCheckFirestoreHealth = jest.fn<() => Promise<any>>();
-const mockGetUserSettings = jest.fn<() => Promise<any>>();
-const mockSaveUserSettings = jest.fn<() => Promise<any>>();
-const mockGetGeminiHistory = jest.fn<() => Promise<any>>();
-const mockAddGeminiHistoryEntries = jest.fn<() => Promise<any>>();
-const mockClearGeminiHistory = jest.fn<() => Promise<any>>();
-const mockBlacklistToken = jest.fn<() => Promise<any>>();
-const mockCleanupExpiredBlacklistedTokens = jest.fn<() => Promise<any>>();
-const mockIsTokenBlacklisted = jest.fn<() => Promise<boolean>>();
-const mockVerifyGoogleToken = jest.fn<() => Promise<any>>();
-const mockVerifyGoogleAccessToken = jest.fn<() => Promise<any>>();
-const mockGenerateJwt = jest.fn<() => string>();
+const mockUpsertUser = jest.fn<any>();
+const mockGetListingsByUserId = jest.fn<any>();
+const mockGetListingById = jest.fn<any>();
+const mockSaveAllListings = jest.fn<any>();
+const mockSaveListing = jest.fn<any>();
+const mockDeleteListing = jest.fn<any>();
+const mockCheckFirestoreHealth = jest.fn<any>();
+const mockGetUserSettings = jest.fn<any>();
+const mockSaveUserSettings = jest.fn<any>();
+const mockGetGeminiHistory = jest.fn<any>();
+const mockAddGeminiHistoryEntries = jest.fn<any>();
+const mockClearGeminiHistory = jest.fn<any>();
+const mockBlacklistToken = jest.fn<any>();
+const mockCleanupExpiredBlacklistedTokens = jest.fn<any>();
+const mockIsTokenBlacklisted = jest.fn<any>();
+const mockVerifyGoogleToken = jest.fn<any>();
+const mockVerifyGoogleAccessToken = jest.fn<any>();
+const mockGenerateJwt = jest.fn<any>();
 
 // Mock db module
 jest.unstable_mockModule('../db.js', () => ({

@@ -1,8 +1,8 @@
 # MotorScope - Car Listing Tracker
 
-[![Build Status](https://github.com/pbuchman/motorscope/actions/workflows/pack-extension.yml/badge.svg)](https://github.com/pbuchman/motorscope/actions/workflows/pack-extension.yml)
+[![CI](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml/badge.svg)](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://reactjs.org/)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-green.svg)](https://developer.chrome.com/docs/extensions/mv3/)
 [![Gemini AI](https://img.shields.io/badge/Gemini-2.5%20Flash-purple.svg)](https://ai.google.dev/)
@@ -50,7 +50,7 @@ Tracking car prices manually is tedious. MotorScope automates the process:
 
 Car listings are stored using a normalized JSON structure. See the full schema documentation:
 
-📄 **[Car Listing JSON Schema](./docs/car-listing-schema.json)**
+📄 **[Car Listing JSON Schema](./extension/docs/car-listing-schema.json)**
 
 ### Key data fields extracted:
 
@@ -102,27 +102,45 @@ Car listings are stored using a normalized JSON structure. See the full schema d
 # Install dependencies
 npm install
 
-# Run in development mode with hot reload
-npm run dev
+# Run extension in development mode with hot reload
+npm run dev:extension
 
-# Build for production
+# Run API in development mode
+npm run dev:api
+
+# Build everything for production
 npm run build
 
-# Clean and rebuild
-npm run rebuild:dist
+# Build extension only
+npm run build:extension
+
+# Build API only
+npm run build:api
+
+# Run all tests
+npm test
+
+# Run linting
+npm run lint
 
 # Type check
-npx tsc --noEmit
+npm run typecheck
+
+# Clean build artifacts
+npm run clean
 ```
 
 ## 🏗️ Tech Stack
 
-- **Frontend**: React 19, TypeScript 5.2, Tailwind CSS 4
-- **Build Tool**: Vite 5
-- **AI**: Google Gemini API (@google/genai)
-- **Charts**: Recharts
+- **Frontend**: React 19.2, TypeScript 5.9, Tailwind CSS 4.1
+- **Build Tool**: Vite 5.1
+- **AI**: Google Gemini API (@google/genai 1.31)
+- **Charts**: Recharts 3.5
 - **Icons**: Lucide React
+- **i18n**: i18next (English & Polish)
+- **Testing**: Jest 29, React Testing Library
 - **Extension**: Chrome Manifest V3
+- **Backend**: Node.js 20, Express, Firestore
 
 ## ⚙️ Configuration
 
@@ -140,18 +158,25 @@ motorscope/
 ├── extension/               # Chrome extension source
 │   ├── src/
 │   │   ├── components/      # React UI components
-│   │   │   ├── CarCard.tsx          # Grid view car card
-│   │   │   ├── CarCardCompact.tsx   # Compact list view card
-│   │   │   ├── Dashboard.tsx        # Main dashboard view
-│   │   │   ├── DashboardFilters.tsx # Filter controls
-│   │   │   ├── ListingDetailModal.tsx # Detailed listing overlay
-│   │   │   ├── PriceChart.tsx       # Price history chart
-│   │   │   └── SettingsPage.tsx     # Extension settings
+│   │   │   ├── ui/              # Reusable UI primitives
+│   │   │   ├── popup/           # Extension popup components
+│   │   │   ├── CarCard.tsx      # Grid view car card
+│   │   │   ├── CarCardCompact.tsx # Compact list view card
+│   │   │   ├── Dashboard.tsx    # Main dashboard view
+│   │   │   └── SettingsPage.tsx # Extension settings
 │   │   ├── config/
-│   │   │   └── marketplaces.ts      # Supported marketplace configs
+│   │   │   └── marketplaces.ts  # Supported marketplace configs
 │   │   ├── services/        # Business logic
-│   │   │   ├── geminiService.ts     # AI data extraction
-│   │   │   └── storageService.ts    # Data persistence
+│   │   │   ├── gemini/          # AI data extraction
+│   │   │   ├── refresh/         # Background refresh logic
+│   │   │   └── settings/        # Settings management
+│   │   ├── hooks/           # Custom React hooks
+│   │   │   ├── useCurrentTab.ts     # Tab information
+│   │   │   ├── usePageContent.ts    # Page scraping
+│   │   │   └── useChromeMessaging.ts # Extension messaging
+│   │   ├── i18n/            # Internationalization (EN/PL)
+│   │   │   └── locales/         # Translation files
+│   │   ├── context/         # React context providers
 │   │   ├── auth/            # Authentication
 │   │   ├── api/             # API client
 │   │   ├── utils/           # Helper functions
@@ -163,8 +188,13 @@ motorscope/
 │   └── src/
 │       ├── index.ts         # Express server entry
 │       ├── routes.ts        # API routes
-│       └── auth.ts          # Authentication handlers
+│       ├── auth.ts          # Authentication handlers
+│       ├── db.ts            # Firestore database layer
+│       └── migrations/      # Database migrations
 ├── docs/                    # Project documentation
+├── .github/
+│   └── workflows/
+│       └── ci.yml           # CI/CD pipeline
 └── scripts/                 # Utility scripts
 ```
 
@@ -192,5 +222,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<p align="center">Made with ❤️ for car enthusiasts</p>
+<div align="center">Made with ❤️ for car enthusiasts</div>
 
