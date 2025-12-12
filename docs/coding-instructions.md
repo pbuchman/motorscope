@@ -1,274 +1,179 @@
-# Coding Instructions
+# Coding Instructions (v2)
 
-Guidelines for making code changes in the MotorScope project.
+These rules apply to **all code changes** performed by an LLM in this repository.
+They are not suggestions. They are constraints.
 
-For comprehensive refactoring tasks, see [refactoring-prompt.md](./refactoring-prompt.md).
-
----
-
-## General Principles
-
-1. **Zero TypeScript errors, zero warnings**: The build must complete with no errors and no warnings (including "shorten import" hints, unused variables, etc.).
-2. **No suppression hacks**: Do not use `ts-ignore`, `ts-expect-error`, or loosen types to `any`/`unknown` just to hide errors.
-3. **Always validate changes**: After editing a file, check for TypeScript errors and fix them.
-4. **Build and test**: Run `npm run build` and `npm test` for both projects.
+The repository is a monorepo with:
+- `/extension` — Chrome extension frontend (TypeScript, React, i18n EN/PL)
+- `/api` — backend API (TypeScript, Firestore, migrations)
 
 ---
 
-## TypeScript / Module Style
+## 1. TypeScript correctness is mandatory
 
-### ESM Only
-
-- Use `import` / `export` syntax only
-- Do not introduce `require()` or `module.exports`
-
-### Import Paths
-
-- Use the `@/` path alias instead of deep relative paths
-- Example: Use `@/types` instead of `../../types`
-- The alias is configured in `tsconfig.json` as `"@/*": ["./src/*"]`
-
-### Typing
-
-- Do not introduce `any` unless absolutely unavoidable
-- Prefer explicit, accurate types
-- Fix implicit `any` warnings
-
-### Anti-Patterns to Avoid
-
-1. **Throwing exceptions caught locally**
-   ```typescript
-   // ❌ Bad
-   try {
-     if (!data) throw new Error('No data');
-   } catch (error) {
-     throw new Error('Operation failed');
-   }
-   
-   // ✅ Good
-   if (!data) throw new Error('No data');
-   try {
-     // external operations only
-   } catch (error) {
-     throw new Error('Operation failed');
-   }
-   ```
-
-2. **Redundant local variables**
-   ```typescript
-   // ❌ Bad
-   const result = fn();
-   return result;
-   
-   // ✅ Good
-   return fn();
-   ```
-
-3. **Unused variables/imports** - Remove them; use `_` prefix for intentionally unused params
-
-4. **Deeply nested promise chains** - Use `async/await`
-
-5. **Copy-pasted code** - Factor into shared utilities
+- The codebase must compile with **zero TypeScript errors**.
+- Do **not** hide problems using:
+    - `@ts-ignore`
+    - `@ts-expect-error`
+    - unsafe casts
+    - loosening types to `any` or `unknown`
+- `any` is forbidden unless there is **no realistic alternative** and the reason is documented inline.
+- Prefer explicit, narrow types over broad unions.
 
 ---
 
-## Code Formatting
+## 2. No warnings, ever
 
-Consistent formatting is **enforced at the monorepo level** by ESLint and EditorConfig.
-
-### EditorConfig (WebStorm / VS Code)
-
-The root `.editorconfig` file enforces formatting in all editors that support it (WebStorm, VS Code, etc.):
-- 4-space indentation for TypeScript/JavaScript
-- UTF-8 encoding
-- LF line endings
-- Trim trailing whitespace
-- Insert final newline
-
-**WebStorm**: EditorConfig is supported natively. Settings are automatically applied.
-
-### ESLint Configuration (Monorepo)
-
-The root `/.eslintrc.json` defines shared rules for both `/api` and `/extension`:
-- 4-space indentation
-- Single quotes for strings/imports
-- No spaces inside braces `{foo}` not `{ foo }`
-- Trailing commas in multiline
-- No trailing whitespace
-- Newline at end of file
-
-Each project extends the root config:
-- `/api/.eslintrc.json` - extends root, adds Node.js env
-- `/extension/.eslintrc.json` - extends root, adds browser env + JSX
-
-### Running Checks
-
-```bash
-# Monorepo-wide commands (from root)
-npm run lint          # Lint both projects
-npm run lint:fix      # Auto-fix both projects
-npm run typecheck     # Type-check both projects
-npm run build         # Build both (includes lint + typecheck)
-npm run test          # Test both projects
-
-# Per-project commands
-npm run lint:api      # Lint API only
-npm run lint:extension # Lint extension only
-npm run typecheck:api # Type-check API only
-npm run typecheck:extension # Type-check extension only
-```
-
-**Note**: `npm run build` runs `lint → typecheck → compile` for each project. Build fails on any error.
-
-### Indentation & Spacing
-
-- **Indentation**: 4 spaces (no tabs) - **enforced by ESLint**
-- **Line length**: Keep lines reasonably short (~100-120 chars)
-- **Trailing whitespace**: None
-- **Final newline**: Files should end with a single newline
-
-### Import Formatting
-
-- **No spaces inside braces**: `{foo, bar}` not `{ foo, bar }`
-- **Single quotes** for import paths: `'./types'` not `"./types"`
-- **Group imports** by type (React, external, internal) with blank lines between
-
-```typescript
-// ✅ Correct
-import React, {useCallback, useEffect, useState} from 'react';
-import {useTranslation} from 'react-i18next';
-
-import {CarListing} from '@/types';
-import {useAuth} from '@/auth/AuthContext';
-```
-
-### Object/Array Formatting
-
-- **No spaces inside braces/brackets** for inline: `{foo: 1}` not `{ foo: 1 }`
-- **Trailing commas** in multi-line objects/arrays
-- **Consistent brace style**: Opening brace on same line
-
-```typescript
-// ✅ Correct
-const config = {
-    id: 'test',
-    enabled: true,
-};
-
-// ✅ Correct inline
-const obj = {foo: 1, bar: 2};
-```
-
-### Function Formatting
-
-- **Arrow functions** preferred for callbacks and functional components
-- **No space before parentheses** in function calls: `fn()` not `fn ()`
-- **Space after keywords**: `if (`, `for (`, `while (`
-
-```typescript
-// ✅ Correct
-const handleClick = () => {
-    doSomething();
-};
-
-if (condition) {
-    // ...
-}
-```
+- No TypeScript warnings.
+- No ESLint warnings.
+- No test runner warnings.
+- No “minor” hints:
+    - unused imports
+    - unused variables
+    - deprecated APIs
+    - import path shortening suggestions
+- If tooling reports it, you fix it.
 
 ---
 
-## i18n (Extension Only)
+## 3. Module system and imports
 
-- All user-facing strings must use i18n (`t()`, `useTranslation()`)
-- English is canonical; Polish must be synced (all EN keys must exist in PL)
-- No inline user-visible text in components
-- Preserve placeholders (`{{name}}`, etc.) in translations
-- Use appropriate plural forms (`_plural`, `_0` for Polish zero-form)
-
----
-
-## Export Patterns
-
-### Migrations (API)
-
-Use default exports with a `Migration` object:
-
-```typescript
-import type { Migration } from './types.js';
-
-const migration: Migration = {
-  id: 'YYYYMMDD_description',
-  description: 'Human readable description',
-  up: async (db) => { /* logic */ },
-};
-
-export default migration;
-```
-
-Registry (`/api/src/migrations/index.ts`):
-```typescript
-import myMigration from './YYYYMMDD_description.js';
-export const migrations: Migration[] = [myMigration];
-```
-
-### Components and Services (Extension)
-
-- Use named exports for most modules
-- Use default exports only for top-level page components
+- Use **ESM only**: `import` / `export`.
+- Do not introduce `require()` or `module.exports`.
+- Do not mix module systems.
+- Prefer clean, readable imports:
+    - Use path aliases or barrel files if available.
+    - Avoid long relative paths.
+- Remove duplicated or inconsistent import styles.
 
 ---
 
-## Testing Principles
+## 4. i18n rules (extension only)
 
-Tests must be **behavior-focused**:
+- **i18n exists only in `/extension`.**
+- `/api` must never contain translations.
 
-- ❌ Avoid "renders without crashing" as the only assertion
-- ❌ Avoid pure snapshot tests that don't guard behavior
-- ✅ For each test: "If I break this logic, will this test fail?"
-- ✅ Assert on user-visible outcomes and data changes
-
----
-
-## Project Structure
-
-### Extension (`/extension`)
-
-- Background service worker: `src/background.ts`
-- Auth: `chrome.identity.getAuthToken()` for Google OAuth
-- Session storage: `chrome.storage.session` for runtime state
-- i18n: EN/PL locales in `src/i18n/locales/`
-
-### API (`/api`)
-
-- Express + Firestore
-- JWT tokens include `jti` for blacklist support
-- Migrations: one file per migration in `src/migrations/`
-- No i18n - English only
+In `/extension`:
+- No user-facing inline strings are allowed.
+- All UI text must come from i18n.
+- English is the **single source of truth**.
+- Every English key **must** exist in Polish.
+- Keys, structure, placeholders, and formatting must match exactly.
+- Placeholders (`{count}`, `{name}`, ICU rules, etc.) must be preserved.
+- Polish translations must be:
+    - complete
+    - grammatically correct
+    - context-aware
+- Fix half-translated or English leftovers immediately.
 
 ---
 
-## Before Committing
+## 5. Testing philosophy
 
-```bash
-# Both must pass with no errors/warnings
-# Note: npm run build automatically runs lint first
-cd api && npm run build && npm test
-cd extension && npm run build && npm test
+The goal is **maximum reasonable coverage**, not artificial 100%.
 
-# To auto-fix formatting issues:
-cd api && npm run lint:fix
-cd extension && npm run lint:fix
-```
+### Forbidden test types
+- “renders without crashing”
+- snapshot-only tests
+- tests that only assert mocks were called
+- tests that would pass even if real logic was broken
 
-### Checklist
+### Required properties of tests
+- Tests must assert **observable behavior**.
+- Tests must fail on **realistic regressions**.
+- Over-mocking is not allowed.
+- External systems must be mocked properly:
+    - Chrome extension APIs
+    - Firestore (emulator or structured mocks)
+    - network calls
 
-- [ ] Zero TypeScript errors
-- [ ] Zero ESLint errors (build will fail otherwise)
-- [ ] No `ts-ignore` or `any` hacks (in production code)
-- [ ] Import paths use `@/` alias where applicable
-- [ ] No unused variables or imports
-- [ ] 4-space indentation, single quotes, no trailing whitespace
-- [ ] i18n: EN/PL keys in sync (extension)
-- [ ] Tests pass for both projects
+### Coverage expectations
+- `/extension`:
+    - background service worker
+    - message routing
+    - storage interactions
+    - scheduled jobs
+    - non-trivial UI components
+    - hooks and shared logic
+- `/api`:
+    - business logic
+    - data transformations
+    - auth flows
+    - HTTP endpoints
+    - **all migrations**
 
+Trivial presentational components may remain untested **only if justified**.
+
+---
+
+## 6. Migration architecture (API only)
+
+- All migrations live in `/api/src/migrations`.
+- One migration = one file.
+- The main migration module:
+    - imports migrations
+    - orders them
+    - executes them
+- No migration logic in the orchestrator.
+
+Migrations must be:
+- idempotent
+- batch-safe
+- logged
+- tested
+
+Choose one migration export pattern and apply it consistently.
+
+---
+
+## 7. UI behavior changes (extension)
+
+When modifying UI behavior:
+- Preserve existing functionality unless explicitly instructed otherwise.
+- State changes must be persisted if they affect user settings.
+- UI logic changes must be tested.
+- If a behavior requires reload or reinitialization, document it.
+
+---
+
+## 8. No magic, no duplication
+
+- No magic strings in logic.
+- No copy-pasted logic where a shared utility is appropriate.
+- Refactor duplicated behavior into shared helpers **without changing behavior**.
+
+---
+
+## 9. External contracts
+
+- Do not change public API contracts casually:
+    - HTTP responses
+    - message formats
+    - migration entrypoints
+- If a contract change is unavoidable:
+    - make it explicit
+    - keep it minimal
+    - document it
+
+---
+
+## 10. Honesty and verification
+
+- Do not claim work is complete unless it actually is.
+- Do not bluff about coverage, correctness, or verification.
+- If something is ambiguous or risky:
+    - make a reasonable decision
+    - document it
+
+---
+
+## 11. Final verification before completion
+
+Before finishing any task:
+- Build passes.
+- Type-check passes.
+- Lint passes.
+- Tests pass.
+- Zero warnings remain.
+
+If any of these fail, the task is not complete.

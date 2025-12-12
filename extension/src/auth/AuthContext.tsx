@@ -7,6 +7,7 @@
 
 import React, {createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {initializeAuth, loginWithProvider, logout as logoutFromProvider, trySilentLogin, User} from './oauthClient';
+import {isChromeExtension, MessageTypes, sendMessage} from '@/hooks/useChromeMessaging';
 
 /**
  * Auth context state
@@ -54,6 +55,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                     token: authState.token,
                     error: null,
                 });
+
+                // If user is already logged in on init, ensure alarm is initialized
+                if (authState.status === 'logged_in' && isChromeExtension()) {
+                    sendMessage({type: MessageTypes.INITIALIZE_ALARM}).catch((err) => {
+                        console.warn('[AuthContext] Failed to initialize alarm on auth restore:', err);
+                    });
+                }
             } catch (error) {
                 console.error('[AuthContext] Failed to initialize auth:', error);
                 setState({
@@ -96,6 +104,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                 token,
                 error: null,
             });
+
+            // Initialize alarm scheduling for background refresh after login
+            if (isChromeExtension()) {
+                sendMessage({type: MessageTypes.INITIALIZE_ALARM}).catch((err) => {
+                    console.warn('[AuthContext] Failed to initialize alarm after login:', err);
+                });
+            }
         } catch (error) {
             console.error('[AuthContext] Login failed:', error);
             const message = error instanceof Error ? error.message : 'Login failed';

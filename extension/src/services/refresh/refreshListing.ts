@@ -50,14 +50,20 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
 
         // Non-OK response (including status 0, which indicates a network error)
         if (fetchResult.status !== 200) {
+            // 520 is a Cloudflare error typically meaning the origin needs authentication
+            const isLoginRequired = fetchResult.status === 520 || fetchResult.status === 0;
+            const errorMsg = isLoginRequired
+                ? 'Login required - please log in to the marketplace site'
+                : `HTTP ${fetchResult.status}`;
+
             return {
                 listing: {
                     ...listing,
                     lastRefreshStatus: 'error',
-                    lastRefreshError: `HTTP ${fetchResult.status}`,
+                    lastRefreshError: errorMsg,
                 },
                 success: false,
-                error: `HTTP error: ${fetchResult.status}`,
+                error: isLoginRequired ? errorMsg : `HTTP error: ${fetchResult.status}`,
             };
         }
 

@@ -8,6 +8,7 @@ export const MessageTypes = {
     TRIGGER_MANUAL_REFRESH: 'TRIGGER_MANUAL_REFRESH',
     RESCHEDULE_ALARM: 'RESCHEDULE_ALARM',
     REFRESH_STATUS_CHANGED: 'REFRESH_STATUS_CHANGED',
+    INITIALIZE_ALARM: 'INITIALIZE_ALARM',
 } as const;
 
 export type MessageType = typeof MessageTypes[keyof typeof MessageTypes];
@@ -156,10 +157,17 @@ export const useChromeMessaging = () => {
         });
     }, []);
 
+    const initializeAlarm = useCallback(async () => {
+        return sendMessage<{ success: boolean; error?: string }>({
+            type: MessageTypes.INITIALIZE_ALARM,
+        });
+    }, []);
+
     return {
         notifyListingUpdated,
         triggerManualRefresh,
         rescheduleAlarm,
+        initializeAlarm,
         sendMessage,
         isChromeExtension: isChromeExtension(),
     };

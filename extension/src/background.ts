@@ -6,7 +6,8 @@ import {STORAGE_KEYS} from '@/services/settings/storageKeys';
 import {DEFAULT_REFRESH_STATUS} from '@/services/settings/refreshStatus';
 import {getToken, initializeAuth, isTokenExpired, trySilentLogin} from '@/auth/oauthClient';
 import {getStoredToken} from '@/auth/storage';
-import {API_PREFIX, DEFAULT_BACKEND_URL, LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH} from '@/auth/config';
+import {API_PREFIX, LISTINGS_ENDPOINT_PATH, SETTINGS_ENDPOINT_PATH} from '@/auth/config';
+import {getBackendServerUrl} from '@/auth/localServerStorage';
 
 const CHECK_ALARM_NAME = 'motorscope_check_alarm';
 const AUTH_CHECK_ALARM_NAME = 'motorscope_auth_check';
@@ -38,7 +39,8 @@ const getSettings = async (): Promise<Settings> => {
         return {checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: ''};
     }
 
-    const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+    const backendUrl = await getBackendServerUrl();
+    const url = `${backendUrl}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
 
     try {
         const response = await fetch(url, {
@@ -79,7 +81,8 @@ const apiRequest = async <T>(
         throw new Error('Not authenticated');
     }
 
-    const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${endpoint}`;
+    const backendUrl = await getBackendServerUrl();
+    const url = `${backendUrl}${API_PREFIX}${endpoint}`;
 
     const response = await fetch(url, {
         ...options,
@@ -153,7 +156,8 @@ const persistRefreshScheduleToApi = async (schedule: {
             return;
         }
 
-        const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+        const backendUrl = await getBackendServerUrl();
+        const url = `${backendUrl}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
         const response = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -461,6 +465,15 @@ const scheduleAuthCheck = async (): Promise<void> => {
 
 // Helper to schedule alarm based on stored nextRefreshTime or default interval
 const initializeAlarm = async (): Promise<void> => {
+    // Check if user is authenticated - only schedule alarms for logged in users
+    const token = await getToken();
+    if (!token) {
+        console.log('[BG] User not authenticated, skipping alarm initialization');
+        // Clear any existing alarm since user is not logged in
+        await chrome.alarms.clear(CHECK_ALARM_NAME);
+        return;
+    }
+
     const settings = await getSettings();
     let refreshStatus = await getRefreshStatus();
 
@@ -468,31 +481,29 @@ const initializeAlarm = async (): Promise<void> => {
     // This handles the case where browser was restarted
     if (!refreshStatus.nextRefreshTime || !refreshStatus.lastRefreshTime) {
         try {
-            const token = await getToken();
-            if (token) {
-                const url = `${DEFAULT_BACKEND_URL}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
-                const response = await fetch(url, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
+            const backendUrl = await getBackendServerUrl();
+            const url = `${backendUrl}${API_PREFIX}${SETTINGS_ENDPOINT_PATH}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
 
-                if (response.ok) {
-                    const apiSettings = await response.json();
+            if (response.ok) {
+                const apiSettings = await response.json();
 
-                    // Merge API refresh schedule into session storage
-                    if (apiSettings.nextRefreshTime || apiSettings.lastRefreshTime) {
-                        const updatedStatus = {
-                            ...refreshStatus,
-                            lastRefreshTime: apiSettings.lastRefreshTime || refreshStatus.lastRefreshTime,
-                            nextRefreshTime: apiSettings.nextRefreshTime || refreshStatus.nextRefreshTime,
-                            lastRefreshCount: apiSettings.lastRefreshCount || refreshStatus.lastRefreshCount,
-                        };
-                        await updateRefreshStatus(updatedStatus);
-                        refreshStatus = updatedStatus;
-                        console.log('[BG] Restored refresh schedule from API');
-                    }
+                // Merge API refresh schedule into session storage
+                if (apiSettings.nextRefreshTime || apiSettings.lastRefreshTime) {
+                    const updatedStatus = {
+                        ...refreshStatus,
+                        lastRefreshTime: apiSettings.lastRefreshTime || refreshStatus.lastRefreshTime,
+                        nextRefreshTime: apiSettings.nextRefreshTime || refreshStatus.nextRefreshTime,
+                        lastRefreshCount: apiSettings.lastRefreshCount || refreshStatus.lastRefreshCount,
+                    };
+                    await updateRefreshStatus(updatedStatus);
+                    refreshStatus = updatedStatus;
+                    console.log('[BG] Restored refresh schedule from API');
                 }
             }
         } catch (error) {
@@ -588,6 +599,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (request.type === 'TRY_SILENT_LOGIN') {
         trySilentLogin()
             .then((result) => sendResponse({success: !!result, result}))
+            .catch((error) => sendResponse({success: false, error: String(error)}));
+        return true;
+    }
+
+    if (request.type === 'INITIALIZE_ALARM') {
+        initializeAlarm()
+            .then(() => {
+                console.log('[BG] Alarm initialized via message');
+                sendResponse({success: true});
+            })
             .catch((error) => sendResponse({success: false, error: String(error)}));
         return true;
     }

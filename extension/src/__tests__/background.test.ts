@@ -72,6 +72,11 @@ jest.mock('../auth/storage', () => ({
     }),
 }));
 
+// Mock local server storage
+jest.mock('../auth/localServerStorage', () => ({
+    getBackendServerUrl: jest.fn().mockResolvedValue('https://api.motorscope.com'),
+}));
+
 // Mock global fetch
 const createMockResponse = (data: any, ok = true, status = 200) => ({
     ok,
@@ -318,6 +323,44 @@ describe('Background Service Worker', () => {
             await new Promise(r => setTimeout(r, 100));
 
             expect(mockTrySilentLoginCalled).toBe(true);
+        });
+    });
+
+    // ==========================================================================
+    // Message Routing - INITIALIZE_ALARM
+    // ==========================================================================
+
+    describe('INITIALIZE_ALARM message', () => {
+        it('should initialize alarm when user is authenticated', async () => {
+            mockGetTokenValue = 'mock-jwt-token';
+            mockStorageValue = createMockRefreshStatus();
+
+            await triggerOnMessage({type: 'INITIALIZE_ALARM'});
+            await new Promise(r => setTimeout(r, 100));
+
+            // Should have created an alarm
+            expect(getChromeMock().alarms.create).toHaveBeenCalled();
+        });
+
+        it('should skip alarm initialization when user is not authenticated', async () => {
+            mockGetTokenValue = null;
+            mockStorageValue = createMockRefreshStatus();
+
+            // Reset the mock to track new calls
+            getChromeMock().alarms.create.mockClear();
+            getChromeMock().alarms.clear.mockClear();
+
+            await triggerOnMessage({type: 'INITIALIZE_ALARM'});
+            await new Promise(r => setTimeout(r, 100));
+
+            // Should have cleared the alarm but not created a new one
+            expect(getChromeMock().alarms.clear).toHaveBeenCalledWith('motorscope_check_alarm');
+            // alarms.create should only be called for auth check, not for refresh
+            const createCalls = getChromeMock().alarms.create.mock.calls;
+            const refreshAlarmCalls = createCalls.filter(
+                (call: any[]) => call[0] === 'motorscope_check_alarm',
+            );
+            expect(refreshAlarmCalls.length).toBe(0);
         });
     });
 

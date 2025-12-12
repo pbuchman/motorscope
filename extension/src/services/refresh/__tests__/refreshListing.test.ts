@@ -329,7 +329,7 @@ describe('Refresh Listing Service', () => {
             expect(result.error).toContain('403');
         });
 
-        it('should handle network errors (status 0)', async () => {
+        it('should handle network errors (status 0) as login required', async () => {
             mockFetchListingPage.mockResolvedValue({
                 expired: false,
                 status: 0,
@@ -339,8 +339,21 @@ describe('Refresh Listing Service', () => {
 
             expect(result.success).toBe(false);
             expect(result.listing.lastRefreshStatus).toBe('error');
+            expect(result.listing.lastRefreshError).toContain('Login required');
+            expect(result.listing.lastRefreshError).toContain('Login required');
         });
 
+        it('should handle 520 Cloudflare error as login required', async () => {
+            mockFetchListingPage.mockResolvedValue({
+                expired: false,
+                status: 520,
+            });
+            const result = await refreshSingleListing(baseListing);
+            expect(result.success).toBe(false);
+            expect(result.listing.lastRefreshStatus).toBe('error');
+            expect(result.listing.lastRefreshError).toContain('Login required');
+            expect(result.error).toContain('Login required');
+        });
         it('should handle CORS/fetch errors', async () => {
             const fetchError = new MockFetchError('CORS blocked', true);
             mockFetchListingPage.mockRejectedValue(fetchError);
