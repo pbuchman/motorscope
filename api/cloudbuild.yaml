@@ -19,7 +19,10 @@ steps:
         echo "Commit: $SHORT_SHA"
         echo "Trigger: $TRIGGER_NAME"
         echo "Project: $PROJECT_ID"
-        echo "Webhook event: ${_WEBHOOK_EVENT}"
+        echo "Webhook event: $_WEBHOOK_EVENT"
+        echo "Pusher: $PUSHER_NAME"
+        echo "Pusher: $_PUSHER_NAME"
+        echo "Pusher: ${_PUSHER_NAME}"
         echo "=============================================="
 
   # Build the Docker image
