@@ -30,13 +30,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # Don't use npm cache - it causes issues with native optional deps
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Fix Rollup optional dependency
-        run: npm install @rollup/rollup-linux-x64-gnu
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Lint API
         working-directory: api
@@ -66,9 +65,14 @@ jobs:
         working-directory: api
         run: tsc
 
-      - name: Build Extension
+      - name: Install extension native deps
         working-directory: extension
-        run: npx vite build
+        run: |
+          mkdir -p node_modules
+          npm install lightningcss lightningcss-linux-x64-gnu --legacy-peer-deps
+
+      - name: Build Extension
+        run: npm --workspace=extension exec vite build
 
       - name: Get short SHA
         id: sha
