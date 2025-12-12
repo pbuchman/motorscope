@@ -2,9 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main, development]
+    branches:
+      - main
+      - development
   pull_request:
-    branches: [main, development]
+    types: [opened, synchronize]
+    branches:
+      - main
+      - development
 
 # Cancel duplicate runs - keeps only the latest
 concurrency:
