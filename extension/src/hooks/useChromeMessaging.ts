@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef, type DependencyList} from 'react';
 
 /**
  * Message types for extension communication
@@ -76,7 +76,7 @@ export const sendMessage = async <T = unknown>(message: ExtensionMessage): Promi
  */
 export const useMessageListener = (
     handler: (message: ExtensionMessage) => void,
-    deps: React.DependencyList = [],
+    deps: DependencyList = [],
 ): void => {
     const handlerRef = useRef(handler);
     handlerRef.current = handler;
@@ -94,7 +94,6 @@ export const useMessageListener = (
         return () => {
             chrome.runtime.onMessage.removeListener(listener);
         };
-    // eslint-disable-next-line
     }, deps);
 };
 
@@ -107,7 +106,7 @@ export const useMessageListener = (
  */
 export const useStorageListener = (
     handler: (changes: { [key: string]: StorageChange }) => void,
-    deps: React.DependencyList = [],
+    deps: DependencyList = [],
     namespace: 'session' | 'local' | 'all' = 'session',
 ): void => {
     const handlerRef = useRef(handler);
@@ -132,7 +131,6 @@ export const useStorageListener = (
         return () => {
             chrome.storage.onChanged.removeListener(listener);
         };
-    // eslint-disable-next-line
     }, deps);
 };
 

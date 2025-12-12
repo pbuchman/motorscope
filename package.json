@@ -1,6 +1,7 @@
 {
   "name": "motorscope",
   "version": "1.0.0",
+  "type": "module",
   "description": "MotorScope - Car Listing Tracker monorepo containing Chrome extension and backend API",
   "private": true,
   "workspaces": [
@@ -29,8 +30,10 @@
     "clean": "rm -rf extension/dist api/dist"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0"
+    "@eslint/js": "^9.39.1",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0"
   }
 }
