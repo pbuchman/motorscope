@@ -13,6 +13,12 @@
     "notifications",
     "identity"
   ],
+  "host_permissions": [
+    "https://otomoto.pl/*",
+    "https://www.otomoto.pl/*",
+    "https://autoplac.pl/*",
+    "https://www.autoplac.pl/*"
+  ],
   "oauth2": {
     "client_id": "663051224718-09r9kev3ubbtdkasigdjfvr581vkvlvd.apps.googleusercontent.com",
     "scopes": [
