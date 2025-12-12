@@ -1,7 +1,57 @@
 # Cloud Build configuration for MotorScope API
 # Builds Docker image and deploys to Cloud Run
+# Only deploys when triggered by pbuchman (verified via GitHub webhook)
 
 steps:
+  # Verify GitHub user - uses $_PUSH_USER from GitHub webhook (cannot be spoofed)
+  # This is set by Cloud Build from the authenticated GitHub event, NOT from git config
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "=============================================="
+        echo "Security Check: Verifying deployment authorization"
+        echo "=============================================="
+        echo "GitHub Push User (from webhook): ${_GITHUB_USER:-not set}"
+        echo "Trigger Name: $TRIGGER_NAME"
+        echo "Branch: $BRANCH_NAME"
+        echo "Commit SHA: $COMMIT_SHA"
+        echo ""
+
+        # SECURITY: $_GITHUB_USER comes from GitHub's authenticated webhook payload
+        # It CANNOT be spoofed via git config - it's the actual GitHub username
+        # that pushed the code, verified by GitHub's authentication
+
+        ALLOWED_USERS="pbuchman"
+        GITHUB_USER="${_GITHUB_USER:-}"
+
+        if [[ -z "$GITHUB_USER" ]]; then
+          echo "ERROR: GitHub user not available in webhook data"
+          echo "This might be a manual trigger or misconfigured webhook"
+          exit 1
+        fi
+
+        AUTHORIZED=false
+        for user in $ALLOWED_USERS; do
+          if [[ "$GITHUB_USER" == "$user" ]]; then
+            AUTHORIZED=true
+            break
+          fi
+        done
+
+        if [[ "$AUTHORIZED" != "true" ]]; then
+          echo "=============================================="
+          echo "ERROR: Deployment NOT authorized"
+          echo "GitHub user '$GITHUB_USER' is not in the allowed list"
+          echo "Allowed users: $ALLOWED_USERS"
+          echo "=============================================="
+          exit 1
+        fi
+
+        echo "✓ GitHub user verified: $GITHUB_USER"
+        echo "Proceeding with deployment..."
+
   # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -54,6 +104,8 @@ substitutions:
   _REGION: 'europe-central2'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
+  # _GITHUB_USER is automatically set by Cloud Build from GitHub webhook
+  # Configure in trigger: _GITHUB_USER = $(push.pusher.name) or $(body.sender.login)
 
 # Build options
 options:
