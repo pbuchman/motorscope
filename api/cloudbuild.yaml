@@ -68,9 +68,12 @@ steps:
       - '10'
       - '--set-env-vars'
       - 'NODE_ENV=production'
+      - '--set-secrets'
+      - 'JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest'
 
 # Substitution variables (can be overridden in trigger)
 substitutions:
+  _PUSHER_NAME: '$(body.pusher.name)'
   _REGION: 'europe-central2'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
