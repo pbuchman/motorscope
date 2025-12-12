@@ -47,9 +47,20 @@ export function renderWithProviders(
     };
 }
 
-// Re-export everything from RTL
-export * from '@testing-library/react';
-export {screen, waitFor, within, fireEvent, cleanup, act} from '@testing-library/react';
+// Re-export commonly used utilities from RTL
+// Note: Using explicit exports instead of 'export *' for compatibility with moduleResolution: bundler
+export {
+    screen,
+    waitFor,
+    within,
+    fireEvent,
+    cleanup,
+    act,
+    queries,
+    queryByAttribute,
+    buildQueries,
+    getQueriesForElement,
+} from '@testing-library/react';
 export {userEvent};
 export {renderWithProviders as render};
 
