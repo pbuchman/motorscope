@@ -20,6 +20,7 @@ jobs:
   build-test-package:
     name: Build, Test & Package
     runs-on: ubuntu-latest
+    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
       - name: Checkout
@@ -31,13 +32,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Clean install dependencies
-        run: |
-          npm cache clean --force
-          npm ci --include=optional
-        env:
-          npm_config_platform: linux
-          npm_config_arch: x64
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fix Rollup optional dependency
+        run: npm install @rollup/rollup-linux-x64-gnu
 
       - name: Lint API
         working-directory: api
