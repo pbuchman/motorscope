@@ -49,6 +49,7 @@ export function renderWithProviders(
 
 // Re-export everything from RTL
 export * from '@testing-library/react';
+export {screen, waitFor, within, fireEvent, cleanup, act} from '@testing-library/react';
 export {userEvent};
 export {renderWithProviders as render};
 
