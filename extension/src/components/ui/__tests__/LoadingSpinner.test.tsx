@@ -9,10 +9,12 @@ import {render, screen} from '@testing-library/react';
 import {LoadingSpinner} from '@/components/ui/LoadingSpinner';
 
 describe('LoadingSpinner', () => {
-    it('renders with default loading message', () => {
-        render(<LoadingSpinner/>);
+    it('renders without message by default', () => {
+        const {container} = render(<LoadingSpinner/>);
 
-        expect(screen.getByText('Loading...')).toBeInTheDocument();
+        // Should have spinner but no text content
+        expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+        expect(container.querySelector('p')).not.toBeInTheDocument();
     });
 
     it('renders with custom message', () => {
@@ -22,9 +24,9 @@ describe('LoadingSpinner', () => {
     });
 
     it('renders without message when empty string provided', () => {
-        render(<LoadingSpinner message=""/>);
+        const {container} = render(<LoadingSpinner message=""/>);
 
-        expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+        expect(container.querySelector('p')).not.toBeInTheDocument();
     });
 
     it('applies custom className', () => {

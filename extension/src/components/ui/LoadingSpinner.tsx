@@ -23,7 +23,7 @@ const sizeClasses = {
 };
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-    message = 'Loading...',
+    message,
     size = 'md',
     className = '',
 }) => (

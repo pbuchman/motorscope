@@ -38,7 +38,7 @@ export const PopupHeader: React.FC<PopupHeaderProps> = ({
                         onClick={onOpenDashboard}
                         className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors"
                     >
-                        Dashboard
+                        {t('common:nav.dashboard')}
                     </button>
                     <button
                         onClick={onOpenSettings}
