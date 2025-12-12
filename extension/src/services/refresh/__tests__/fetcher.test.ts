@@ -125,7 +125,7 @@ describe('HTML Text Extraction Logic', () => {
         });
 
         it('should handle title with attributes', () => {
-            const html = '<title lang="pl">Test Title</title>';
+            const html = '<html lang="pl"><head><title lang="pl">Test Title</title></head><body></body></html>';
             const result = extractTitle(html);
             expect(result).toBe('Test Title');
         });
@@ -137,13 +137,13 @@ describe('HTML Text Extraction Logic', () => {
         });
 
         it('should trim whitespace from title', () => {
-            const html = '<title>  Whitespace Title  </title>';
+            const html = '<html lang="en"><title>  Whitespace Title  </title></html>';
             const result = extractTitle(html);
             expect(result).toBe('Whitespace Title');
         });
 
         it('should handle case-insensitive title tag', () => {
-            const html = '<TITLE>Uppercase Title</TITLE>';
+            const html = '<html lang="en"><TITLE>Uppercase Title</TITLE></html>';
             const result = extractTitle(html);
             expect(result).toBe('Uppercase Title');
         });
@@ -161,7 +161,7 @@ describe('fetchListingPage', () => {
             global.fetch = jest.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
-                text: async () => '<html><title>Test</title><body>Content</body></html>',
+                text: async () => '<html lang="en"><title>Test</title><body>Content</body></html>',
             });
 
             const result = await fetchListingPage('https://www.otomoto.pl/test');
@@ -269,12 +269,13 @@ describe('fetchListingPage', () => {
 
             (chrome.scripting.executeScript as jest.Mock).mockResolvedValue([
                 {
-                    result: {
-                        title: 'Test Page',
-                        html: '<html lang="en"><title>Test Page</title><body>Content</body></html>',
-                        is404: false,
-                        is410: false,
-                    },
+                    result:
+                        {
+                            title: 'Test Page',
+                            html: '<html lang="en"><title>Test Page</title><body>Content</body></html>',
+                            is404: false,
+                            is410: false,
+                        },
                 },
             ]);
 
@@ -419,4 +420,3 @@ describe('fetchListingPage', () => {
         });
     });
 });
-
