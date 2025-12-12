@@ -19,7 +19,6 @@ steps:
         echo "Commit: $SHORT_SHA"
         echo "Trigger: $TRIGGER_NAME"
         echo "Project: $PROJECT_ID"
-        echo "Pusher: ${_PUSHER_NAME}"
         echo "=============================================="
 
   # Build the Docker image
