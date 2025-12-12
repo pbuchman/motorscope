@@ -7,37 +7,37 @@
 import {beforeEach, describe, expect, it, jest} from '@jest/globals';
 
 // Create mock Firestore before importing db module
-const mockDocGet = jest.fn<() => Promise<any>>();
-const mockDocSet = jest.fn<() => Promise<any>>();
-const mockDocUpdate = jest.fn<() => Promise<any>>();
-const mockDocDelete = jest.fn<() => Promise<any>>();
+const mockDocGet = jest.fn<any>();
+const mockDocSet = jest.fn<any>();
+const mockDocUpdate = jest.fn<any>();
+const mockDocDelete = jest.fn<any>();
 const mockDoc = jest.fn(() => ({
     get: mockDocGet,
     set: mockDocSet,
     update: mockDocUpdate,
     delete: mockDocDelete,
-}));
+})) as jest.Mock;
 
-const mockWhere = jest.fn<() => any>();
-const mockOrderBy = jest.fn<() => any>();
-const mockLimit = jest.fn<() => any>();
-const mockQueryGet = jest.fn<() => Promise<any>>();
+const mockWhere = jest.fn<any>();
+const mockOrderBy = jest.fn<any>();
+const mockLimit = jest.fn<any>();
+const mockQueryGet = jest.fn<any>();
 
 const mockCollection = jest.fn(() => ({
     doc: mockDoc,
     where: mockWhere,
-}));
+})) as jest.Mock;
 
-const mockBatchSet = jest.fn<() => void>();
-const mockBatchDelete = jest.fn<() => void>();
-const mockBatchCommit = jest.fn<() => Promise<any>>();
+const mockBatchSet = jest.fn<any>();
+const mockBatchDelete = jest.fn<any>();
+const mockBatchCommit = jest.fn<any>();
 const mockBatch = jest.fn(() => ({
     set: mockBatchSet,
     delete: mockBatchDelete,
     commit: mockBatchCommit,
-}));
+})) as jest.Mock;
 
-const mockListCollections = jest.fn<() => Promise<any>>();
+const mockListCollections = jest.fn<any>();
 
 jest.unstable_mockModule('@google-cloud/firestore', () => ({
     Firestore: jest.fn(() => ({
