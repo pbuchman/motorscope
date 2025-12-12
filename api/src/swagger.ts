@@ -304,7 +304,7 @@ All endpoints except \`/api/healthz\` and \`/api/auth/google\` require JWT authe
         },
         {
             url: 'http://localhost:8080',
-            description: 'Local development'
+            description: 'Local development',
         },
     ],
     tags: [
