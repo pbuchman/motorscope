@@ -21,7 +21,6 @@ steps:
         echo "Project: $PROJECT_ID"
         echo "=============================================="
 
-
   # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
