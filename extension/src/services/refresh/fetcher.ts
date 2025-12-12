@@ -3,9 +3,10 @@
  *
  * Utilities for fetching and parsing webpage content.
  * Supports both standard fetch() and background tab fetching for sites with restrictions.
+ *
+ * Strategy: Always try fetch() first, then automatically fallback to background tab
+ * if Cloudflare or network errors are detected.
  */
-
-import {getMarketplaceForUrl} from '@/config/marketplaces';
 
 // Constants for content extraction and timeouts
 const MAX_TEXT_CONTENT_LENGTH = 20000;
@@ -38,6 +39,8 @@ export interface FetchPageResult {
     textContent?: string;
     /** Page title (only if status 200) */
     pageTitle?: string;
+    /** Whether background tab was used (due to fetch fallback) */
+    usedBackgroundTab?: boolean;
 }
 
 /**
@@ -243,21 +246,64 @@ async function fetchListingPageWithFetch(url: string): Promise<FetchPageResult> 
 }
 
 /**
+ * Check if an error indicates a Cloudflare or network issue that may be resolved with background tab
+ */
+function isCloudflareOrNetworkError(error: unknown): boolean {
+    // TypeError is thrown for CORS/network failures or fetch network issues
+    return error instanceof TypeError || (error instanceof FetchError && error.isCorsError);
+}
+
+/**
+ * Check if HTTP status indicates Cloudflare restriction
+ * 520-530 range are Cloudflare-specific error codes
+ */
+function isCloudflareStatusCode(status: number): boolean {
+    return status >= 520 && status <= 530;
+}
+
+/**
  * Fetch listing page and return status + content in a single request
  * This combines the expired check and content fetch to avoid duplicate HTTP requests
  *
- * Automatically selects the appropriate fetching method based on marketplace configuration:
- * - Background tab for marketplaces with Cloudflare/restrictions (e.g., autoplac.pl)
- * - Standard fetch() for other marketplaces (e.g., otomoto.pl)
+ * Strategy:
+ * 1. First attempt using standard fetch()
+ * 2. If Cloudflare/network error occurs, automatically fallback to background tab
+ * 3. This provides a generic approach that works for all marketplaces
  */
-export async function fetchListingPage(url: string): Promise<FetchPageResult> {
-    // Get marketplace configuration to determine fetch method
-    const marketplace = getMarketplaceForUrl(url);
+export async function fetchListingPage(url: string, forceBackgroundTab: boolean = false): Promise<FetchPageResult> {
+    // If forced to use background tab, skip fetch attempt
+    if (forceBackgroundTab) {
+        const result = await fetchListingPageWithTab(url);
+        return {...result, usedBackgroundTab: true};
+    }
 
-    // Use background tab if configured, otherwise use standard fetch
-    if (marketplace?.useBackgroundTab) {
-        return fetchListingPageWithTab(url);
-    } else {
-        return fetchListingPageWithFetch(url);
+    // First, try standard fetch
+    try {
+        const result = await fetchListingPageWithFetch(url);
+
+        // If we got a Cloudflare status code, fallback to background tab
+        if (isCloudflareStatusCode(result.status)) {
+            console.log(`[Fetcher] Got Cloudflare status ${result.status}, falling back to background tab for ${url}`);
+            const tabResult = await fetchListingPageWithTab(url);
+            return {...tabResult, usedBackgroundTab: true};
+        }
+
+        return {...result, usedBackgroundTab: false};
+    } catch (error) {
+        // If it's a Cloudflare/network error, fallback to background tab
+        if (isCloudflareOrNetworkError(error)) {
+            console.log(`[Fetcher] Fetch failed with network/CORS error, falling back to background tab for ${url}`);
+            try {
+                const tabResult = await fetchListingPageWithTab(url);
+                return {...tabResult, usedBackgroundTab: true};
+            } catch (tabError) {
+                // Both methods failed, re-throw the original error
+                console.error(`[Fetcher] Background tab also failed for ${url}:`, tabError);
+                throw error;
+            }
+        }
+
+        // Not a Cloudflare error, re-throw
+        throw error;
     }
 }

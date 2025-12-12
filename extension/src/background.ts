@@ -290,6 +290,7 @@ const runBackgroundRefresh = async (): Promise<void> => {
     let refreshedCount = 0;
     let errorCount = 0;
     let rateLimitHit = false;
+    let useBackgroundTabMode = false; // Track if we should force background tab for remaining listings
     const recentlyRefreshed: RefreshedListingInfo[] = [];
 
     for (let i = 0; i < sortedListings.length; i++) {
@@ -306,7 +307,14 @@ const runBackgroundRefresh = async (): Promise<void> => {
             pendingItems: [...pendingItems],
         });
 
-        const result = await refreshSingleListing(listing);
+        // Pass the forceBackgroundTab flag if we've already encountered Cloudflare issues
+        const result = await refreshSingleListing(listing, useBackgroundTabMode);
+
+        // If background tab was used (due to Cloudflare fallback), enable it for remaining listings
+        if (result.usedBackgroundTab && !useBackgroundTabMode) {
+            console.log('[BG] Cloudflare fallback triggered, switching to background tab mode for remaining listings');
+            useBackgroundTabMode = true;
+        }
 
         // Save the updated listing to the API
         if (result.success || result.listing.lastRefreshStatus === 'error') {

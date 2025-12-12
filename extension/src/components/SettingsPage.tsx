@@ -849,7 +849,7 @@ const GeminiUsageSection: React.FC<GeminiUsageSectionProps> = ({
                 <p className="text-sm text-slate-400">{t('geminiStats.noApiCalls')}</p>
             ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {filteredHistory.slice().reverse().slice(0, 50).map(entry => (
+                    {filteredHistory.slice(0, 50).map(entry => (
                         <div key={entry.id} className="border border-gray-100 rounded-lg p-3 text-sm">
                             <div className="flex items-start justify-between gap-2 mb-2">
                                 <div className="flex items-center gap-2 min-w-0">

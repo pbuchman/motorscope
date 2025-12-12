@@ -18,6 +18,8 @@ export interface RefreshResult {
     error?: string;
     rateLimited?: boolean;
     priceChanged?: boolean;
+    /** Whether background tab was used (due to Cloudflare/network fallback) */
+    usedBackgroundTab?: boolean;
 }
 
 /**
@@ -28,11 +30,17 @@ export interface RefreshResult {
  * - Always records a new price point on each refresh (full audit trail)
  * - Deduplication (one per day) happens on UI side based on user's timezone
  * - priceChanged flag indicates if price changed from previous day
+ *
+ * @param listing The listing to refresh
+ * @param forceBackgroundTab If true, skip fetch() and use background tab directly
  */
-export async function refreshSingleListing(listing: CarListing): Promise<RefreshResult> {
+export async function refreshSingleListing(
+    listing: CarListing,
+    forceBackgroundTab: boolean = false,
+): Promise<RefreshResult> {
     try {
         // Fetch page content (single request - checks status and gets content)
-        const fetchResult = await fetchListingPage(listing.source.url);
+        const fetchResult = await fetchListingPage(listing.source.url, forceBackgroundTab);
 
         // Check for expired listing (404/410)
         if (fetchResult.expired) {
@@ -45,6 +53,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
                     lastRefreshError: undefined,
                 },
                 success: true,
+                usedBackgroundTab: fetchResult.usedBackgroundTab,
             };
         }
 
@@ -64,6 +73,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
                 },
                 success: false,
                 error: isLoginRequired ? errorMsg : `HTTP error: ${fetchResult.status}`,
+                usedBackgroundTab: fetchResult.usedBackgroundTab,
             };
         }
 
@@ -108,6 +118,7 @@ export async function refreshSingleListing(listing: CarListing): Promise<Refresh
             listing: updatedListing,
             success: true,
             priceChanged,
+            usedBackgroundTab: fetchResult.usedBackgroundTab,
         };
     } catch (error) {
         const isRateLimited = error instanceof RateLimitError;
