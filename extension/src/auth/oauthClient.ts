@@ -125,7 +125,7 @@ const verifySessionWithBackend = async (token: string): Promise<boolean> => {
 
         console.log('[OAuth] Backend session invalid:', response.status);
         return false;
-    } catch (error) {
+    } catch {
         // Network error - assume session is valid to allow offline usage
         console.log('[OAuth] Backend verification failed (network error), assuming valid');
         return true;

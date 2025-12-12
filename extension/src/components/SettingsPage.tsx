@@ -80,7 +80,7 @@ const validateGeminiApiKey = async (apiKey: string, t: (key: string) => string):
             return {valid: false, error: t('settings:validation.noGeminiAccess')};
         }
         return {valid: false, error: data.error?.message || t('settings:validation.failedToValidate')};
-    } catch (error) {
+    } catch {
         return {valid: false, error: t('settings:validation.networkError')};
     }
 };
@@ -301,7 +301,7 @@ const SettingsPage: React.FC = () => {
             await updateSettings(formSettings);
 
             setSuccessMessage(formSettings.geminiApiKey ? t('settings:save.success') : t('settings:save.successWithWarning'));
-        } catch (error) {
+        } catch {
             setApiKeyError(t('settings:save.failed'));
         } finally {
             setSaving(false);
