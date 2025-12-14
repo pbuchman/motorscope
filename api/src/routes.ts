@@ -1145,15 +1145,11 @@ router.post('/images', authMiddleware, async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/images/*', authMiddleware, async (req: Request, res: Response) => {
+router.get('/images/:userId/:listingId/:filename', authMiddleware, async (req: Request, res: Response) => {
     try {
-        // Extract file path from URL (everything after /images/)
-        const filePath = req.params[0];
-
-        if (!filePath) {
-            sendError(res, 400, 'Invalid image path');
-            return;
-        }
+        // Reconstruct file path from parameters
+        const {userId, listingId, filename} = req.params;
+        const filePath = `images/${userId}/${listingId}/${filename}`;
 
         // Get image metadata and signed URL
         const {url} = await getImageMetadata(filePath);
@@ -1218,15 +1214,11 @@ router.get('/images/*', authMiddleware, async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/images/*', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/images/:userId/:listingId/:filename', authMiddleware, async (req: Request, res: Response) => {
     try {
-        // Extract file path from URL
-        const filePath = req.params[0];
-
-        if (!filePath) {
-            sendError(res, 400, 'Invalid image path');
-            return;
-        }
+        // Reconstruct file path from parameters
+        const {userId, listingId, filename} = req.params;
+        const filePath = `images/${userId}/${listingId}/${filename}`;
 
         const deleted = await scheduleImageDeletion(filePath);
 

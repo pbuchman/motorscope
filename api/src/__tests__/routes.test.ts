@@ -28,6 +28,13 @@ const mockVerifyGoogleToken = jest.fn<any>();
 const mockVerifyGoogleAccessToken = jest.fn<any>();
 const mockGenerateJwt = jest.fn<any>();
 
+// Mock storage module
+const mockCheckStorageHealth = jest.fn<any>();
+const mockUploadImage = jest.fn<any>();
+const mockDownloadImageFromUrl = jest.fn<any>();
+const mockGetImageMetadata = jest.fn<any>();
+const mockScheduleImageDeletion = jest.fn<any>();
+
 // Mock db module
 jest.unstable_mockModule('../db.js', () => ({
     upsertUser: mockUpsertUser,
@@ -62,6 +69,15 @@ jest.unstable_mockModule('../auth.js', () => ({
     verifyGoogleAccessToken: mockVerifyGoogleAccessToken,
     generateJwt: mockGenerateJwt,
 } as any));
+
+// Mock storage module
+jest.unstable_mockModule('../storage.js', () => ({
+    checkStorageHealth: mockCheckStorageHealth,
+    uploadImage: mockUploadImage,
+    downloadImageFromUrl: mockDownloadImageFromUrl,
+    getImageMetadata: mockGetImageMetadata,
+    scheduleImageDeletion: mockScheduleImageDeletion,
+}));
 
 // Import routes after mocking
 const routesModule = await import('../routes.js');
@@ -148,6 +164,7 @@ describe('API Routes', () => {
         jest.clearAllMocks();
         // Set default mock return values
         mockIsTokenBlacklisted.mockResolvedValue(false);
+        mockCheckStorageHealth.mockResolvedValue(true);
     });
 
     // ==========================================================================

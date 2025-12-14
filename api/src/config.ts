@@ -52,6 +52,9 @@ export const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'motorscope-images
 /** Default expiration time for deleted images (30 days) */
 export const IMAGE_DELETION_EXPIRATION_DAYS = 30;
 
+/** Maximum allowed image size in bytes (10MB) */
+export const IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
 // =============================================================================
 // Cloud Run Configuration
 // =============================================================================

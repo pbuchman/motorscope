@@ -8,6 +8,12 @@ import {CarListing} from '@/types';
 import {uploadImageFromUrl} from '@/api/client';
 import {getBackendServerUrl} from '@/auth/localServerStorage';
 
+/** API path prefix for image endpoints */
+const API_IMAGES_PATH = '/api/images/';
+
+/** Placeholder image URL pattern */
+const PLACEHOLDER_PATTERN = 'placehold';
+
 /**
  * Upload listing thumbnail to API storage and update the listing
  *
@@ -18,7 +24,7 @@ export async function uploadListingThumbnail(listing: CarListing): Promise<CarLi
     const {thumbnailUrl, id} = listing;
 
     // Skip if already using API storage or placeholder
-    if (thumbnailUrl.startsWith('/api/images/') || thumbnailUrl.includes('placehold')) {
+    if (thumbnailUrl.startsWith(API_IMAGES_PATH) || thumbnailUrl.includes(PLACEHOLDER_PATTERN)) {
         return listing;
     }
 
@@ -26,6 +32,7 @@ export async function uploadListingThumbnail(listing: CarListing): Promise<CarLi
         // Upload image to API storage
         const {url: apiPath} = await uploadImageFromUrl(thumbnailUrl, id);
 
+        // apiPath is already in format: /api/images/userId/listingId/filename.ext
         // Build full API URL for the image
         const backendUrl = await getBackendServerUrl();
         const fullImageUrl = `${backendUrl}${apiPath}`;
@@ -49,7 +56,7 @@ export async function uploadListingThumbnail(listing: CarListing): Promise<CarLi
  * @returns True if the URL is an API image URL
  */
 export function isApiImageUrl(url: string): boolean {
-    return url.includes('/api/images/');
+    return url.includes(API_IMAGES_PATH);
 }
 
 /**
@@ -59,5 +66,5 @@ export function isApiImageUrl(url: string): boolean {
  * @returns True if the URL is an external image URL
  */
 export function isExternalImageUrl(url: string): boolean {
-    return url.startsWith('http') && !isApiImageUrl(url) && !url.includes('placehold');
+    return url.startsWith('http') && !isApiImageUrl(url) && !url.includes(PLACEHOLDER_PATTERN);
 }

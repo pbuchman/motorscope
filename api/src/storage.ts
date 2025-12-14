@@ -6,7 +6,7 @@
  */
 
 import {Storage} from '@google-cloud/storage';
-import {GCS_BUCKET_NAME, GCP_PROJECT_ID, IMAGE_DELETION_EXPIRATION_DAYS} from './config.js';
+import {GCS_BUCKET_NAME, GCP_PROJECT_ID, IMAGE_DELETION_EXPIRATION_DAYS, IMAGE_MAX_SIZE_BYTES} from './config.js';
 
 /** GCS client instance */
 let storageClient: Storage | null = null;
@@ -38,7 +38,7 @@ function getBucket() {
  * @param contentType - MIME type of the image
  * @param userId - User ID for organizing images
  * @param listingId - Listing ID for organizing images
- * @returns Object URL and file path in GCS
+ * @returns API URL path and GCS file path
  */
 export async function uploadImage(
     imageBuffer: Buffer,
@@ -65,14 +65,11 @@ export async function uploadImage(
         validation: 'crc32c',
     });
 
-    // Generate signed URL valid for 7 days
-    const [url] = await file.getSignedUrl({
-        version: 'v4',
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Return API path format: /api/images/userId/listingId/filename.ext
+    const filename = `${timestamp}${ext}`;
+    const apiPath = `/api/images/${userId}/${listingId}/${filename}`;
 
-    return {url, path: filePath};
+    return {url: apiPath, path: filePath};
 }
 
 /**
@@ -100,7 +97,7 @@ export async function downloadImageFromUrl(
     }
 
     // Validate file size (max 10MB)
-    if (buffer.length > 10 * 1024 * 1024) {
+    if (buffer.length > IMAGE_MAX_SIZE_BYTES) {
         throw new Error('Image too large (max 10MB)');
     }
 
