@@ -38,8 +38,9 @@ jest.unstable_mockModule('@google-cloud/storage', () => ({
     })),
 }));
 
-// Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+// Mock global fetch with proper typing
+const mockFetch = jest.fn<typeof global.fetch>();
+global.fetch = mockFetch as typeof global.fetch;
 
 // Import the module under test after mocking
 const storageModule = await import('../storage.js');
@@ -76,7 +77,7 @@ describe('Storage Service', () => {
                     metadata: expect.objectContaining({
                         contentType,
                     }),
-                })
+                }),
             );
         });
 
@@ -96,13 +97,13 @@ describe('Storage Service', () => {
     describe('downloadImageFromUrl', () => {
         it('should download image from URL', async () => {
             const mockArrayBuffer = new ArrayBuffer(100);
-            (global.fetch as jest.Mock).mockResolvedValue({
+            mockFetch.mockResolvedValue({
                 ok: true,
                 headers: {
-                    get: jest.fn().mockReturnValue('image/jpeg'),
+                    get: () => 'image/jpeg',
                 },
-                arrayBuffer: jest.fn().mockResolvedValue(mockArrayBuffer),
-            });
+                arrayBuffer: async () => mockArrayBuffer,
+            } as any);
 
             const result = await downloadImageFromUrl('https://example.com/image.jpg');
 
@@ -113,23 +114,23 @@ describe('Storage Service', () => {
         });
 
         it('should throw error for failed download', async () => {
-            (global.fetch as jest.Mock).mockResolvedValue({
+            mockFetch.mockResolvedValue({
                 ok: false,
                 statusText: 'Not Found',
-            });
+            } as any);
 
             await expect(downloadImageFromUrl('https://example.com/missing.jpg'))
                 .rejects.toThrow('Failed to download image');
         });
 
         it('should throw error for invalid content type', async () => {
-            (global.fetch as jest.Mock).mockResolvedValue({
+            mockFetch.mockResolvedValue({
                 ok: true,
                 headers: {
-                    get: jest.fn().mockReturnValue('text/html'),
+                    get: () => 'text/html',
                 },
-                arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(100)),
-            });
+                arrayBuffer: async () => new ArrayBuffer(100),
+            } as any);
 
             await expect(downloadImageFromUrl('https://example.com/page.html'))
                 .rejects.toThrow('Invalid content type');
@@ -137,13 +138,13 @@ describe('Storage Service', () => {
 
         it('should throw error for images exceeding size limit', async () => {
             const largeBuffer = new ArrayBuffer(11 * 1024 * 1024); // 11MB
-            (global.fetch as jest.Mock).mockResolvedValue({
+            mockFetch.mockResolvedValue({
                 ok: true,
                 headers: {
-                    get: jest.fn().mockReturnValue('image/jpeg'),
+                    get: () => 'image/jpeg',
                 },
-                arrayBuffer: jest.fn().mockResolvedValue(largeBuffer),
-            });
+                arrayBuffer: async () => largeBuffer,
+            } as any);
 
             await expect(downloadImageFromUrl('https://example.com/large.jpg'))
                 .rejects.toThrow('Image too large');
@@ -181,7 +182,7 @@ describe('Storage Service', () => {
                         deletedAt: expect.any(String),
                         scheduledDeletion: expect.any(String),
                     }),
-                })
+                }),
             );
         });
 

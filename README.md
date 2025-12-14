@@ -205,6 +205,181 @@ motorscope/
 - ✅ Google Sign-in uses secure OAuth 2.0 flow
 - ✅ Backend only stores listing data you choose to track
 - ✅ All communication with backend is over HTTPS
+- ✅ Listing images are stored in Google Cloud Storage with automatic expiration
+
+## ☁️ Backend Setup (Cloud Infrastructure)
+
+The MotorScope backend runs on Google Cloud Platform and requires the following services:
+
+### Prerequisites
+
+- Google Cloud Platform account
+- gcloud CLI installed and configured
+- Project with billing enabled
+
+### 1. Create GCP Project
+
+```bash
+# Create new project
+gcloud projects create motorscope --name="MotorScope"
+
+# Set as active project
+gcloud config set project motorscope
+
+# Enable billing (replace BILLING_ACCOUNT_ID with your billing account)
+gcloud beta billing projects link motorscope --billing-account=BILLING_ACCOUNT_ID
+```
+
+### 2. Enable Required APIs
+
+```bash
+# Enable required Google Cloud services
+gcloud services enable firestore.googleapis.com
+gcloud services enable storage-api.googleapis.com
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+```
+
+### 3. Create Firestore Database
+
+**Using GCP Console (Recommended):**
+
+1. Go to [Firestore Console](https://console.cloud.google.com/firestore)
+2. Click **Create Database**
+3. Choose **Native mode**
+4. Select location: **europe-west1** (or your preferred region)
+5. Database ID: **motorscopedb**
+6. Click **Create**
+
+**Using gcloud CLI:**
+
+```bash
+gcloud firestore databases create --location=europe-west1 --type=firestore-native --database=motorscopedb
+```
+
+### 4. Create Cloud Storage Bucket
+
+**Using GCP Console:**
+
+1. Go to [Cloud Storage Console](https://console.cloud.google.com/storage)
+2. Click **Create Bucket**
+3. Name: **motorscope-images** (must be globally unique)
+4. Location type: **Region**
+5. Location: **europe-west1** (same as Firestore)
+6. Storage class: **Standard**
+7. Access control: **Uniform**
+8. Click **Create**
+
+**Configure Lifecycle Rules (Important):**
+
+1. Open your bucket **motorscope-images**
+2. Go to **Lifecycle** tab
+3. Click **Add a rule**
+4. Configure deletion rule:
+   - **Action**: Delete object
+   - **Condition**: Custom metadata - Key: `deletedAt`, Value exists
+   - **Age**: 30 days
+5. Click **Create**
+
+**Using gcloud CLI:**
+
+```bash
+# Create bucket
+gsutil mb -l europe-west1 -c STANDARD gs://motorscope-images
+
+# Set uniform access control
+gsutil uniformbucketlevelaccess set on gs://motorscope-images
+
+# Create lifecycle configuration file
+cat > lifecycle.json << EOF
+{
+  "lifecycle": {
+    "rule": [
+      {
+        "action": {"type": "Delete"},
+        "condition": {
+          "age": 30,
+          "matchesPrefix": ["images/"],
+          "customTimeBefore": "$(date -u -d '+30 days' +%Y-%m-%d)"
+        }
+      }
+    ]
+  }
+}
+EOF
+
+# Apply lifecycle rules
+gsutil lifecycle set lifecycle.json gs://motorscope-images
+```
+
+### 5. Set Up Authentication
+
+```bash
+# Create OAuth 2.0 credentials for Chrome extension
+# Go to: https://console.cloud.google.com/apis/credentials
+# 1. Click "Create Credentials" → "OAuth client ID"
+# 2. Application type: Chrome extension
+# 3. Name: MotorScope Extension
+# 4. Extension ID: (get from chrome://extensions after loading extension)
+# 5. Save the Client ID
+
+# Create JWT secret for API
+openssl rand -base64 32 > jwt_secret.txt
+```
+
+### 6. Deploy API to Cloud Run
+
+```bash
+# Navigate to API directory
+cd api
+
+# Build and deploy
+gcloud run deploy motorscope-api \
+  --source . \
+  --region europe-west1 \
+  --allow-unauthenticated \
+  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-images" \
+  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest"
+```
+
+### 7. Configure CORS
+
+Update Cloud Run service to allow extension origin:
+
+```bash
+# Get your extension ID from chrome://extensions
+EXTENSION_ID="your-extension-id-here"
+
+# Update service with CORS settings
+gcloud run services update motorscope-api \
+  --region europe-west1 \
+  --set-env-vars "ALLOWED_ORIGIN_EXTENSION=chrome-extension://${EXTENSION_ID}"
+```
+
+### Summary of Required Configuration
+
+| Service | Resource | Configuration |
+|---------|----------|---------------|
+| **Firestore** | Database | Name: `motorscopedb`, Location: `europe-west1`, Mode: Native |
+| **Cloud Storage** | Bucket | Name: `motorscope-images`, Location: `europe-west1`, Lifecycle: 30-day deletion |
+| **Cloud Run** | Service | Name: `motorscope-api`, Region: `europe-west1` |
+| **Secret Manager** | Secrets | `JWT_SECRET`, `OAUTH_CLIENT_ID` |
+
+### Environment Variables
+
+The API requires the following environment variables in Cloud Run:
+
+```
+NODE_ENV=production
+GCP_PROJECT_ID=motorscope
+GCS_BUCKET_NAME=motorscope-images
+ALLOWED_ORIGIN_EXTENSION=chrome-extension://YOUR_EXTENSION_ID
+BACKEND_BASE_URL=https://motorscope-api-xxxxx-ew.a.run.app
+```
+
+Secrets (stored in Secret Manager):
+- `JWT_SECRET` - Secret key for JWT token signing
+- `OAUTH_CLIENT_ID` - Google OAuth 2.0 client ID
 
 ## 🤝 Contributing
 

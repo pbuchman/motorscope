@@ -97,7 +97,7 @@ describe('imageUpload utility', () => {
 
             expect(mockUploadImageFromUrl).toHaveBeenCalledWith(
                 'https://external.com/image.jpg',
-                'vin_ABC123'
+                'vin_ABC123',
             );
             expect(result.thumbnailUrl).toBe('https://api.example.com/api/images/user123/vin_ABC123/12345.jpg');
         });
