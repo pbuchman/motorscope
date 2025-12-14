@@ -234,3 +234,27 @@ export const clearRemoteGeminiHistory = async (): Promise<{ success: boolean; de
     });
 };
 
+// =============================================================================
+// Image Storage API
+// =============================================================================
+
+const IMAGES_ENDPOINT_PATH = '/images';
+
+/**
+ * Upload image from external URL to API storage
+ *
+ * @param imageUrl - External URL of the image to upload
+ * @param listingId - Listing ID this image belongs to
+ * @returns API URL for the stored image
+ */
+export const uploadImageFromUrl = async (
+    imageUrl: string,
+    listingId: string,
+): Promise<{url: string; path: string}> => {
+    return apiRequest<{url: string; path: string}>(IMAGES_ENDPOINT_PATH, {
+        method: 'POST',
+        body: JSON.stringify({imageUrl, listingId}),
+    });
+};
+
+
