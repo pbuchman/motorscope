@@ -43,6 +43,16 @@ export const FIRESTORE_TOKEN_BLACKLIST_COLLECTION = 'token_blacklist';
 export const FIRESTORE_LISTINGS_USER_FIELD = 'userId';
 
 // =============================================================================
+// Google Cloud Storage Configuration
+// =============================================================================
+
+/** GCS Bucket name for storing listing images */
+export const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'motorscope-images';
+
+/** Default expiration time for deleted images (30 days) */
+export const IMAGE_DELETION_EXPIRATION_DAYS = 30;
+
+// =============================================================================
 // Cloud Run Configuration
 // =============================================================================
 

@@ -23,6 +23,13 @@ import {
     saveUserSettings,
     upsertUser,
 } from './db.js';
+import {
+    checkStorageHealth,
+    downloadImageFromUrl,
+    getImageMetadata,
+    scheduleImageDeletion,
+    uploadImage,
+} from './storage.js';
 import {handleError, sendError, sendOperationSuccess, sendSuccess} from './utils/response.js';
 import type {AuthResponse, CarListing, GeminiCallHistoryEntry, HealthResponse, User, UserSettings} from './types.js';
 
@@ -59,6 +66,7 @@ const router = Router();
  */
 router.get('/healthz', async (_req: Request, res: Response) => {
     const firestoreOk = await checkFirestoreHealth();
+    const storageOk = await checkStorageHealth();
 
     // Opportunistic cleanup of expired tokens (~10% of requests)
     if (Math.random() < 0.1) {
@@ -72,12 +80,13 @@ router.get('/healthz', async (_req: Request, res: Response) => {
     }
 
     const response: HealthResponse = {
-        status: firestoreOk ? 'ok' : 'error',
+        status: firestoreOk && storageOk ? 'ok' : 'error',
         firestore: firestoreOk ? 'ok' : 'error',
+        storage: storageOk ? 'ok' : 'error',
         timestamp: new Date().toISOString(),
     };
 
-    sendSuccess(res, response, firestoreOk ? 200 : 503);
+    sendSuccess(res, response, firestoreOk && storageOk ? 200 : 503);
 });
 
 // =============================================================================
@@ -982,6 +991,253 @@ router.delete('/gemini-history', authMiddleware, async (req: Request, res: Respo
         sendOperationSuccess(res, undefined, {deleted: deletedCount});
     } catch (error) {
         handleError(res, error, 'clearing Gemini history');
+    }
+});
+
+// =============================================================================
+// Image Storage API (Protected Routes)
+// =============================================================================
+
+/**
+ * @openapi
+ * /api/images:
+ *   post:
+ *     summary: Upload image from external URL
+ *     description: |
+ *       Download an image from an external URL and store it in GCS.
+ *       Returns the API URL for the stored image.
+ *       This ensures images remain available even if removed from original source.
+ *     tags:
+ *       - Images
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - imageUrl
+ *               - listingId
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: External URL of the image to download and store
+ *                 example: "https://example.com/car-image.jpg"
+ *               listingId:
+ *                 type: string
+ *                 description: Listing ID this image belongs to
+ *                 example: "vin_WBAPH5C55BA123456"
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   description: API URL for accessing the stored image
+ *                   example: "/api/images/user123/vin_ABC/1234567890.jpg"
+ *                 path:
+ *                   type: string
+ *                   description: Internal GCS path
+ *       400:
+ *         description: Bad request - invalid URL or missing parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post('/images', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.user!.userId;
+        const {imageUrl, listingId} = req.body as {imageUrl?: string; listingId?: string};
+
+        if (!imageUrl || typeof imageUrl !== 'string') {
+            sendError(res, 400, 'imageUrl is required and must be a string');
+            return;
+        }
+
+        if (!listingId || typeof listingId !== 'string') {
+            sendError(res, 400, 'listingId is required and must be a string');
+            return;
+        }
+
+        // Validate URL format
+        try {
+            new URL(imageUrl);
+        } catch {
+            sendError(res, 400, 'imageUrl must be a valid URL');
+            return;
+        }
+
+        // Download image from external URL
+        const {buffer, contentType} = await downloadImageFromUrl(imageUrl);
+
+        // Upload to GCS
+        const {path} = await uploadImage(buffer, contentType, userId, listingId);
+
+        // Return API path instead of signed URL to keep it consistent
+        const apiPath = `/api/images/${path}`;
+
+        sendSuccess(res, {url: apiPath, path});
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to upload image';
+        handleError(res, error, message);
+    }
+});
+
+/**
+ * @openapi
+ * /api/images/{filePath}:
+ *   get:
+ *     summary: Get image
+ *     description: |
+ *       Retrieve an image from GCS storage.
+ *       Returns a redirect to a signed URL for the image.
+ *     tags:
+ *       - Images
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filePath
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: File path in GCS (format images/userId/listingId/timestamp.ext)
+ *         example: "images/google_123/vin_ABC/1234567890.jpg"
+ *     responses:
+ *       302:
+ *         description: Redirect to signed URL for the image
+ *       404:
+ *         description: Image not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/images/*', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        // Extract file path from URL (everything after /images/)
+        const filePath = req.params[0];
+
+        if (!filePath) {
+            sendError(res, 400, 'Invalid image path');
+            return;
+        }
+
+        // Get image metadata and signed URL
+        const {url} = await getImageMetadata(filePath);
+
+        // Redirect to signed URL
+        res.redirect(302, url);
+    } catch (error) {
+        handleError(res, error, 'retrieving image');
+    }
+});
+
+/**
+ * @openapi
+ * /api/images/{filePath}:
+ *   delete:
+ *     summary: Delete image
+ *     description: |
+ *       Schedule an image for deletion from GCS.
+ *       The image will be marked for deletion and automatically removed after 30 days.
+ *     tags:
+ *       - Images
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filePath
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: File path in GCS
+ *         example: "images/google_123/vin_ABC/1234567890.jpg"
+ *     responses:
+ *       200:
+ *         description: Image scheduled for deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Image scheduled for deletion"
+ *       404:
+ *         description: Image not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.delete('/images/*', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        // Extract file path from URL
+        const filePath = req.params[0];
+
+        if (!filePath) {
+            sendError(res, 400, 'Invalid image path');
+            return;
+        }
+
+        const deleted = await scheduleImageDeletion(filePath);
+
+        if (!deleted) {
+            sendError(res, 404, 'Image not found');
+            return;
+        }
+
+        sendOperationSuccess(res, 'Image scheduled for deletion');
+    } catch (error) {
+        handleError(res, error, 'deleting image');
     }
 });
 
