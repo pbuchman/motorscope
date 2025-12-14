@@ -339,21 +339,7 @@ gcloud run deploy motorscope-api \
   --region europe-west1 \
   --allow-unauthenticated \
   --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-images" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest"
-```
-
-### 7. Configure CORS
-
-Update Cloud Run service to allow extension origin:
-
-```bash
-# Get your extension ID from chrome://extensions
-EXTENSION_ID="your-extension-id-here"
-
-# Update service with CORS settings
-gcloud run services update motorscope-api \
-  --region europe-west1 \
-  --set-env-vars "ALLOWED_ORIGIN_EXTENSION=chrome-extension://${EXTENSION_ID}"
+  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin:latest"
 ```
 
 ### Summary of Required Configuration
@@ -363,7 +349,7 @@ gcloud run services update motorscope-api \
 | **Firestore** | Database | Name: `motorscopedb`, Location: `europe-west1`, Mode: Native |
 | **Cloud Storage** | Bucket | Name: `motorscope-images`, Location: `europe-west1`, Lifecycle: 30-day deletion |
 | **Cloud Run** | Service | Name: `motorscope-api`, Region: `europe-west1` |
-| **Secret Manager** | Secrets | `JWT_SECRET`, `OAUTH_CLIENT_ID` |
+| **Secret Manager** | Secrets | `JWT_SECRET`, `OAUTH_CLIENT_ID`, `ALLOWED_ORIGIN_EXTENSION` |
 
 ### Environment Variables
 
@@ -373,13 +359,13 @@ The API requires the following environment variables in Cloud Run:
 NODE_ENV=production
 GCP_PROJECT_ID=motorscope
 GCS_BUCKET_NAME=motorscope-images
-ALLOWED_ORIGIN_EXTENSION=chrome-extension://YOUR_EXTENSION_ID
 BACKEND_BASE_URL=https://motorscope-api-xxxxx-ew.a.run.app
 ```
 
 Secrets (stored in Secret Manager):
 - `JWT_SECRET` - Secret key for JWT token signing
 - `OAUTH_CLIENT_ID` - Google OAuth 2.0 client ID
+- `ALLOWED_ORIGIN_EXTENSION` - Chrome extension origin (format: `chrome-extension://YOUR_EXTENSION_ID`)
 
 ## 🤝 Contributing
 
