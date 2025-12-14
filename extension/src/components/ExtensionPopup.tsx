@@ -34,6 +34,7 @@ import {
     isTrackableOfferPage,
 } from '@/config/marketplaces';
 import {normalizeUrl} from '@/utils/formatters';
+import {uploadListingThumbnail} from '@/utils/imageUpload';
 
 // Types
 import {CarListing} from '@/types';
@@ -144,7 +145,9 @@ const ExtensionPopup: React.FC = () => {
         if (!previewData) return;
 
         try {
-            await add(previewData);
+            // Upload image to API storage before saving
+            const listingWithApiImage = await uploadListingThumbnail(previewData);
+            await add(listingWithApiImage);
             setPreviewData(null);
             setShowVinWarning(false);
             setShowDateWarning(false);

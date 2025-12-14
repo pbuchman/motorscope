@@ -294,6 +294,7 @@ export interface AuthResponse {
 export interface HealthResponse {
     status: 'ok' | 'error';
     firestore: 'ok' | 'error';
+    storage?: 'ok' | 'error';
     timestamp: string;
 }
 
