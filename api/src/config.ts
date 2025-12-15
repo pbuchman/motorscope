@@ -125,6 +125,12 @@ export function validateConfig(): void {
         if (!ALLOWED_ORIGIN_EXTENSION) {
             errors.push('ALLOWED_ORIGIN_EXTENSION environment variable is required in production');
         }
+        if (!process.env.GCP_PROJECT_ID) {
+            errors.push('GCP_PROJECT_ID environment variable is required in production');
+        }
+        if (!process.env.GCS_BUCKET_NAME) {
+            errors.push('GCS_BUCKET_NAME environment variable is required in production');
+        }
     }
 
     if (errors.length > 0) {

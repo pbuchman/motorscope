@@ -183,6 +183,7 @@ module "cloud_build" {
   service_name                 = var.cloud_run_service_name
   service_account_email        = module.iam.cloud_run_service_account_email
   webhook_secret_id            = module.secrets.github_webhook_secret_id
+  gcs_bucket_name              = var.storage_bucket_name
 
   depends_on = [
     google_project_service.required_apis,

@@ -36,6 +36,12 @@ resource "google_cloudbuild_trigger" "api_deploy" {
     repo_type  = "GITHUB"
   }
 
+  # Substitution variables for the build
+  substitutions = {
+    _ENV             = var.environment
+    _GCS_BUCKET_NAME = var.gcs_bucket_name
+  }
+
   # Service account for builds
   service_account = "projects/${var.project_id}/serviceAccounts/${var.service_account_email}"
 }
@@ -63,6 +69,12 @@ resource "google_cloudbuild_trigger" "api_deploy_manual" {
     repository = "projects/${var.project_id}/locations/${var.region}/connections/github/repositories/${var.github_owner}-${var.github_repo}"
     revision   = "refs/heads/${var.branch}"
     repo_type  = "GITHUB"
+  }
+
+  # Substitution variables for the build
+  substitutions = {
+    _ENV             = var.environment
+    _GCS_BUCKET_NAME = var.gcs_bucket_name
   }
 
   # Service account for builds

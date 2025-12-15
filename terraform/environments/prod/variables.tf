@@ -45,9 +45,9 @@ variable "cloud_run_max_instances" {
 }
 
 variable "storage_bucket_name" {
-  description = "Cloud Storage bucket name (must be globally unique)"
+  description = "Cloud Storage bucket name (required - must be globally unique)"
   type        = string
-  default     = "motorscope-prod-images"
+  # No default - must be explicitly set in terraform.tfvars
 }
 
 variable "firestore_database_id" {

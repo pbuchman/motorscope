@@ -55,3 +55,7 @@ variable "environment" {
   type        = string
 }
 
+variable "gcs_bucket_name" {
+  description = "GCS bucket name for the environment"
+  type        = string
+}

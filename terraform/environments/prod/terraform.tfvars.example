@@ -1,17 +1,27 @@
 # =============================================================================
 # Production Environment Configuration Example
 # =============================================================================
-# Copy this file to terraform.tfvars and update with your values
+# Copy this file to terraform.tfvars and update with your values.
+# DO NOT commit terraform.tfvars to version control.
+#
+# REQUIRED VARIABLES (no defaults - must be set):
+# - project_id
+# - storage_bucket_name
+# - environment
 
-project_id  = "motorscope-prod"
+# GCP Project ID (REQUIRED)
+project_id = "motorscope-prod"
+
+# Environment name (REQUIRED)
 environment = "prod"
+
+# Cloud Storage bucket name (REQUIRED - must be globally unique)
+storage_bucket_name = "motorscope-prod-images"
 
 # Cloud Run Configuration
 cloud_run_min_instances = 1  # Always keep 1 instance running in production
 cloud_run_max_instances = 10 # Allow scaling up to 10 instances
 
-# Storage Configuration
-storage_bucket_name = "motorscope-prod-images"  # Must be globally unique
 
 # GitHub Configuration
 github_owner         = "pbuchman"

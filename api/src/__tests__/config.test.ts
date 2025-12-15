@@ -104,6 +104,8 @@ describe('Configuration', () => {
             delete process.env.JWT_SECRET;
             delete process.env.OAUTH_CLIENT_ID;
             delete process.env.ALLOWED_ORIGIN_EXTENSION;
+            delete process.env.GCP_PROJECT_ID;
+            delete process.env.GCS_BUCKET_NAME;
 
             const config = await import('../config.js');
 
@@ -115,6 +117,8 @@ describe('Configuration', () => {
             delete process.env.JWT_SECRET;
             process.env.OAUTH_CLIENT_ID = 'test-client-id';
             process.env.ALLOWED_ORIGIN_EXTENSION = 'chrome-extension://test';
+            process.env.GCP_PROJECT_ID = 'test-project';
+            process.env.GCS_BUCKET_NAME = 'test-bucket';
 
             const config = await import('../config.js');
 
@@ -126,6 +130,8 @@ describe('Configuration', () => {
             process.env.JWT_SECRET = 'test-secret';
             delete process.env.OAUTH_CLIENT_ID;
             process.env.ALLOWED_ORIGIN_EXTENSION = 'chrome-extension://test';
+            process.env.GCP_PROJECT_ID = 'test-project';
+            process.env.GCS_BUCKET_NAME = 'test-bucket';
 
             const config = await import('../config.js');
 
@@ -137,10 +143,38 @@ describe('Configuration', () => {
             process.env.JWT_SECRET = 'test-secret';
             process.env.OAUTH_CLIENT_ID = 'test-client-id';
             delete process.env.ALLOWED_ORIGIN_EXTENSION;
+            process.env.GCP_PROJECT_ID = 'test-project';
+            process.env.GCS_BUCKET_NAME = 'test-bucket';
 
             const config = await import('../config.js');
 
             expect(() => config.validateConfig()).toThrow('ALLOWED_ORIGIN_EXTENSION');
+        });
+
+        it('should throw in production without GCP_PROJECT_ID', async () => {
+            process.env.NODE_ENV = 'production';
+            process.env.JWT_SECRET = 'test-secret';
+            process.env.OAUTH_CLIENT_ID = 'test-client-id';
+            process.env.ALLOWED_ORIGIN_EXTENSION = 'chrome-extension://test';
+            delete process.env.GCP_PROJECT_ID;
+            process.env.GCS_BUCKET_NAME = 'test-bucket';
+
+            const config = await import('../config.js');
+
+            expect(() => config.validateConfig()).toThrow('GCP_PROJECT_ID');
+        });
+
+        it('should throw in production without GCS_BUCKET_NAME', async () => {
+            process.env.NODE_ENV = 'production';
+            process.env.JWT_SECRET = 'test-secret';
+            process.env.OAUTH_CLIENT_ID = 'test-client-id';
+            process.env.ALLOWED_ORIGIN_EXTENSION = 'chrome-extension://test';
+            process.env.GCP_PROJECT_ID = 'test-project';
+            delete process.env.GCS_BUCKET_NAME;
+
+            const config = await import('../config.js');
+
+            expect(() => config.validateConfig()).toThrow('GCS_BUCKET_NAME');
         });
 
         it('should not throw in production with all required env vars', async () => {
@@ -148,6 +182,8 @@ describe('Configuration', () => {
             process.env.JWT_SECRET = 'test-secret';
             process.env.OAUTH_CLIENT_ID = 'test-client-id';
             process.env.ALLOWED_ORIGIN_EXTENSION = 'chrome-extension://test';
+            process.env.GCP_PROJECT_ID = 'test-project';
+            process.env.GCS_BUCKET_NAME = 'test-bucket';
 
             const config = await import('../config.js');
 

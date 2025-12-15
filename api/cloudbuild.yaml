@@ -15,6 +15,7 @@ steps:
         echo "=============================================="
         echo "MotorScope API Deployment"
         echo "=============================================="
+        echo "Environment: ${_ENV}"
         echo "Branch: $BRANCH_NAME"
         echo "Commit: $SHORT_SHA"
         echo "Trigger: $TRIGGER_NAME"
@@ -67,7 +68,7 @@ steps:
       - '--max-instances'
       - '10'
       - '--set-env-vars'
-      - 'NODE_ENV=production'
+      - 'NODE_ENV=production,GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}'
       - '--set-secrets'
       - 'JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest'
 
@@ -77,6 +78,8 @@ substitutions:
   _REGION: 'europe-west1'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
+  _ENV: 'prod'  # Environment: 'dev' or 'prod'
+  _GCS_BUCKET_NAME: ''  # Must be set per environment
 
 # Build options
 options:
