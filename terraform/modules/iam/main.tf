@@ -87,3 +87,11 @@ resource "google_project_iam_member" "cloudbuild_secrets" {
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${local.cloud_build_service_account}"
 }
+
+# Allow Cloud Run service account to push to Artifact Registry (used by Cloud Build trigger)
+resource "google_project_iam_member" "cloud_run_artifact_registry" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+

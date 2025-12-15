@@ -182,6 +182,7 @@ module "cloud_build" {
   allowed_pusher               = var.github_allowed_pusher
   artifact_registry_repository = var.artifact_registry_repository
   service_name                 = var.cloud_run_service_name
+  service_account_email        = module.iam.cloud_run_service_account_email
   webhook_secret_id            = module.secrets.github_webhook_secret_id
 
   depends_on = [

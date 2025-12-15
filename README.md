@@ -9,6 +9,12 @@
 
 MotorScope is a Chrome extension that helps you collect and track data from car listing platforms. It uses Google Gemini AI to extract vehicle information and monitor price changes over time.
 
+## 📦 Deployment
+
+For infrastructure deployment and setup instructions, see **[terraform/DEPLOYMENT.md](terraform/DEPLOYMENT.md)**.
+
+This is the single source of truth for deploying the MotorScope infrastructure to Google Cloud Platform.
+
 ## 🌐 Supported Marketplaces
 
 | Marketplace | Country | Status |

@@ -2,13 +2,18 @@
 # Cloud Build Trigger Module Variables
 # =============================================================================
 
-variable "project_id" {
-  description = "GCP project ID"
+variable "service_name" {
+  description = "Cloud Run service name"
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name (dev, prod)"
+variable "service_account_email" {
+  description = "Service account email for Cloud Build executions"
+  type        = string
+}
+
+variable "webhook_secret_id" {
+  description = "Secret Manager secret ID for GitHub webhook"
   type        = string
 }
 
@@ -45,14 +50,13 @@ variable "artifact_registry_repository" {
   type        = string
 }
 
-variable "service_name" {
-  description = "Cloud Run service name"
+variable "project_id" {
+  description = "GCP project ID"
   type        = string
 }
 
-
-variable "webhook_secret_id" {
-  description = "Secret Manager secret ID for GitHub webhook"
+variable "environment" {
+  description = "Environment name (dev, prod)"
   type        = string
 }
 

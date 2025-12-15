@@ -1,5 +1,35 @@
 # Complete Deployment Guide for MotorScope Infrastructure
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Prerequisites Checklist](#prerequisites-checklist)
+3. [Step 1: Install Required Tools](#step-1-install-required-tools)
+4. [Step 2: Create and Configure GCP Project](#step-2-create-and-configure-gcp-project)
+5. [Step 3: Create Terraform State Storage](#step-3-create-terraform-state-storage)
+6. [Step 4: Configure Environment Variables](#step-4-configure-environment-variables)
+7. [Step 5: Initialize Terraform](#step-5-initialize-terraform)
+8. [Step 6: Review Infrastructure Plan](#step-6-review-infrastructure-plan)
+9. [Step 7: Deploy Infrastructure](#step-7-deploy-infrastructure)
+10. [Step 8: Configure Secrets](#step-8-configure-secrets)
+11. [Step 9: Build and Deploy API Container](#step-9-build-and-deploy-api-container)
+12. [Step 10: Verify Deployment](#step-10-verify-deployment)
+13. [Step 11: Configure CI/CD with Cloud Build](#step-11-configure-cicd-with-cloud-build)
+    - [11.1: Link GitHub Repository (2nd Gen)](#111-link-github-repository-2nd-gen)
+    - [11.2: Create Cloud Build Trigger](#112-create-cloud-build-trigger)
+    - [11.3: Create GitHub Webhook Secret](#113-create-github-webhook-secret)
+    - [11.4: Configure GitHub Webhook](#114-configure-github-webhook)
+    - [11.5: Import Trigger to Terraform](#115-import-trigger-to-terraform)
+    - [11.6: Test CI/CD Pipeline](#116-test-cicd-pipeline)
+    - [11.7: Troubleshooting CI/CD](#117-troubleshooting-cicd)
+14. [Outputs Reference](#outputs-reference)
+15. [Maintenance Tasks](#maintenance-tasks)
+16. [Troubleshooting](#troubleshooting)
+17. [Cleanup / Destruction](#cleanup--destruction)
+18. [Next Steps](#next-steps)
+
+---
+
 ## Overview
 
 This guide provides step-by-step instructions for deploying MotorScope infrastructure to GCP project `motorscope-dev`.
@@ -352,6 +382,244 @@ gcloud run services logs read motorscope-api \
 
 ---
 
+## Step 11: Configure CI/CD with Cloud Build
+
+### 11.1 Link GitHub Repository (2nd Gen)
+
+Cloud Build uses 2nd generation repositories for better GitHub integration.
+
+1. **Open Cloud Build Repositories:**
+   ```
+   https://console.cloud.google.com/cloud-build/repositories?project=motorscope-dev
+   ```
+
+2. **Connect Repository:**
+   - Click **"Connect Repository"** or **"Create Host Connection"**
+   - Select **"Cloud Build repositories"** (2nd gen)
+   - Click **"Continue"**
+
+3. **Authenticate with GitHub:**
+   - Click **"Authenticate"**
+   - Sign in to GitHub
+   - Authorize **"Google Cloud Build"** app
+
+4. **Select Repository:**
+   - Select your GitHub account/organization
+   - Choose **`pbuchman/motorscope`** repository
+   - Click **"Connect"**
+
+5. **Verify Connection:**
+   ```bash
+   gcloud builds repositories list \
+     --connection=projects/motorscope-dev/locations/europe-west1/connections/github \
+     --region=europe-west1 \
+     --project=motorscope-dev
+   ```
+
+   You should see: `pbuchman-motorscope`
+
+### 11.2 Create Cloud Build Trigger
+
+The trigger is managed by Terraform but must be imported first.
+
+1. **Create Trigger in Console:**
+   
+   Go to: https://console.cloud.google.com/cloud-build/triggers?project=motorscope-dev
+
+   - Click **"Create Trigger"**
+   - **Name:** `motorscope-api-deploy-dev`
+   - **Region:** `europe-west1 (Belgium)`
+   - **Event:** Select **"Webhook event"**
+   - **Webhook URL:** (will be shown after creation)
+   - **Secret:** Select `github-webhook-secret` (create if doesn't exist)
+
+2. **Configure Source:**
+   - **Repository:** Select **"2nd gen"**
+   - **Repository:** `pbuchman-motorscope`
+   - **Branch:** `development` (exact branch name, not regex)
+
+3. **Configure Build:**
+   - **Type:** Cloud Build configuration file (YAML or JSON)
+   - **Location:** Repository
+   - **Cloud Build configuration file location:** `/api/cloudbuild.yaml`
+
+4. **Advanced Settings:**
+   - **Service account:** `motorscope-api-dev@motorscope-dev.iam.gserviceaccount.com`
+   - **Substitution variables:** (optional, can be added later)
+     - `_PUSHER_NAME`: `$(body.pusher.name)`
+   - **Filter:** `_PUSHER_NAME.matches("^pbuchman$")` (only trigger for specific user)
+
+5. **Click "Create"**
+
+6. **Note the Trigger ID** from the URL:
+   ```
+   https://console.cloud.google.com/cloud-build/triggers/edit/TRIGGER_ID?project=motorscope-dev
+   ```
+
+### 11.3 Create GitHub Webhook Secret
+
+If not already created:
+
+```bash
+# Generate a random secret
+WEBHOOK_SECRET=$(openssl rand -hex 32)
+echo "Webhook Secret: $WEBHOOK_SECRET"
+# Save this value - you'll need it for GitHub
+
+# Store in Secret Manager
+echo -n "$WEBHOOK_SECRET" | \
+  gcloud secrets create github-webhook-secret \
+    --project=motorscope-dev \
+    --replication-policy="automatic" \
+    --data-file=-
+```
+
+Or add a new version if secret exists:
+```bash
+echo -n "$WEBHOOK_SECRET" | \
+  gcloud secrets versions add github-webhook-secret \
+    --project=motorscope-dev \
+    --data-file=-
+```
+
+### 11.4 Configure GitHub Webhook
+
+1. **Get Webhook URL from Cloud Build:**
+   
+   After creating the trigger, click **"Show URL preview"** in the trigger details, or construct it:
+   ```
+   https://cloudbuild.googleapis.com/v1/projects/motorscope-dev/locations/europe-west1/triggers/TRIGGER_ID:webhook
+   ```
+   
+   Replace `TRIGGER_ID` with your actual trigger ID.
+
+2. **Add Webhook to GitHub Repository:**
+   
+   Go to: https://github.com/pbuchman/motorscope/settings/hooks
+
+   - Click **"Add webhook"**
+   
+   **Webhook Configuration:**
+   - **Payload URL:** 
+     ```
+     https://cloudbuild.googleapis.com/v1/projects/motorscope-dev/locations/europe-west1/triggers/TRIGGER_ID:webhook
+     ```
+   - **Content type:** `application/json`
+   - **Secret:** The webhook secret you generated in step 11.3
+   - **SSL verification:** ✅ Enable SSL verification
+   - **Which events would you like to trigger this webhook?**
+     - Select **"Just the push event"**
+   - **Active:** ✅ Checked
+
+3. **Click "Add webhook"**
+
+4. **Verify Webhook:**
+   - GitHub will send a ping event
+   - Check the "Recent Deliveries" tab
+   - Should show a green checkmark ✅
+
+### 11.5 Import Trigger to Terraform
+
+Once the trigger is created manually, import it into Terraform:
+
+```bash
+cd terraform/environments/dev
+
+# Get trigger ID from Cloud Console URL or:
+TRIGGER_ID=$(gcloud builds triggers list \
+  --project=motorscope-dev \
+  --region=europe-west1 \
+  --filter="name=motorscope-api-deploy-dev" \
+  --format="value(id)")
+
+# Import to Terraform
+terraform import -lock=false \
+  module.motorscope.module.cloud_build.google_cloudbuild_trigger.api_deploy \
+  projects/motorscope-dev/locations/europe-west1/triggers/$TRIGGER_ID
+```
+
+Verify no changes needed:
+```bash
+terraform plan -lock=false
+```
+
+Should output: `No changes. Your infrastructure matches the configuration.`
+
+### 11.6 Test CI/CD Pipeline
+
+Test the complete pipeline:
+
+```bash
+cd ~/personal/motorscope
+git checkout development
+echo "# CI/CD Test" >> api/README.md
+git add api/README.md
+git commit -m "Test Cloud Build trigger"
+git push origin development
+```
+
+**Monitor the build:**
+
+```bash
+# List recent builds
+gcloud builds list --project=motorscope-dev --limit=5
+
+# Watch specific build
+gcloud builds log BUILD_ID --project=motorscope-dev --stream
+```
+
+**Expected behavior:**
+1. GitHub sends webhook to Cloud Build
+2. Trigger checks filter: pusher is "pbuchman"?
+3. Executes `/api/cloudbuild.yaml`
+4. Builds Docker image
+5. Pushes to Artifact Registry
+6. Deploys to Cloud Run
+7. New revision is live
+
+**Verify deployment:**
+```bash
+# Get latest Cloud Run revision
+gcloud run revisions list \
+  --service=motorscope-api \
+  --project=motorscope-dev \
+  --region=europe-west1 \
+  --limit=1
+
+# Test API
+SERVICE_URL=$(gcloud run services describe motorscope-api \
+  --project=motorscope-dev \
+  --region=europe-west1 \
+  --format='value(status.url)')
+
+curl $SERVICE_URL/api/healthz
+```
+
+### 11.7 Troubleshooting CI/CD
+
+**Webhook not triggering:**
+- Check GitHub webhook deliveries: https://github.com/pbuchman/motorscope/settings/hooks
+- Verify webhook secret matches Secret Manager
+- Check trigger is enabled in Cloud Console
+
+**Build fails at permission error:**
+- Verify service account has `artifactregistry.writer` role:
+  ```bash
+  gcloud projects get-iam-policy motorscope-dev \
+    --filter="bindings.members:motorscope-api-dev" \
+    --format="table(bindings.role)"
+  ```
+
+**Build executes but Cloud Run doesn't update:**
+- Check Cloud Build logs for deployment step
+- Verify image was pushed to Artifact Registry:
+  ```bash
+  gcloud artifacts docker images list \
+    europe-west1-docker.pkg.dev/motorscope-dev/motorscope \
+    --project=motorscope-dev
+  ```
+
+---
 
 ## Outputs Reference
 

@@ -1,31 +1,52 @@
 # =============================================================================
 # Cloud Build Trigger Module
 # =============================================================================
-# Uses GitHub integration (requires GitHub App to be connected via console first)
+# Webhook-based trigger with 2nd gen repository
+
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 resource "google_cloudbuild_trigger" "api_deploy" {
-  project     = var.project_id
-  name        = "motorscope-api-deploy-${var.environment}"
-  description = "Build and deploy motorscope-api on push to ${var.branch}"
-  location    = var.region
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-    push {
-      branch = "^${var.branch}$"
-    }
+  project  = var.project_id
+  name     = "motorscope-api-deploy-${var.environment}"
+  location = var.region
+
+  # Webhook configuration (uses project number, not ID)
+  webhook_config {
+    secret = "projects/${data.google_project.project.number}/secrets/${var.webhook_secret_id}/versions/1"
   }
-  filename = "api/cloudbuild.yaml"
-  included_files = [
-    "api/**"
-  ]
+
+  # Source repository (2nd gen)
+  source_to_build {
+    repository = "projects/${var.project_id}/locations/${var.region}/connections/github/repositories/${var.github_owner}-${var.github_repo}"
+    ref        = "refs/heads/${var.branch}"
+    repo_type  = "GITHUB"
+  }
+
+  # Build configuration file location (2nd gen)
+  git_file_source {
+    path       = "api/cloudbuild.yaml"
+    repository = "projects/${var.project_id}/locations/${var.region}/connections/github/repositories/${var.github_owner}-${var.github_repo}"
+    revision   = "refs/heads/${var.branch}"
+    repo_type  = "GITHUB"
+  }
+
+  # Service account for builds
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.service_account_email}"
+
+  # Filter by pusher name
+  filter = "_PUSHER_NAME.matches(\"^${var.allowed_pusher}$\")"
+
+  # Substitutions
   substitutions = {
-    _REGION       = var.region
-    _REPOSITORY   = var.artifact_registry_repository
-    _SERVICE_NAME = var.service_name
+    _PUSHER_NAME = "$(body.pusher.name)"
   }
-  tags = [
-    "api",
-    "deployment",
-    var.environment
-  ]
+
+  lifecycle {
+    ignore_changes = [
+      source_to_build[0].repo_type,
+      git_file_source[0].repo_type,
+    ]
+  }
 }
