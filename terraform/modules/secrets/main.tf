@@ -60,6 +60,24 @@ resource "google_secret_manager_secret" "allowed_origin_extension" {
 }
 
 # =============================================================================
+# GitHub Webhook Secret
+# =============================================================================
+
+resource "google_secret_manager_secret" "github_webhook_secret" {
+  project   = var.project_id
+  secret_id = "github-webhook-secret"
+
+  labels = merge(var.labels, {
+    environment = var.environment
+    purpose     = "ci-cd"
+  })
+
+  replication {
+    auto {}
+  }
+}
+
+# =============================================================================
 # IAM Bindings - Grant access to service account
 # =============================================================================
 

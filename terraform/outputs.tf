@@ -55,5 +55,18 @@ output "secret_references" {
     jwt_secret               = module.secrets.jwt_secret_id
     oauth_client_id          = module.secrets.oauth_client_id_secret_id
     allowed_origin_extension = module.secrets.allowed_origin_extension_secret_id
+    github_webhook_secret    = module.secrets.github_webhook_secret_id
   }
 }
+
+# Cloud Build trigger information
+output "build_trigger_name" {
+  description = "Cloud Build trigger name"
+  value       = module.cloud_build.trigger_name
+}
+
+output "build_trigger_id" {
+  description = "Cloud Build trigger ID"
+  value       = module.cloud_build.trigger_id
+}
+

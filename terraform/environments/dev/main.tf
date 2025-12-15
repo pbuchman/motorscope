@@ -34,6 +34,12 @@ module "motorscope" {
   # Image lifecycle
   image_deletion_days = 30
 
+  # CI/CD Configuration
+  build_trigger_branch  = "development"
+  github_owner          = "pbuchman"
+  github_repo           = "motorscope"
+  github_allowed_pusher = "pbuchman"
+
   # Labels
   labels = {
     environment = "dev"

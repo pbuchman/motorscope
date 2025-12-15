@@ -162,3 +162,33 @@ module "cloud_run" {
     module.artifact_registry,
   ]
 }
+
+# =============================================================================
+# Cloud Build Trigger Module - CI/CD Pipeline
+# =============================================================================
+# NOTE: Requires GitHub App to be connected first via console
+# Go to: https://console.cloud.google.com/cloud-build/triggers/connect?project=motorscope-dev
+# Connect pbuchman/motorscope repository, then run terraform apply
+
+module "cloud_build" {
+  source = "./modules/cloud-build"
+
+  project_id                   = var.project_id
+  environment                  = var.environment
+  region                       = var.cloud_run_region
+  branch                       = var.build_trigger_branch
+  github_owner                 = var.github_owner
+  github_repo                  = var.github_repo
+  allowed_pusher               = var.github_allowed_pusher
+  artifact_registry_repository = var.artifact_registry_repository
+  service_name                 = var.cloud_run_service_name
+  webhook_secret_id            = module.secrets.github_webhook_secret_id
+
+  depends_on = [
+    google_project_service.required_apis,
+    module.iam,
+    module.artifact_registry,
+    module.cloud_run,
+  ]
+}
+

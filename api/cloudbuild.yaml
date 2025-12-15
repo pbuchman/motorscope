@@ -74,7 +74,7 @@ steps:
 # Substitution variables (can be overridden in trigger)
 substitutions:
   _PUSHER_NAME: '$(body.pusher.name)'
-  _REGION: 'europe-central2'
+  _REGION: 'europe-west1'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
 
