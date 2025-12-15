@@ -8,8 +8,18 @@ output "cloud_run_service_account_email" {
 }
 
 output "cloud_run_service_account_name" {
-  description = "Full name of the Cloud Run service account"
+  description = "Cloud Run service account resource name"
   value       = google_service_account.cloud_run.name
+}
+
+output "cloud_build_service_account_id" {
+  description = "Cloud Build service account ID (project number based)"
+  value       = local.cloud_build_service_account
+}
+
+output "cloud_build_service_account_email" {
+  description = "Cloud Build service account email"
+  value       = local.cloud_build_service_account
 }
 
 output "cloud_build_service_account" {

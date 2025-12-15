@@ -6,8 +6,16 @@
 [![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://reactjs.org/)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-green.svg)](https://developer.chrome.com/docs/extensions/mv3/)
 [![Gemini AI](https://img.shields.io/badge/Gemini-2.5%20Flash-purple.svg)](https://ai.google.dev/)
+[![Terraform](https://img.shields.io/badge/Terraform-1.5+-623CE4.svg)](https://www.terraform.io/)
+[![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4.svg)](https://cloud.google.com/run)
 
 MotorScope is a Chrome extension that helps you collect and track data from car listing platforms. It uses Google Gemini AI to extract vehicle information and monitor price changes over time.
+
+## 📦 Deployment
+
+For infrastructure deployment and setup instructions, see **[terraform/DEPLOYMENT.md](terraform/DEPLOYMENT.md)**.
+
+This is the single source of truth for deploying the MotorScope infrastructure to Google Cloud Platform.
 
 ## 🌐 Supported Marketplaces
 
@@ -207,158 +215,48 @@ motorscope/
 - ✅ All communication with backend is over HTTPS
 - ✅ Listing images are stored in Google Cloud Storage with automatic expiration
 
-## ☁️ Cloud Infrastructure
+## ☁️ Infrastructure & Deployment
 
-The MotorScope backend runs on Google Cloud Platform (GCP). Infrastructure is managed using **Terraform** for reproducible deployments.
+The MotorScope backend runs on Google Cloud Platform (GCP). Infrastructure is managed using **Terraform**.
 
-### Environments
+### Project Configuration
 
-| Environment | Description | Region |
-|-------------|-------------|--------|
-| **Development** | Testing and development | `europe-west1` |
-| **Production** | Live service (planned) | `europe-west1` |
+| Environment | Project ID | Region |
+|-------------|------------|--------|
+| **Development** | `motorscope-dev` | `europe-west1` |
+| **Production** | TBD | `europe-west1` |
 
-### Quick Start (Terraform)
+### Resources
 
-> 📖 **Full documentation**: See [`terraform/README.md`](./terraform/README.md) for detailed setup instructions.
+| Service | Description |
+|---------|-------------|
+| **Firestore** | NoSQL database (users, listings, settings) |
+| **Cloud Storage** | Listing image storage with lifecycle management |
+| **Cloud Run** | Containerized API service |
+| **Artifact Registry** | Docker image repository |
+| **Secret Manager** | Secure credential storage |
+
+### Deploy Infrastructure
+
+**📖 Complete deployment guide:** [`terraform/DEPLOYMENT.md`](./terraform/DEPLOYMENT.md)
+
+Quick start:
 
 ```bash
-# 1. Navigate to environment directory
 cd terraform/environments/dev
-
-# 2. Copy and configure variables
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
-
-# 3. Initialize Terraform
+# Edit terraform.tfvars with motorscope-dev project details
 terraform init
-
-# 4. Deploy infrastructure
 terraform apply
-
-# 5. Set secret values (after deployment)
-echo -n "$(openssl rand -base64 32)" | gcloud secrets versions add jwt-secret --data-file=-
-echo -n "YOUR_OAUTH_CLIENT_ID" | gcloud secrets versions add oauth-client-id --data-file=-
-echo -n "chrome-extension://YOUR_EXTENSION_ID" | gcloud secrets versions add allowed-origin-extension --data-file=-
 ```
 
-### Infrastructure Components
+After deployment, configure secrets and deploy the API container. See full instructions in [`terraform/DEPLOYMENT.md`](./terraform/DEPLOYMENT.md).
 
-| Service | Resource | Description |
-|---------|----------|-------------|
-| **Firestore** | `motorscopedb` | NoSQL database for users, listings, settings |
-| **Cloud Storage** | `motorscope-images` | Listing image storage with lifecycle management |
-| **Cloud Run** | `motorscope-api` | Containerized API service |
-| **Artifact Registry** | `motorscope` | Docker container image repository |
-| **Secret Manager** | Various | Secure storage for JWT secret, OAuth credentials |
+### Additional Documentation
 
-### Required Secrets
-
-| Secret | Description | How to Obtain |
-|--------|-------------|---------------|
-| `jwt-secret` | JWT signing key | Generate: `openssl rand -base64 32` |
-| `oauth-client-id` | Google OAuth 2.0 client ID | GCP Console → APIs & Services → Credentials |
-| `allowed-origin-extension` | Chrome extension origin | `chrome-extension://EXTENSION_ID` |
-
-### Manual Setup (Alternative)
-
-<details>
-<summary>Click to expand manual GCP setup instructions</summary>
-
-#### Prerequisites
-
-- Google Cloud Platform account
-- gcloud CLI installed and configured
-- Project with billing enabled
-
-#### 1. Create GCP Project
-
-```bash
-# Create new project
-gcloud projects create motorscope --name="MotorScope"
-
-# Set as active project
-gcloud config set project motorscope
-
-# Enable billing (replace BILLING_ACCOUNT_ID with your billing account)
-gcloud beta billing projects link motorscope --billing-account=BILLING_ACCOUNT_ID
-```
-
-#### 2. Enable Required APIs
-
-```bash
-gcloud services enable \
-  firestore.googleapis.com \
-  storage-api.googleapis.com \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  secretmanager.googleapis.com \
-  artifactregistry.googleapis.com
-```
-
-#### 3. Create Firestore Database
-
-```bash
-gcloud firestore databases create \
-  --location=europe-west1 \
-  --type=firestore-native \
-  --database=motorscopedb
-```
-
-#### 4. Create Cloud Storage Bucket
-
-```bash
-gsutil mb -l europe-west1 -c STANDARD gs://motorscope-images
-gsutil uniformbucketlevelaccess set on gs://motorscope-images
-```
-
-#### 5. Create Secrets
-
-```bash
-# Create secrets in Secret Manager
-echo -n "$(openssl rand -base64 32)" | \
-  gcloud secrets create jwt-secret --data-file=-
-
-# Set OAuth client ID (get from GCP Console)
-echo -n "YOUR_OAUTH_CLIENT_ID" | \
-  gcloud secrets create oauth-client-id --data-file=-
-
-# Set extension origin
-echo -n "chrome-extension://YOUR_EXTENSION_ID" | \
-  gcloud secrets create allowed-origin-extension --data-file=-
-```
-
-#### 6. Deploy API to Cloud Run
-
-```bash
-cd api
-
-gcloud run deploy motorscope-api \
-  --source . \
-  --region europe-west1 \
-  --allow-unauthenticated \
-  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-images" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest"
-```
-
-</details>
-
-### Environment Variables Reference
-
-The API requires these environment variables in Cloud Run:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `production` |
-| `GCP_PROJECT_ID` | GCP project ID | `motorscope` |
-| `GCS_BUCKET_NAME` | Storage bucket name | `motorscope-images` |
-
-Secrets (from Secret Manager):
-| Secret | Description |
-|--------|-------------|
-| `JWT_SECRET` | JWT signing key |
-| `OAUTH_CLIENT_ID` | Google OAuth 2.0 client ID |
-| `ALLOWED_ORIGIN_EXTENSION` | Chrome extension origin |
+- **[`terraform/DEPLOYMENT.md`](./terraform/DEPLOYMENT.md)** - Complete step-by-step deployment
+- **[`terraform/SUMMARY.md`](./terraform/SUMMARY.md)** - Quick reference & commands
+- **[`terraform/CHECKLIST.md`](./terraform/CHECKLIST.md)** - Deployment verification checklist
 
 ## 🤝 Contributing
 

@@ -29,7 +29,7 @@ resource "google_storage_bucket" "images" {
   # Lifecycle rules for automatic cleanup
   lifecycle_rule {
     condition {
-      age = var.image_deletion_days
+      age            = var.image_deletion_days
       matches_prefix = ["images/deleted/"]
     }
     action {

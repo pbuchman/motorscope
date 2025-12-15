@@ -25,10 +25,10 @@ resource "google_project_iam_member" "cloud_run_firestore" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
-# Cloud Storage access (object admin for listing images)
+# Cloud Storage access (admin for bucket operations and object management)
 resource "google_project_iam_member" "cloud_run_storage" {
   project = var.project_id
-  role    = "roles/storage.objectAdmin"
+  role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
@@ -86,4 +86,25 @@ resource "google_project_iam_member" "cloudbuild_secrets" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${local.cloud_build_service_account}"
+}
+
+# Allow Cloud Run service account to push to Artifact Registry (used by Cloud Build trigger)
+resource "google_project_iam_member" "cloud_run_artifact_registry" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
+# Allow Cloud Run service account to deploy to Cloud Run (when used as Cloud Build service account)
+resource "google_project_iam_member" "cloud_run_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
+# Allow Cloud Run service account to act as itself
+resource "google_service_account_iam_member" "cloud_run_self_user" {
+  service_account_id = google_service_account.cloud_run.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cloud_run.email}"
 }

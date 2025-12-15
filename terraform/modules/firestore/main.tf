@@ -49,23 +49,6 @@ resource "google_firestore_field" "token_blacklist_ttl" {
 # =============================================================================
 # Indexes for efficient queries
 
-# Index for listings by userId
-resource "google_firestore_index" "listings_by_user" {
-  project    = var.project_id
-  database   = google_firestore_database.main.name
-  collection = "listings"
-
-  fields {
-    field_path = "userId"
-    order      = "ASCENDING"
-  }
-
-  fields {
-    field_path = "__name__"
-    order      = "ASCENDING"
-  }
-}
-
 # Index for gemini_history by userId and timestamp
 resource "google_firestore_index" "gemini_history_by_user" {
   project    = var.project_id
@@ -83,19 +66,3 @@ resource "google_firestore_index" "gemini_history_by_user" {
   }
 }
 
-# Index for token_blacklist expiration cleanup
-resource "google_firestore_index" "token_blacklist_expiry" {
-  project    = var.project_id
-  database   = google_firestore_database.main.name
-  collection = "token_blacklist"
-
-  fields {
-    field_path = "expireAt"
-    order      = "ASCENDING"
-  }
-
-  fields {
-    field_path = "__name__"
-    order      = "ASCENDING"
-  }
-}

@@ -70,11 +70,6 @@ variable "labels" {
   default     = {}
 }
 
-variable "deletion_protection" {
-  description = "Enable deletion protection for the service"
-  type        = bool
-  default     = false
-}
 
 variable "request_timeout" {
   description = "Maximum request timeout duration"

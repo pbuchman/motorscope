@@ -1,14 +1,14 @@
 # =============================================================================
 # Development Environment - Main Configuration
 # =============================================================================
-# Instantiates the root module with development-specific values.
+# Instantiates the root module with dev-specific values.
 
 module "motorscope" {
   source = "../.."
 
   # GCP Project Configuration
   project_id  = var.project_id
-  environment = "development"
+  environment = "dev"
 
   # Region Configuration
   region = "europe-west1"
@@ -21,10 +21,10 @@ module "motorscope" {
   storage_bucket_name = var.storage_bucket_name
 
   # Cloud Run Configuration
-  cloud_run_service_name = "motorscope-api"
-  cloud_run_region       = "europe-west1"
-  cloud_run_memory       = "512Mi"
-  cloud_run_cpu          = "1"
+  cloud_run_service_name  = "motorscope-api"
+  cloud_run_region        = "europe-west1"
+  cloud_run_memory        = "512Mi"
+  cloud_run_cpu           = "1"
   cloud_run_min_instances = 0
   cloud_run_max_instances = 10
 
@@ -34,9 +34,15 @@ module "motorscope" {
   # Image lifecycle
   image_deletion_days = 30
 
+  # CI/CD Configuration
+  build_trigger_branch  = "development"
+  github_owner          = "pbuchman"
+  github_repo           = "motorscope"
+  github_allowed_pusher = "pbuchman"
+
   # Labels
   labels = {
-    environment = "development"
+    environment = "dev"
     project     = "motorscope"
     managed-by  = "terraform"
   }

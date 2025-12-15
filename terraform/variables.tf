@@ -16,11 +16,11 @@ variable "region" {
 }
 
 variable "environment" {
-  description = "Environment name (development, production)"
+  description = "Environment name (dev, prod)"
   type        = string
   validation {
-    condition     = contains(["development", "production"], var.environment)
-    error_message = "Environment must be 'development' or 'production'."
+    condition     = contains(["dev", "prod"], var.environment)
+    error_message = "Environment must be 'dev' or 'prod'."
   }
 }
 
@@ -94,3 +94,28 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
+
+variable "github_owner" {
+  description = "GitHub repository owner"
+  type        = string
+  default     = "pbuchman"
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
+  default     = "motorscope"
+}
+
+variable "github_allowed_pusher" {
+  description = "GitHub username allowed to trigger builds (security filter)"
+  type        = string
+  default     = "pbuchman"
+}
+
+variable "build_trigger_branch" {
+  description = "Git branch to trigger builds on"
+  type        = string
+  default     = "main"
+}
+

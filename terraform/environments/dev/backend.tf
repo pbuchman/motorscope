@@ -5,7 +5,7 @@
 
 terraform {
   backend "gcs" {
-    bucket = "motorscope-terraform-state"
+    bucket = "motorscope-dev-terraform-state"
     prefix = "env/dev"
   }
 }

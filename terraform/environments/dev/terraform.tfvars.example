@@ -6,7 +6,7 @@
 
 # GCP Project ID
 # The GCP project where resources will be created
-project_id = "motorscope"
+project_id = "motorscope-dev"
 
 # Cloud Storage bucket name (must be globally unique)
-storage_bucket_name = "motorscope-images"
+storage_bucket_name = "motorscope-dev-images"
