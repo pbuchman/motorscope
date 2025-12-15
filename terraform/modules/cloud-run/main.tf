@@ -12,8 +12,6 @@ resource "google_cloud_run_v2_service" "api" {
   name     = var.service_name
   location = var.region
 
-  # Delete protection (enable for production)
-  deletion_protection = var.deletion_protection
 
   template {
     # Service account to run as
