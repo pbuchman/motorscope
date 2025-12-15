@@ -23,7 +23,7 @@ resource "google_artifact_registry_repository" "main" {
 
     condition {
       tag_state  = "UNTAGGED"
-      older_than = "2592000s" # 30 days
+      older_than = "${var.untagged_image_retention_days * 86400}s"
     }
   }
 
@@ -32,7 +32,7 @@ resource "google_artifact_registry_repository" "main" {
     action = "KEEP"
 
     most_recent_versions {
-      keep_count = 10
+      keep_count = var.keep_recent_images_count
     }
   }
 

@@ -39,7 +39,7 @@ resource "google_storage_bucket" "images" {
 
   # Soft delete policy (keep deleted objects for recovery)
   soft_delete_policy {
-    retention_duration_seconds = 604800 # 7 days
+    retention_duration_seconds = var.soft_delete_retention_days * 86400
   }
 
   # Labels

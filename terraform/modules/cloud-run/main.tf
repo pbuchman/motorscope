@@ -92,7 +92,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     # Execution environment
-    timeout = "300s" # 5 minutes max request timeout
+    timeout = var.request_timeout
   }
 
   # Traffic routing (100% to latest revision)

@@ -40,3 +40,9 @@ variable "force_destroy" {
   type        = bool
   default     = false
 }
+
+variable "soft_delete_retention_days" {
+  description = "Number of days to retain soft-deleted objects"
+  type        = number
+  default     = 7
+}

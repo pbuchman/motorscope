@@ -24,3 +24,15 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
+
+variable "untagged_image_retention_days" {
+  description = "Number of days to retain untagged images before deletion"
+  type        = number
+  default     = 30
+}
+
+variable "keep_recent_images_count" {
+  description = "Number of recent tagged images to keep"
+  type        = number
+  default     = 10
+}

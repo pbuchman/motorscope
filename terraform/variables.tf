@@ -50,7 +50,7 @@ variable "cloud_run_service_name" {
 variable "cloud_run_region" {
   description = "Cloud Run deployment region"
   type        = string
-  default     = "europe-central2"
+  default     = "europe-west1"
 }
 
 variable "cloud_run_memory" {

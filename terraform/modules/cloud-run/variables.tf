@@ -75,3 +75,9 @@ variable "deletion_protection" {
   type        = bool
   default     = false
 }
+
+variable "request_timeout" {
+  description = "Maximum request timeout duration"
+  type        = string
+  default     = "300s"
+}
