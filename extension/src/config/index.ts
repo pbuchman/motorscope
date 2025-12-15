@@ -5,4 +5,5 @@
  */
 
 export * from './marketplaces';
+export * from './environment';
 

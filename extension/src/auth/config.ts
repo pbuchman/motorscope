@@ -12,7 +12,11 @@
 export const BACKEND_SERVER_OPTIONS = [
     {
         label: 'Development (Cloud)',
-        value: 'https://motorscope-dev-663051224718.europe-west1.run.app',
+        value: 'https://motorscope-api-608235183788.europe-west1.run.app',
+    },
+    {
+        label: 'Production (Cloud)',
+        value: 'https://motorscope-api-83225257608.europe-west1.run.app',
     },
     {
         label: 'Local',
