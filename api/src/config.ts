@@ -59,7 +59,7 @@ export const IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 // Cloud Run Configuration
 // =============================================================================
 
-/** Cloud Run service name */
+/** Cloud Run service name (default for development environment) */
 export const CLOUD_RUN_SERVICE_NAME = 'motorscope-api';
 
 /** Cloud Run deployment region */

@@ -207,17 +207,71 @@ motorscope/
 - ✅ All communication with backend is over HTTPS
 - ✅ Listing images are stored in Google Cloud Storage with automatic expiration
 
-## ☁️ Backend Setup (Cloud Infrastructure)
+## ☁️ Cloud Infrastructure
 
-The MotorScope backend runs on Google Cloud Platform and requires the following services:
+The MotorScope backend runs on Google Cloud Platform (GCP). Infrastructure is managed using **Terraform** for reproducible deployments.
 
-### Prerequisites
+### Environments
+
+| Environment | Description | Region |
+|-------------|-------------|--------|
+| **Development** | Testing and development | `europe-west1` |
+| **Production** | Live service (planned) | `europe-west1` |
+
+### Quick Start (Terraform)
+
+> 📖 **Full documentation**: See [`terraform/README.md`](./terraform/README.md) for detailed setup instructions.
+
+```bash
+# 1. Navigate to environment directory
+cd terraform/environments/dev
+
+# 2. Copy and configure variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+
+# 3. Initialize Terraform
+terraform init
+
+# 4. Deploy infrastructure
+terraform apply
+
+# 5. Set secret values (after deployment)
+echo -n "$(openssl rand -base64 32)" | gcloud secrets versions add jwt-secret --data-file=-
+echo -n "YOUR_OAUTH_CLIENT_ID" | gcloud secrets versions add oauth-client-id --data-file=-
+echo -n "chrome-extension://YOUR_EXTENSION_ID" | gcloud secrets versions add allowed-origin-extension --data-file=-
+```
+
+### Infrastructure Components
+
+| Service | Resource | Description |
+|---------|----------|-------------|
+| **Firestore** | `motorscopedb` | NoSQL database for users, listings, settings |
+| **Cloud Storage** | `motorscope-images` | Listing image storage with lifecycle management |
+| **Cloud Run** | `motorscope-api` | Containerized API service |
+| **Artifact Registry** | `motorscope` | Docker container image repository |
+| **Secret Manager** | Various | Secure storage for JWT secret, OAuth credentials |
+
+### Required Secrets
+
+| Secret | Description | How to Obtain |
+|--------|-------------|---------------|
+| `jwt-secret` | JWT signing key | Generate: `openssl rand -base64 32` |
+| `oauth-client-id` | Google OAuth 2.0 client ID | GCP Console → APIs & Services → Credentials |
+| `allowed-origin-extension` | Chrome extension origin | `chrome-extension://EXTENSION_ID` |
+
+### Manual Setup (Alternative)
+
+<details>
+<summary>Click to expand manual GCP setup instructions</summary>
+
+#### Prerequisites
 
 - Google Cloud Platform account
 - gcloud CLI installed and configured
 - Project with billing enabled
 
-### 1. Create GCP Project
+#### 1. Create GCP Project
 
 ```bash
 # Create new project
@@ -230,142 +284,81 @@ gcloud config set project motorscope
 gcloud beta billing projects link motorscope --billing-account=BILLING_ACCOUNT_ID
 ```
 
-### 2. Enable Required APIs
+#### 2. Enable Required APIs
 
 ```bash
-# Enable required Google Cloud services
-gcloud services enable firestore.googleapis.com
-gcloud services enable storage-api.googleapis.com
-gcloud services enable run.googleapis.com
-gcloud services enable cloudbuild.googleapis.com
+gcloud services enable \
+  firestore.googleapis.com \
+  storage-api.googleapis.com \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  secretmanager.googleapis.com \
+  artifactregistry.googleapis.com
 ```
 
-### 3. Create Firestore Database
-
-**Using GCP Console (Recommended):**
-
-1. Go to [Firestore Console](https://console.cloud.google.com/firestore)
-2. Click **Create Database**
-3. Choose **Native mode**
-4. Select location: **europe-west1** (or your preferred region)
-5. Database ID: **motorscopedb**
-6. Click **Create**
-
-**Using gcloud CLI:**
+#### 3. Create Firestore Database
 
 ```bash
-gcloud firestore databases create --location=europe-west1 --type=firestore-native --database=motorscopedb
+gcloud firestore databases create \
+  --location=europe-west1 \
+  --type=firestore-native \
+  --database=motorscopedb
 ```
 
-### 4. Create Cloud Storage Bucket
-
-**Using GCP Console:**
-
-1. Go to [Cloud Storage Console](https://console.cloud.google.com/storage)
-2. Click **Create Bucket**
-3. Name: **motorscope-images** (must be globally unique)
-4. Location type: **Region**
-5. Location: **europe-west1** (same as Firestore)
-6. Storage class: **Standard**
-7. Access control: **Uniform**
-8. Click **Create**
-
-**Configure Lifecycle Rules (Important):**
-
-1. Open your bucket **motorscope-images**
-2. Go to **Lifecycle** tab
-3. Click **Add a rule**
-4. Configure deletion rule:
-   - **Action**: Delete object
-   - **Condition**: Custom metadata - Key: `deletedAt`, Value exists
-   - **Age**: 30 days
-5. Click **Create**
-
-**Using gcloud CLI:**
+#### 4. Create Cloud Storage Bucket
 
 ```bash
-# Create bucket
 gsutil mb -l europe-west1 -c STANDARD gs://motorscope-images
-
-# Set uniform access control
 gsutil uniformbucketlevelaccess set on gs://motorscope-images
-
-# Create lifecycle configuration file
-cat > lifecycle.json << EOF
-{
-  "lifecycle": {
-    "rule": [
-      {
-        "action": {"type": "Delete"},
-        "condition": {
-          "age": 30,
-          "matchesPrefix": ["images/"],
-          "customTimeBefore": "$(date -u -d '+30 days' +%Y-%m-%d)"
-        }
-      }
-    ]
-  }
-}
-EOF
-
-# Apply lifecycle rules
-gsutil lifecycle set lifecycle.json gs://motorscope-images
 ```
 
-### 5. Set Up Authentication
+#### 5. Create Secrets
 
 ```bash
-# Create OAuth 2.0 credentials for Chrome extension
-# Go to: https://console.cloud.google.com/apis/credentials
-# 1. Click "Create Credentials" → "OAuth client ID"
-# 2. Application type: Chrome extension
-# 3. Name: MotorScope Extension
-# 4. Extension ID: (get from chrome://extensions after loading extension)
-# 5. Save the Client ID
+# Create secrets in Secret Manager
+echo -n "$(openssl rand -base64 32)" | \
+  gcloud secrets create jwt-secret --data-file=-
 
-# Create JWT secret for API
-openssl rand -base64 32 > jwt_secret.txt
+# Set OAuth client ID (get from GCP Console)
+echo -n "YOUR_OAUTH_CLIENT_ID" | \
+  gcloud secrets create oauth-client-id --data-file=-
+
+# Set extension origin
+echo -n "chrome-extension://YOUR_EXTENSION_ID" | \
+  gcloud secrets create allowed-origin-extension --data-file=-
 ```
 
-### 6. Deploy API to Cloud Run
+#### 6. Deploy API to Cloud Run
 
 ```bash
-# Navigate to API directory
 cd api
 
-# Build and deploy
 gcloud run deploy motorscope-api \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
   --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-images" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin:latest"
+  --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest"
 ```
 
-### Summary of Required Configuration
+</details>
 
-| Service | Resource | Configuration |
-|---------|----------|---------------|
-| **Firestore** | Database | Name: `motorscopedb`, Location: `europe-west1`, Mode: Native |
-| **Cloud Storage** | Bucket | Name: `motorscope-images`, Location: `europe-west1`, Lifecycle: 30-day deletion |
-| **Cloud Run** | Service | Name: `motorscope-api`, Region: `europe-west1` |
-| **Secret Manager** | Secrets | `JWT_SECRET`, `OAUTH_CLIENT_ID`, `ALLOWED_ORIGIN_EXTENSION` |
+### Environment Variables Reference
 
-### Environment Variables
+The API requires these environment variables in Cloud Run:
 
-The API requires the following environment variables in Cloud Run:
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NODE_ENV` | Environment mode | `production` |
+| `GCP_PROJECT_ID` | GCP project ID | `motorscope` |
+| `GCS_BUCKET_NAME` | Storage bucket name | `motorscope-images` |
 
-```
-NODE_ENV=production
-GCP_PROJECT_ID=motorscope
-GCS_BUCKET_NAME=motorscope-images
-BACKEND_BASE_URL=https://motorscope-api-xxxxx-ew.a.run.app
-```
-
-Secrets (stored in Secret Manager):
-- `JWT_SECRET` - Secret key for JWT token signing
-- `OAUTH_CLIENT_ID` - Google OAuth 2.0 client ID
-- `ALLOWED_ORIGIN_EXTENSION` - Chrome extension origin (format: `chrome-extension://YOUR_EXTENSION_ID`)
+Secrets (from Secret Manager):
+| Secret | Description |
+|--------|-------------|
+| `JWT_SECRET` | JWT signing key |
+| `OAUTH_CLIENT_ID` | Google OAuth 2.0 client ID |
+| `ALLOWED_ORIGIN_EXTENSION` | Chrome extension origin |
 
 ## 🤝 Contributing
 

@@ -1,0 +1,12 @@
+# =============================================================================
+# Development Environment - Terraform Variables
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in the values.
+# DO NOT commit terraform.tfvars to version control.
+
+# GCP Project ID
+# The GCP project where resources will be created
+project_id = "motorscope"
+
+# Cloud Storage bucket name (must be globally unique)
+storage_bucket_name = "motorscope-images"
