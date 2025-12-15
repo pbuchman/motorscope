@@ -9,5 +9,4 @@
 project_id = "motorscope"
 
 # Cloud Storage bucket name (must be globally unique)
-# Format: <project>-<env>-images
-storage_bucket_name = "motorscope-dev-images"
+storage_bucket_name = "motorscope-images"

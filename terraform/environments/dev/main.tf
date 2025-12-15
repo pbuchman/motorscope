@@ -8,7 +8,7 @@ module "motorscope" {
 
   # GCP Project Configuration
   project_id  = var.project_id
-  environment = "dev"
+  environment = "development"
 
   # Region Configuration
   region = "europe-west1"
@@ -21,7 +21,7 @@ module "motorscope" {
   storage_bucket_name = var.storage_bucket_name
 
   # Cloud Run Configuration
-  cloud_run_service_name = "motorscope-dev"
+  cloud_run_service_name = "motorscope-api"
   cloud_run_region       = "europe-west1"
   cloud_run_memory       = "512Mi"
   cloud_run_cpu          = "1"

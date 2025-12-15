@@ -99,7 +99,7 @@ cp terraform.tfvars.example terraform.tfvars
 Edit `terraform.tfvars`:
 ```hcl
 project_id          = "motorscope"           # Your GCP project ID
-storage_bucket_name = "motorscope-dev-images" # Must be globally unique
+storage_bucket_name = "motorscope-images" # Must be globally unique
 ```
 
 ### Step 3: Initialize Terraform
@@ -156,7 +156,7 @@ Before Cloud Run can deploy, push an initial container image:
 cd ../../../api
 
 # Build and push container image
-gcloud builds submit --tag europe-west1-docker.pkg.dev/motorscope/motorscope/motorscope-dev:latest
+gcloud builds submit --tag europe-west1-docker.pkg.dev/motorscope/motorscope/motorscope-api:latest
 ```
 
 ### Step 8: Verify Deployment
@@ -241,7 +241,7 @@ The Cloud Build configuration should reference Terraform outputs:
 substitutions:
   _REGION: 'europe-west1'
   _REPOSITORY: 'motorscope'
-  _SERVICE_NAME: 'motorscope-dev'
+  _SERVICE_NAME: 'motorscope-api'
 ```
 
 ## 🔍 Troubleshooting
@@ -268,7 +268,7 @@ substitutions:
 
 ```bash
 # Cloud Run logs
-gcloud run services logs read motorscope-dev --region=europe-west1
+gcloud run services logs read motorscope-api --region=europe-west1
 
 # Cloud Build logs
 gcloud builds log BUILD_ID

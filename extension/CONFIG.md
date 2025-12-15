@@ -102,7 +102,7 @@
 
 # Cloud (Development):
 
-# https://motorscope-dev-663051224718.europe-west1.run.app/api
+# https://motorscope-api-663051224718.europe-west1.run.app/api
 
 #
 

@@ -247,8 +247,8 @@ echo -n "chrome-extension://YOUR_EXTENSION_ID" | gcloud secrets versions add all
 | Service | Resource | Description |
 |---------|----------|-------------|
 | **Firestore** | `motorscopedb` | NoSQL database for users, listings, settings |
-| **Cloud Storage** | `motorscope-dev-images` | Listing image storage with lifecycle management |
-| **Cloud Run** | `motorscope-dev` | Containerized API service |
+| **Cloud Storage** | `motorscope-images` | Listing image storage with lifecycle management |
+| **Cloud Run** | `motorscope-api` | Containerized API service |
 | **Artifact Registry** | `motorscope` | Docker container image repository |
 | **Secret Manager** | Various | Secure storage for JWT secret, OAuth credentials |
 
@@ -308,8 +308,8 @@ gcloud firestore databases create \
 #### 4. Create Cloud Storage Bucket
 
 ```bash
-gsutil mb -l europe-west1 -c STANDARD gs://motorscope-dev-images
-gsutil uniformbucketlevelaccess set on gs://motorscope-dev-images
+gsutil mb -l europe-west1 -c STANDARD gs://motorscope-images
+gsutil uniformbucketlevelaccess set on gs://motorscope-images
 ```
 
 #### 5. Create Secrets
@@ -333,11 +333,11 @@ echo -n "chrome-extension://YOUR_EXTENSION_ID" | \
 ```bash
 cd api
 
-gcloud run deploy motorscope-dev \
+gcloud run deploy motorscope-api \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-dev-images" \
+  --set-env-vars "NODE_ENV=production,GCP_PROJECT_ID=motorscope,GCS_BUCKET_NAME=motorscope-images" \
   --set-secrets "JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest"
 ```
 
@@ -351,7 +351,7 @@ The API requires these environment variables in Cloud Run:
 |----------|-------------|---------|
 | `NODE_ENV` | Environment mode | `production` |
 | `GCP_PROJECT_ID` | GCP project ID | `motorscope` |
-| `GCS_BUCKET_NAME` | Storage bucket name | `motorscope-dev-images` |
+| `GCS_BUCKET_NAME` | Storage bucket name | `motorscope-images` |
 
 Secrets (from Secret Manager):
 | Secret | Description |

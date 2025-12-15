@@ -5,7 +5,7 @@
 # This deployment uses infrastructure managed by Terraform (see /terraform).
 # The following resources must exist before running this build:
 # - Artifact Registry repository (motorscope)
-# - Cloud Run service (motorscope-dev)
+# - Cloud Run service (motorscope-api)
 # - Secret Manager secrets (jwt-secret, oauth-client-id, allowed-origin-extension)
 #
 # SECURITY: Configure trigger with Repository Event Filter (CEL):
@@ -85,11 +85,11 @@ steps:
 # Default values are for the development environment
 substitutions:
   _PUSHER_NAME: '$(body.pusher.name)'
-  _ENVIRONMENT: 'dev'
+  _ENVIRONMENT: 'development'
   _REGION: 'europe-west1'
   _REPOSITORY: 'motorscope'
-  _SERVICE_NAME: 'motorscope-dev'
-  _BUCKET_NAME: 'motorscope-dev-images'
+  _SERVICE_NAME: 'motorscope-api'
+  _BUCKET_NAME: 'motorscope-images'
 
 # Build options
 options:
