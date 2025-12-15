@@ -1,4 +1,4 @@
-# MotorScope - Car Listing Tracker
+# ![MotorScope](extension/icon-prod.png) MotorScope - Car Listing Tracker
 
 [![CI](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml/badge.svg)](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -252,12 +252,6 @@ terraform apply
 
 After deployment, configure secrets and deploy the API container. See full instructions in [`terraform/DEPLOYMENT.md`](./terraform/DEPLOYMENT.md).
 
-### Additional Documentation
-
-- **[`terraform/DEPLOYMENT.md`](./terraform/DEPLOYMENT.md)** - Complete step-by-step deployment
-- **[`terraform/SUMMARY.md`](./terraform/SUMMARY.md)** - Quick reference & commands
-- **[`terraform/CHECKLIST.md`](./terraform/CHECKLIST.md)** - Deployment verification checklist
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -274,5 +268,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<div align="center">Made with ❤️ for car enthusiasts</div>
+**Made with ❤️ for car enthusiasts**
 
