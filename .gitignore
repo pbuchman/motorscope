@@ -51,3 +51,6 @@ override.tf.json
 .terraform.lock.hcl
 .terraformrc
 terraform.rc
+
+# Extension signing keys (private keys must not be committed)
+extension/keys/*.pem

@@ -22,11 +22,11 @@ const OAUTH_CLIENT_IDS: Record<Environment, string> = {
 };
 
 // Manifest keys per environment (for consistent extension ID)
+// Generated using: openssl genrsa -out key.pem 2048 && openssl rsa -in key.pem -pubout -outform DER | base64
+// Keys stored in extension/keys/ directory
 const MANIFEST_KEYS: Record<Environment, string> = {
-    // Dev key - generates extension ID for dev OAuth client
-    dev: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvjTpR0Us75uREbD+W90RIhFHnhBE1j0U2W+ry9YZYEs5ESQF++kOEpbq8KQxwUUkPVr/7Y7NjLEjnqCEkjunwgrnToYEAjZy3REhfn0hCB6Ia2fIaeEqLVaXKgK9A7m8pvdvLxxsJNZ5ylHmi92LN6XHsa44oNcx7EqBie6rxoqowaxttsAUUFLhLwyM5olh9g4k71Ykh0QwQ/wNHUQ7VZnROchbvvbtQpwhsxzpOXoUbs/SxIfUAXiaNQoFW7kXUI9gyQ9MDevE+Ge0oMz1IcjNT1Jw1vJpePaUVsUV880SxWuNqtG9cPK29xl1RkPXrkJY1ws66kHZDm9S6du93QIDAQAB',
-    // Prod key - generates extension ID for prod OAuth client
-    prod: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw8mK3rULXH5pZ5KqfGQvXMgYo0j8C2vPh4ZB3VZxk7W9sT6RMfH1qNpLcJ5dKz0YA8tB2v3oXwK9pR5nM4L6hQ1sF7jE8cD2iN0bG9yU4mA3xW5vT1qP6oL8sK2dJ0fR4tC7zA9uH3bQ1xS2wE4pN6mD5qK0vT8rC1fZ3yJ2aG7hI9nL4oP5sQ6tU0vW1xY2zA3bB4cC5dD6eE7fF8gG9hH0iI1jJ2kK3lL4mM5nN6oO7pP8qQ9rR0sS1tT2uU3vV4wW5xX6yY7zZ8aA9bB0cC1dD2eE3fF4gG5hH6iI7jJ8kK9lL0mM1nN2oO3pP4qQ5rR6sS7tT8uU9vVwQIDAQAB',
+    dev: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxDBhPYKCaLNu0UpqFZ2RbToHpDk2xfGd42/qeaUfgm4Qgdo04gMW9dmiV6kc/OuQ04cRCO7EpYWwFkJwsaB9GT9ZVpNGNbDXc3RkxIjdYMMd5ZB6hZRM9jO8uJlhJO73qCvKjYT8Y56NnbF6eRVAIcDpacWwM18UCUcTnQRr7yAEU2DOkUcs9DipfguJL5nKi41Q4CjI5i6OaONvMUry39uVue5XlXykrEGoODiMJLbwUeiZKoe0isQkORhiNi5ThLCr50r8EbGHc1x7kLweCvcixaLhkk2TZNkfVaXWQj4JPkYV2llMM0WgAEXoLIjy/CSHq19eiFkazeGJL2oLdQIDAQAB',
+    prod: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuoUtTHyTZIO+lR+rE3KT7iyhGmChojGrNciiqoCfn9ogQeOGkPjz8DE9BwihKeSxbEoOyPH9ORfKadtacIy+J2i7uBCFEF4+VQJaSow7SRMS6tfQkIMF9LEwlJLo1EnH1CDjVooK+9ino2adjfRtu678a/Se1Q59kAPbGgJXeykvHR3PY6sS04x2GvlOxMVBnP2yI+5AxX7CNBA9Qz7e4a9ooX9U2Z6PQBApJPWVce3qB0UUGVfEkfjn3/oSCD4R0UAPhgwlUhz2aGzfEJ4iEXzPFwxPImnQz33q459a8M46Fvq4o7t3OlfMAsIApnKLp/JlI9eZu8otoqvVqqRueQIDAQAB',
 };
 
 // Icon files per environment
