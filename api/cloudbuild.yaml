@@ -1,13 +1,6 @@
 # Cloud Build configuration for MotorScope API
 # Builds Docker image and deploys to Cloud Run
 #
-# INFRASTRUCTURE NOTE:
-# This deployment uses infrastructure managed by Terraform (see /terraform).
-# The following resources must exist before running this build:
-# - Artifact Registry repository (motorscope)
-# - Cloud Run service (motorscope-api)
-# - Secret Manager secrets (jwt-secret, oauth-client-id, allowed-origin-extension)
-#
 # SECURITY: Configure trigger with Repository Event Filter (CEL):
 #   push.pusher.name == "pbuchman"
 # This filters at trigger level using authenticated GitHub webhook data
@@ -22,13 +15,10 @@ steps:
         echo "=============================================="
         echo "MotorScope API Deployment"
         echo "=============================================="
-        echo "Environment: ${_ENVIRONMENT}"
         echo "Branch: $BRANCH_NAME"
         echo "Commit: $SHORT_SHA"
         echo "Trigger: $TRIGGER_NAME"
         echo "Project: $PROJECT_ID"
-        echo "Region: ${_REGION}"
-        echo "Service: ${_SERVICE_NAME}"
         echo "Pusher: ${_PUSHER_NAME}"
         echo "=============================================="
 
@@ -77,19 +67,16 @@ steps:
       - '--max-instances'
       - '10'
       - '--set-env-vars'
-      - 'NODE_ENV=production,GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_NAME=${_BUCKET_NAME}'
+      - 'NODE_ENV=production'
       - '--set-secrets'
       - 'JWT_SECRET=jwt-secret:latest,OAUTH_CLIENT_ID=oauth-client-id:latest,ALLOWED_ORIGIN_EXTENSION=allowed-origin-extension:latest'
 
 # Substitution variables (can be overridden in trigger)
-# Default values are for the development environment
 substitutions:
   _PUSHER_NAME: '$(body.pusher.name)'
-  _ENVIRONMENT: 'development'
-  _REGION: 'europe-west1'
+  _REGION: 'europe-central2'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
-  _BUCKET_NAME: 'motorscope-images'
 
 # Build options
 options:
