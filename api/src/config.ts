@@ -4,13 +4,13 @@
  * This file contains all configuration values for the backend API.
  * Environment variables are used for secrets and deployment-specific values.
  *
- * Required environment variables in Cloud Run:
- * - NODE_ENV: "production" for Cloud Run
- * - GCP_PROJECT_ID: GCP project ID (motorscope)
+ * Required environment variables in Cloud Run (dev or prod):
+ * - NODE_ENV: "dev" or "prod" for Cloud Run deployments
+ * - GCP_PROJECT_ID: GCP project ID
+ * - GCS_BUCKET_NAME: GCS bucket name for images
  * - JWT_SECRET: Secret key for signing JWTs
  * - OAUTH_CLIENT_ID: Google OAuth client ID for token verification
  * - ALLOWED_ORIGIN_EXTENSION: Chrome extension origin for CORS
- * - BACKEND_BASE_URL: Public URL of this API
  */
 
 // =============================================================================
@@ -98,11 +98,14 @@ export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || '';
 // Environment
 // =============================================================================
 
-/** Current environment */
+/** Current environment (dev, prod, or development for local) */
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 
 /** Is production environment */
-export const IS_PRODUCTION = NODE_ENV === 'production';
+export const IS_PRODUCTION = NODE_ENV === 'prod';
+
+/** Is running in Cloud Run (dev or prod) vs local development */
+export const IS_CLOUD_RUN = NODE_ENV === 'dev' || NODE_ENV === 'prod';
 
 // =============================================================================
 // Validation
@@ -115,15 +118,22 @@ export const IS_PRODUCTION = NODE_ENV === 'production';
 export function validateConfig(): void {
     const errors: string[] = [];
 
-    if (IS_PRODUCTION) {
+    // Required for any Cloud Run deployment (dev or prod)
+    if (IS_CLOUD_RUN) {
         if (!JWT_SECRET) {
-            errors.push('JWT_SECRET environment variable is required in production');
+            errors.push('JWT_SECRET environment variable is required');
         }
         if (!OAUTH_CLIENT_ID) {
-            errors.push('OAUTH_CLIENT_ID environment variable is required in production');
+            errors.push('OAUTH_CLIENT_ID environment variable is required');
         }
         if (!ALLOWED_ORIGIN_EXTENSION) {
-            errors.push('ALLOWED_ORIGIN_EXTENSION environment variable is required in production');
+            errors.push('ALLOWED_ORIGIN_EXTENSION environment variable is required');
+        }
+        if (!process.env.GCP_PROJECT_ID) {
+            errors.push('GCP_PROJECT_ID environment variable is required');
+        }
+        if (!process.env.GCS_BUCKET_NAME) {
+            errors.push('GCS_BUCKET_NAME environment variable is required');
         }
     }
 

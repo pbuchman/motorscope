@@ -61,21 +61,21 @@ output "secret_references" {
 
 # Cloud Build trigger information
 output "build_trigger_name" {
-  description = "Cloud Build trigger name"
+  description = "Cloud Build trigger name (webhook, dev only)"
   value       = module.cloud_build.trigger_name
 }
 
 output "build_trigger_id" {
-  description = "Cloud Build trigger ID"
+  description = "Cloud Build trigger ID (webhook, dev only)"
   value       = module.cloud_build.trigger_id
 }
 
 output "build_trigger_manual_name" {
-  description = "Manual Cloud Build trigger name (main branch)"
+  description = "Manual Cloud Build trigger name"
   value       = module.cloud_build.manual_trigger_name
 }
 
 output "build_trigger_manual_id" {
-  description = "Manual Cloud Build trigger ID (main branch)"
+  description = "Manual Cloud Build trigger ID"
   value       = module.cloud_build.manual_trigger_id
 }

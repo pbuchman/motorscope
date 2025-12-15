@@ -100,15 +100,21 @@
 
 #
 
-# Cloud (Development):
+# Development (Cloud) - Default:
 
-# https://motorscope-api-663051224718.europe-west1.run.app/api
+# https://motorscope-api-608235183788.europe-west1.run.app
+
+#
+
+# Production (Cloud):
+
+# https://motorscope-api-83225257608.europe-west1.run.app
 
 #
 
 # Local Development:
 
-# http://localhost:8080/api
+# http://localhost:8080
 
 #
 
@@ -132,15 +138,41 @@
 
 #
 
-# # Development build (with HMR)
+# # Development server (with HMR)
 
 # npm run dev
 
 #
 
-# # Production build
+# # Build for development environment (default)
 
 # npm run build
+
+# # or explicitly:
+
+# npm run build:dev
+
+#
+
+# # Build for production environment
+
+# npm run build:prod
+
+#
+
+# The build environment affects:
+
+# - OAuth client ID in manifest.json
+
+# - VITE_ENV variable available at runtime
+
+#
+
+# OAuth Client IDs per environment:
+
+# - dev: 608235183788-siuni6ukq90iou35afhukfc02b7sa8la.apps.googleusercontent.com
+
+# - prod: 83225257608-86kc32r143q96ghn1gmq8c5rhoqcu4jc.apps.googleusercontent.com
 
 #
 

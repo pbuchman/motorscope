@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run lint && npm run typecheck && vite build",
+    "build": "npm run lint && npm run typecheck && VITE_ENV=dev vite build",
+    "build:dev": "npm run lint && npm run typecheck && VITE_ENV=dev vite build",
+    "build:prod": "npm run lint && npm run typecheck && VITE_ENV=prod vite build",
     "rebuild": "rm -rf dist && npm run build",
+    "rebuild:dev": "rm -rf dist && npm run build:dev",
+    "rebuild:prod": "rm -rf dist && npm run build:prod",
     "lint": "eslint src --max-warnings 0",
     "lint:fix": "eslint src --fix",
     "typecheck": "tsc --noEmit",

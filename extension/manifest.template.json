@@ -20,7 +20,7 @@
     "https://www.autoplac.pl/*"
   ],
   "oauth2": {
-    "client_id": "608235183788-siuni6ukq90iou35afhukfc02b7sa8la.apps.googleusercontent.com",
+    "client_id": "{{OAUTH_CLIENT_ID}}",
     "scopes": [
       "openid",
       "email",
@@ -63,3 +63,4 @@
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }
+
