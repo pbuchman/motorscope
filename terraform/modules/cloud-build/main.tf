@@ -39,14 +39,6 @@ resource "google_cloudbuild_trigger" "api_deploy" {
   # Service account for builds
   service_account = "projects/${var.project_id}/serviceAccounts/${var.service_account_email}"
 
-  # Filter by pusher name
-  filter = "_PUSHER_NAME.matches(\"^${var.allowed_pusher}$\")"
-
-  # Substitutions
-  substitutions = {
-    _PUSHER_NAME = "$(body.pusher.name)"
-  }
-
   lifecycle {
     ignore_changes = [
       source_to_build[0].repo_type,

@@ -39,11 +39,6 @@ variable "branch" {
   type        = string
 }
 
-variable "allowed_pusher" {
-  description = "GitHub username allowed to trigger builds (security filter)"
-  type        = string
-  default     = "pbuchman"
-}
 
 variable "artifact_registry_repository" {
   description = "Artifact Registry repository name"

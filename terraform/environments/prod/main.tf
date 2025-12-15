@@ -26,9 +26,8 @@ module "motorscope" {
   artifact_registry_repository = var.artifact_registry_repository
 
   # GitHub Configuration (for manual trigger only)
-  github_owner          = var.github_owner
-  github_repo           = var.github_repo
-  github_allowed_pusher = var.github_allowed_pusher
-  build_trigger_branch  = var.build_trigger_branch
+  github_owner         = var.github_owner
+  github_repo          = var.github_repo
+  build_trigger_branch = var.build_trigger_branch
 }
 

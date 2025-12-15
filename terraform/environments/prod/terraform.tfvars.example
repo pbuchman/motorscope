@@ -14,8 +14,7 @@ cloud_run_max_instances = 10 # Allow scaling up to 10 instances
 storage_bucket_name = "motorscope-prod-images"  # Must be globally unique
 
 # GitHub Configuration
-github_owner          = "pbuchman"
-github_repo           = "motorscope"
-github_allowed_pusher = "pbuchman"
-build_trigger_branch  = "main"  # Production deploys from main branch
+github_owner         = "pbuchman"
+github_repo          = "motorscope"
+build_trigger_branch = "main" # Production deploys from main branch
 

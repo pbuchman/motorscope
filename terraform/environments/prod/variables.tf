@@ -74,11 +74,6 @@ variable "github_repo" {
   default     = "motorscope"
 }
 
-variable "github_allowed_pusher" {
-  description = "GitHub username allowed to trigger builds"
-  type        = string
-  default     = "pbuchman"
-}
 
 variable "build_trigger_branch" {
   description = "Git branch for build triggers"
