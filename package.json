@@ -35,5 +35,10 @@
     "@typescript-eslint/parser": "^8.49.0",
     "eslint": "^9.39.1",
     "globals": "^16.5.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.53.3",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.1.18",
+    "lightningcss-linux-x64-gnu": "^1.30.2"
   }
 }
