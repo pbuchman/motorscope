@@ -78,8 +78,8 @@ substitutions:
   _REGION: 'europe-west1'
   _REPOSITORY: 'motorscope'
   _SERVICE_NAME: 'motorscope-api'
-  _ENV: 'prod'  # Environment: 'dev' or 'prod'
-  _GCS_BUCKET_NAME: ''  # Must be set per environment
+  _ENV: 'undefined!!!'
+  _GCS_BUCKET_NAME: 'undefined!!!'
 
 # Build options
 options:

@@ -73,6 +73,7 @@ resource "google_cloudbuild_trigger" "api_deploy_manual" {
 
   # Substitution variables for the build
   substitutions = {
+    _PUSHER_NAME     = "manual-trigger"
     _ENV             = var.environment
     _GCS_BUCKET_NAME = var.gcs_bucket_name
   }
