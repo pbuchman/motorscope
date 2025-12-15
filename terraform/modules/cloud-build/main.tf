@@ -38,13 +38,6 @@ resource "google_cloudbuild_trigger" "api_deploy" {
 
   # Service account for builds
   service_account = "projects/${var.project_id}/serviceAccounts/${var.service_account_email}"
-
-  lifecycle {
-    ignore_changes = [
-      source_to_build[0].repo_type,
-      git_file_source[0].repo_type,
-    ]
-  }
 }
 
 # =============================================================================
@@ -77,12 +70,5 @@ resource "google_cloudbuild_trigger" "api_deploy_manual" {
 
   # No webhook, no filters - manual trigger only
   # Users can trigger this manually from Cloud Console or gcloud CLI
-
-  lifecycle {
-    ignore_changes = [
-      source_to_build[0].repo_type,
-      git_file_source[0].repo_type,
-    ]
-  }
 }
 

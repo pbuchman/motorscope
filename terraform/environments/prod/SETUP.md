@@ -498,7 +498,7 @@ After successful production deployment:
 
 ## Support
 
-- 📖 Main deployment guide: [terraform/DEPLOYMENT.md](../DEPLOYMENT.md)
+- 📖 Main deployment guide: [terraform/DEPLOYMENT.md](../../DEPLOYMENT.md)
 - 🔧 Production config: `terraform/environments/prod/`
 - 💻 GCP Console: https://console.cloud.google.com/home/dashboard?project=motorscope-prod
 
