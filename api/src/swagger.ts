@@ -299,8 +299,8 @@ All endpoints except \`/api/healthz\` and \`/api/auth/google\` require JWT authe
     },
     servers: [
         {
-            url: 'https://motorscope-api-663051224718.europe-central2.run.app/',
-            description: 'Production',
+            url: 'https://motorscope-dev-663051224718.europe-west1.run.app/',
+            description: 'Development (Cloud)',
         },
         {
             url: 'http://localhost:8080',

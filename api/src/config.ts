@@ -47,7 +47,7 @@ export const FIRESTORE_LISTINGS_USER_FIELD = 'userId';
 // =============================================================================
 
 /** GCS Bucket name for storing listing images */
-export const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'motorscope-images';
+export const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'motorscope-dev-images';
 
 /** Default expiration time for deleted images (30 days) */
 export const IMAGE_DELETION_EXPIRATION_DAYS = 30;
@@ -59,8 +59,8 @@ export const IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 // Cloud Run Configuration
 // =============================================================================
 
-/** Cloud Run service name */
-export const CLOUD_RUN_SERVICE_NAME = 'motorscope-api';
+/** Cloud Run service name (default for dev environment) */
+export const CLOUD_RUN_SERVICE_NAME = 'motorscope-dev';
 
 /** Cloud Run deployment region */
 export const CLOUD_RUN_REGION = 'europe-west1';
