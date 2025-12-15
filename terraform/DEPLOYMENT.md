@@ -224,12 +224,11 @@ First, create OAuth 2.0 credentials:
 
 1. Go to: https://console.cloud.google.com/apis/credentials?project=motorscope-dev
 2. Click **Create Credentials** → **OAuth client ID**
-3. Application type: **Web application**
-4. Name: `MotorScope API`
-5. Authorized JavaScript origins: Leave empty for now
-6. Authorized redirect URIs: Add your Cloud Run URL + `/api/auth/callback`
-7. Click **Create**
-8. Copy the Client ID
+3. Application type: **Chrome Extension**
+4. Name: `MotorScope Extension`
+5. Item ID: Your Chrome extension ID (get from chrome://extensions)
+6. Click **Create**
+7. Copy the Client ID
 
 Store the OAuth Client ID:
 
@@ -240,6 +239,8 @@ echo -n "YOUR_CLIENT_ID.apps.googleusercontent.com" | \
   --project=motorscope-dev \
   --data-file=-
 ```
+
+**Important:** The Client ID must match the one configured in the Chrome extension's `manifest.json` file. Chrome extensions use `chrome.identity.getAuthToken()` which requires the OAuth client type to be "Chrome Extension", not "Web application".
 
 ### 8.3 Chrome Extension Origin
 
@@ -351,27 +352,6 @@ gcloud run services logs read motorscope-api \
 
 ---
 
-## Step 11: Update OAuth Redirect URI
-
-Now that Cloud Run is deployed, update OAuth settings:
-
-1. Get your Cloud Run URL:
-   ```bash
-   terraform output cloud_run_service_url
-   ```
-
-2. Go to: https://console.cloud.google.com/apis/credentials?project=motorscope-dev
-
-3. Click on your OAuth client
-
-4. Add to **Authorized redirect URIs**:
-   ```
-   https://YOUR-CLOUD-RUN-URL/api/auth/callback
-   ```
-
-5. Save
-
----
 
 ## Outputs Reference
 

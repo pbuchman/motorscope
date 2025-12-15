@@ -79,9 +79,10 @@ Use this checklist before deploying infrastructure to ensure all prerequisites a
   - [ ] `storage_bucket_name = "motorscope-dev-images"` (or other unique name)
 
 ### 4. OAuth Client Configuration
-- [ ] OAuth 2.0 Client created in GCP Console
+- [ ] OAuth 2.0 Client created in GCP Console (APIs & Services → Credentials)
+- [ ] Application type set to **"Chrome Extension"**
+- [ ] Extension ID added (Item ID field)
 - [ ] Client ID copied and saved securely
-- [ ] Application type set to "Web application"
 
 ---
 
@@ -155,16 +156,13 @@ Use this checklist before deploying infrastructure to ensure all prerequisites a
     --project=motorscope-dev
   ```
 
-### 6. Update OAuth Configuration
-- [ ] Get Cloud Run service URL
+### 6. Verify OAuth Configuration
+- [ ] Verify OAuth client type is "Chrome Extension" in GCP Console
+- [ ] Verify Extension ID matches the one in chrome://extensions
+- [ ] Verify Client ID is set in the `oauth-client-id` secret
   ```bash
-  cd ../terraform/environments/dev
-  terraform output cloud_run_service_url
+  gcloud secrets versions access latest --secret=oauth-client-id --project=motorscope-dev
   ```
-- [ ] Go to GCP Console → APIs & Services → Credentials
-- [ ] Edit OAuth client
-- [ ] Add redirect URI: `https://YOUR-CLOUD-RUN-URL/api/auth/callback`
-- [ ] Save changes
 
 ---
 
