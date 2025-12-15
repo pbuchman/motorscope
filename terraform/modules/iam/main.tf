@@ -95,3 +95,16 @@ resource "google_project_iam_member" "cloud_run_artifact_registry" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
+# Allow Cloud Run service account to deploy to Cloud Run (when used as Cloud Build service account)
+resource "google_project_iam_member" "cloud_run_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
+# Allow Cloud Run service account to act as itself
+resource "google_service_account_iam_member" "cloud_run_self_user" {
+  service_account_id = google_service_account.cloud_run.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cloud_run.email}"
+}
