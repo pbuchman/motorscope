@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MotorScope - Car Listing Tracker",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvjTpR0Us75uREbD+W90RIhFHnhBE1j0U2W+ry9YZYEs5ESQF++kOEpbq8KQxwUUkPVr/7Y7NjLEjnqCEkjunwgrnToYEAjZy3REhfn0hCB6Ia2fIaeEqLVaXKgK9A7m8pvdvLxxsJNZ5ylHmi92LN6XHsa44oNcx7EqBie6rxoqowaxttsAUUFLhLwyM5olh9g4k71Ykh0QwQ/wNHUQ7VZnROchbvvbtQpwhsxzpOXoUbs/SxIfUAXiaNQoFW7kXUI9gyQ9MDevE+Ge0oMz1IcjNT1Jw1vJpePaUVsUV880SxWuNqtG9cPK29xl1RkPXrkJY1ws66kHZDm9S6du93QIDAQAB",
+  "key": "{{MANIFEST_KEY}}",
   "version": "1.0.0",
   "description": "Track car listings, monitor price changes, and extract vehicle data from online marketplaces",
   "permissions": [
