@@ -25,10 +25,10 @@ resource "google_project_iam_member" "cloud_run_firestore" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
-# Cloud Storage access (object admin for listing images)
+# Cloud Storage access (admin for bucket operations and object management)
 resource "google_project_iam_member" "cloud_run_storage" {
   project = var.project_id
-  role    = "roles/storage.objectAdmin"
+  role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
