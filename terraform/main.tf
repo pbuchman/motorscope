@@ -91,11 +91,11 @@ module "firestore" {
 module "storage" {
   source = "./modules/storage"
 
-  project_id            = var.project_id
-  bucket_name           = var.storage_bucket_name
-  location              = var.region
-  image_deletion_days   = var.image_deletion_days
-  labels                = var.labels
+  project_id          = var.project_id
+  bucket_name         = var.storage_bucket_name
+  location            = var.region
+  image_deletion_days = var.image_deletion_days
+  labels              = var.labels
 
   # Service account that needs access to the bucket
   storage_admin_email = module.iam.cloud_run_service_account_email
@@ -125,30 +125,30 @@ module "artifact_registry" {
 module "cloud_run" {
   source = "./modules/cloud-run"
 
-  project_id           = var.project_id
-  service_name         = var.cloud_run_service_name
-  region               = var.cloud_run_region
-  memory               = var.cloud_run_memory
-  cpu                  = var.cloud_run_cpu
-  min_instances        = var.cloud_run_min_instances
-  max_instances        = var.cloud_run_max_instances
-  labels               = var.labels
+  project_id    = var.project_id
+  service_name  = var.cloud_run_service_name
+  region        = var.cloud_run_region
+  memory        = var.cloud_run_memory
+  cpu           = var.cloud_run_cpu
+  min_instances = var.cloud_run_min_instances
+  max_instances = var.cloud_run_max_instances
+  labels        = var.labels
 
   # Service account to run as
   service_account_email = module.iam.cloud_run_service_account_email
 
   # Environment variables
   environment_variables = {
-    NODE_ENV          = "production"
-    GCP_PROJECT_ID    = var.project_id
-    GCS_BUCKET_NAME   = module.storage.bucket_name
+    NODE_ENV        = "production"
+    GCP_PROJECT_ID  = var.project_id
+    GCS_BUCKET_NAME = module.storage.bucket_name
   }
 
   # Secret references
   secrets = {
-    JWT_SECRET                 = module.secrets.jwt_secret_id
-    OAUTH_CLIENT_ID            = module.secrets.oauth_client_id_secret_id
-    ALLOWED_ORIGIN_EXTENSION   = module.secrets.allowed_origin_extension_secret_id
+    JWT_SECRET               = module.secrets.jwt_secret_id
+    OAUTH_CLIENT_ID          = module.secrets.oauth_client_id_secret_id
+    ALLOWED_ORIGIN_EXTENSION = module.secrets.allowed_origin_extension_secret_id
   }
 
   # Container image (will be updated by CI/CD)

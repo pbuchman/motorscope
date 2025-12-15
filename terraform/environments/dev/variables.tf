@@ -3,7 +3,7 @@
 # =============================================================================
 
 variable "project_id" {
-  description = "GCP project ID for development environment"
+  description = "GCP project ID for dev environment"
   type        = string
 }
 

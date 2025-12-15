@@ -52,8 +52,8 @@ output "service_account_email" {
 output "secret_references" {
   description = "Secret Manager secret references (values stored securely)"
   value = {
-    jwt_secret                 = module.secrets.jwt_secret_id
-    oauth_client_id            = module.secrets.oauth_client_id_secret_id
-    allowed_origin_extension   = module.secrets.allowed_origin_extension_secret_id
+    jwt_secret               = module.secrets.jwt_secret_id
+    oauth_client_id          = module.secrets.oauth_client_id_secret_id
+    allowed_origin_extension = module.secrets.allowed_origin_extension_secret_id
   }
 }
