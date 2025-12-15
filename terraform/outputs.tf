@@ -70,3 +70,12 @@ output "build_trigger_id" {
   value       = module.cloud_build.trigger_id
 }
 
+output "build_trigger_manual_name" {
+  description = "Manual Cloud Build trigger name (main branch)"
+  value       = module.cloud_build.manual_trigger_name
+}
+
+output "build_trigger_manual_id" {
+  description = "Manual Cloud Build trigger ID (main branch)"
+  value       = module.cloud_build.manual_trigger_id
+}

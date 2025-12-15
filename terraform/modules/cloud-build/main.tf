@@ -50,3 +50,42 @@ resource "google_cloudbuild_trigger" "api_deploy" {
     ]
   }
 }
+
+# =============================================================================
+# Manual Trigger for Main Branch
+# =============================================================================
+
+resource "google_cloudbuild_trigger" "api_deploy_manual" {
+  project  = var.project_id
+  name     = "motorscope-api-deploy-${var.environment}-manual"
+  location = var.region
+
+  # Source repository (2nd gen)
+  source_to_build {
+    repository = "projects/${var.project_id}/locations/${var.region}/connections/github/repositories/${var.github_owner}-${var.github_repo}"
+    ref        = "refs/heads/main"
+    repo_type  = "GITHUB"
+  }
+
+  # Build configuration file location (2nd gen)
+  git_file_source {
+    path       = "api/cloudbuild.yaml"
+    repository = "projects/${var.project_id}/locations/${var.region}/connections/github/repositories/${var.github_owner}-${var.github_repo}"
+    revision   = "refs/heads/main"
+    repo_type  = "GITHUB"
+  }
+
+  # Service account for builds
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.service_account_email}"
+
+  # No webhook, no filters - manual trigger only
+  # Users can trigger this manually from Cloud Console or gcloud CLI
+
+  lifecycle {
+    ignore_changes = [
+      source_to_build[0].repo_type,
+      git_file_source[0].repo_type,
+    ]
+  }
+}
+
