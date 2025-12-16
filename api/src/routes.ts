@@ -1066,8 +1066,7 @@ router.delete('/gemini-history', authMiddleware, async (req: Request, res: Respo
  */
 router.post('/images', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const userId = req.user!.userId;
-        const {imageUrl, listingId} = req.body as {imageUrl?: string; listingId?: string};
+        const {imageUrl, listingId} = req.body as {imageUrl?: unknown; listingId?: unknown};
 
         if (!imageUrl || typeof imageUrl !== 'string') {
             sendError(res, 400, 'imageUrl is required and must be a string');
@@ -1091,12 +1090,10 @@ router.post('/images', authMiddleware, async (req: Request, res: Response) => {
         const {buffer, contentType} = await downloadImageFromUrl(imageUrl);
 
         // Upload to GCS
-        const {path} = await uploadImage(buffer, contentType, userId, listingId);
+        const {url, path} = await uploadImage(buffer, contentType, listingId);
 
-        // Return API path instead of signed URL to keep it consistent
-        const apiPath = `/api/images/${path}`;
-
-        sendSuccess(res, {url: apiPath, path});
+        // Return public GCS URL
+        sendSuccess(res, {url, path});
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to upload image';
         handleError(res, error, message);

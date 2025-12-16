@@ -2,14 +2,19 @@
  * Google Cloud Storage Service
  *
  * Handles image upload, download, and deletion using Google Cloud Storage.
- * Images are stored with a 30-day expiration after deletion.
+ * Images are stored publicly accessible at:
+ * https://storage.googleapis.com/{bucket}/listings/{listingId}/{filename}
  */
 
 import {Storage} from '@google-cloud/storage';
 import {GCS_BUCKET_NAME, GCP_PROJECT_ID, IMAGE_DELETION_EXPIRATION_DAYS, IMAGE_MAX_SIZE_BYTES} from './config.js';
+import crypto from 'crypto';
 
 /** GCS client instance */
 let storageClient: Storage | null = null;
+
+/** Base URL for public GCS access */
+const GCS_PUBLIC_URL_BASE = 'https://storage.googleapis.com';
 
 /**
  * Get or create GCS client instance
@@ -32,44 +37,55 @@ function getBucket() {
 }
 
 /**
+ * Generate public URL for a GCS object
+ */
+function getPublicUrl(filePath: string): string {
+    return `${GCS_PUBLIC_URL_BASE}/${GCS_BUCKET_NAME}/${filePath}`;
+}
+
+/**
+ * Generate random identifier for filename
+ */
+function generateRandomId(): string {
+    return crypto.randomBytes(8).toString('hex');
+}
+
+/**
  * Upload image to GCS
  *
  * @param imageBuffer - Image data as buffer
  * @param contentType - MIME type of the image
- * @param userId - User ID for organizing images
  * @param listingId - Listing ID for organizing images
- * @returns API URL path and GCS file path
+ * @returns Public URL and GCS file path
  */
 export async function uploadImage(
     imageBuffer: Buffer,
     contentType: string,
-    userId: string,
     listingId: string,
 ): Promise<{url: string; path: string}> {
     const bucket = getBucket();
-    const timestamp = Date.now();
+    const randomId = generateRandomId();
     const ext = getExtensionFromContentType(contentType);
-    const filePath = `images/${userId}/${listingId}/${timestamp}${ext}`;
+    const filePath = `listings/${listingId}/${randomId}${ext}`;
     const file = bucket.file(filePath);
 
     await file.save(imageBuffer, {
         metadata: {
             contentType,
+            cacheControl: 'public, max-age=31536000', // 1 year cache
             metadata: {
-                userId,
                 listingId,
                 uploadedAt: new Date().toISOString(),
             },
         },
-        public: false,
+        public: true,
         validation: 'crc32c',
     });
 
-    // Return API path format: /api/images/userId/listingId/filename.ext
-    const filename = `${timestamp}${ext}`;
-    const apiPath = `/api/images/${userId}/${listingId}/${filename}`;
+    // Return public GCS URL
+    const publicUrl = getPublicUrl(filePath);
 
-    return {url: apiPath, path: filePath};
+    return {url: publicUrl, path: filePath};
 }
 
 /**
@@ -121,12 +137,8 @@ export async function getImageMetadata(filePath: string): Promise<{
 
     const [metadata] = await file.getMetadata();
 
-    // Generate signed URL valid for 7 days
-    const [url] = await file.getSignedUrl({
-        version: 'v4',
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    });
+    // Return public URL
+    const url = getPublicUrl(filePath);
 
     return {
         url,
@@ -139,7 +151,7 @@ export async function getImageMetadata(filePath: string): Promise<{
 /**
  * Delete image from GCS by setting lifecycle expiration
  *
- * @param filePath - Path to the file in GCS
+ * @param filePath - Path to the file in GCS (e.g., listings/{listingId}/{filename})
  * @returns True if deletion was scheduled successfully
  */
 export async function scheduleImageDeletion(filePath: string): Promise<boolean> {

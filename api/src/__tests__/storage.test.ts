@@ -13,14 +13,12 @@ const mockGetMetadata = jest.fn<any>().mockResolvedValue([{
     size: 12345,
     timeCreated: '2024-01-01T00:00:00.000Z',
 }]);
-const mockGetSignedUrl = jest.fn<any>().mockResolvedValue(['https://storage.googleapis.com/signed-url']);
 const mockExists = jest.fn<any>().mockResolvedValue([true]);
 const mockSetMetadata = jest.fn<any>().mockResolvedValue(undefined);
 
 const mockFile = {
     save: mockSave,
     getMetadata: mockGetMetadata,
-    getSignedUrl: mockGetSignedUrl,
     exists: mockExists,
     setMetadata: mockSetMetadata,
 };
@@ -36,6 +34,15 @@ jest.unstable_mockModule('@google-cloud/storage', () => ({
     Storage: jest.fn(() => ({
         bucket: mockBucket,
     })),
+}));
+
+// Mock crypto for consistent random IDs in tests
+jest.unstable_mockModule('crypto', () => ({
+    default: {
+        randomBytes: jest.fn(() => ({
+            toString: () => 'abc12345',
+        })),
+    },
 }));
 
 // Mock global fetch with proper typing
@@ -59,37 +66,38 @@ describe('Storage Service', () => {
     });
 
     describe('uploadImage', () => {
-        it('should upload image to GCS and return URL and path', async () => {
+        it('should upload image to GCS and return public URL and path', async () => {
             const buffer = Buffer.from('test image data');
             const contentType = 'image/jpeg';
-            const userId = 'user-123';
             const listingId = 'vin_ABC123';
 
-            const result = await uploadImage(buffer, contentType, userId, listingId);
+            const result = await uploadImage(buffer, contentType, listingId);
 
             expect(result).toHaveProperty('url');
             expect(result).toHaveProperty('path');
-            expect(result.path).toContain(`images/${userId}/${listingId}`);
+            expect(result.path).toContain(`listings/${listingId}`);
             expect(result.path).toMatch(/\.jpg$/);
+            expect(result.url).toMatch(/^https:\/\/storage\.googleapis\.com\//);
+            expect(result.url).toContain(result.path);
             expect(mockSave).toHaveBeenCalledWith(
                 buffer,
                 expect.objectContaining({
                     metadata: expect.objectContaining({
                         contentType,
                     }),
+                    public: true,
                 }),
             );
         });
 
         it('should use correct file extension for different content types', async () => {
             const buffer = Buffer.from('test');
-            const userId = 'user-123';
             const listingId = 'vin_ABC';
 
-            const pngResult = await uploadImage(buffer, 'image/png', userId, listingId);
+            const pngResult = await uploadImage(buffer, 'image/png', listingId);
             expect(pngResult.path).toMatch(/\.png$/);
 
-            const webpResult = await uploadImage(buffer, 'image/webp', userId, listingId);
+            const webpResult = await uploadImage(buffer, 'image/webp', listingId);
             expect(webpResult.path).toMatch(/\.webp$/);
         });
     });
@@ -152,8 +160,8 @@ describe('Storage Service', () => {
     });
 
     describe('getImageMetadata', () => {
-        it('should return image metadata with signed URL', async () => {
-            const filePath = 'images/user-123/vin_ABC/12345.jpg';
+        it('should return image metadata with public URL', async () => {
+            const filePath = 'listings/vin_ABC/abc12345.jpg';
 
             const result = await getImageMetadata(filePath);
 
@@ -161,10 +169,11 @@ describe('Storage Service', () => {
             expect(result).toHaveProperty('contentType');
             expect(result).toHaveProperty('size');
             expect(result).toHaveProperty('created');
+            expect(result.url).toMatch(/^https:\/\/storage\.googleapis\.com\//);
+            expect(result.url).toContain(filePath);
             expect(result.contentType).toBe('image/jpeg');
             expect(result.size).toBe(12345);
             expect(mockGetMetadata).toHaveBeenCalled();
-            expect(mockGetSignedUrl).toHaveBeenCalled();
         });
     });
 
@@ -172,7 +181,7 @@ describe('Storage Service', () => {
         it('should schedule image for deletion', async () => {
             mockExists.mockResolvedValueOnce([true]);
 
-            const filePath = 'images/user-123/vin_ABC/12345.jpg';
+            const filePath = 'listings/vin_ABC/abc12345.jpg';
             const result = await scheduleImageDeletion(filePath);
 
             expect(result).toBe(true);
