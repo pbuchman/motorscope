@@ -1,4 +1,4 @@
-# <img src="extension/icon-prod.png" height="40" style="position: relative; top: -10px" alt="MotorScope"> MotorScope - Car Listing Tracker
+# <img src="extension/icon-prod.png" height="50" style="position: relative; top: 10px" alt="MotorScope"> MotorScope - Car Listing Tracker
 
 [![CI](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml/badge.svg)](https://github.com/pbuchman/motorscope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
