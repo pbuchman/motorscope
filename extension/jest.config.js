@@ -17,6 +17,7 @@ export default {
     ],
     moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1',
+        '^@/config/environment$': '<rootDir>/src/config/__mocks__/environment.ts',
         '^@/i18n$': '<rootDir>/src/__mocks__/i18n.ts',
         '^@/(.*)$': '<rootDir>/src/$1',
     },
