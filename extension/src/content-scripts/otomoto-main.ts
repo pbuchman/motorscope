@@ -3,26 +3,26 @@
  * Handles: VIN reveal, phone extraction from React, DOM updates
  */
 
-// ==================== TYPES ====================
-
-interface ReactFiber {
-    memoizedProps?: Record<string, unknown>;
-    pendingProps?: Record<string, unknown>;
-    child?: ReactFiber;
-    sibling?: ReactFiber;
-    return?: ReactFiber;
-}
-
-type SearchDirection = 'up' | 'down';
+import {
+    createLogger,
+    findButtonByText,
+    onDOMReady,
+    isListingPage,
+    cleanPhoneNumber,
+    isValidPhone,
+    getReactFiber,
+    searchFiber,
+    type ReactFiber,
+    type SearchDirection,
+} from './shared';
 
 // ==================== CONSTANTS ====================
 
+const LOG_PREFIX = '[MotorScope]';
+const log = createLogger(LOG_PREFIX);
+
 const CONFIG = {
-    LOG_PREFIX: '[MotorScope]',
-    LISTING_PATH: '/oferta/',
-    POLAND_COUNTRY_CODE: '+48',
     MAX_FIBER_DEPTH: 30,
-    PHONE_REGEX: /^\+?\d{6,}$/,
     RETRY_DELAYS: [2000, 4000, 7000],
 } as const;
 
@@ -52,53 +52,6 @@ const TEXTS = {
 const DATA_ATTRIBUTES = {
     PHONE: 'data-motorscope-phone',
 } as const;
-
-// ==================== UTILITIES ====================
-
-const log = (...args: unknown[]): void => {
-    console.log(CONFIG.LOG_PREFIX, ...args);
-};
-
-/**
- * Clean phone number - remove formatting and Polish country code
- */
-const cleanPhoneNumber = (phone: string): string => {
-    const cleaned = phone.replace(/[\s\-()]/g, '');
-    return cleaned.startsWith(CONFIG.POLAND_COUNTRY_CODE)
-        ? cleaned.slice(CONFIG.POLAND_COUNTRY_CODE.length)
-        : cleaned;
-};
-
-/**
- * Check if a string is a valid phone number
- */
-const isValidPhone = (value: string): boolean => {
-    const cleaned = value.replace(/[\s\-()]/g, '');
-    return CONFIG.PHONE_REGEX.test(cleaned);
-};
-
-/**
- * Find a button by text content within a container
- */
-const findButtonByText = (container: Element | Document, text: string): HTMLButtonElement | null => {
-    const buttons = container.querySelectorAll('button');
-    for (const btn of buttons) {
-        if (btn.textContent?.includes(text)) {
-            return btn as HTMLButtonElement;
-        }
-    }
-    return null;
-};
-
-/**
- * Get React fiber from DOM element
- */
-const getReactFiber = (element: HTMLElement): ReactFiber | null => {
-    const key = Object.keys(element).find(k =>
-        k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
-    );
-    return key ? (element as unknown as Record<string, ReactFiber>)[key] : null;
-};
 
 // ==================== AUTH ====================
 
@@ -164,52 +117,47 @@ const VinModule = {
 
 // ==================== PHONE MODULE ====================
 
+/**
+ * Phone predicate for searching React fiber tree
+ */
+const findPhoneInProps = (props: Record<string, unknown>): string | null => {
+    // Check single-value phone props
+    const phoneProps = ['number', 'phoneNumber', 'phone'];
+    for (const propName of phoneProps) {
+        const value = props[propName];
+        if (typeof value === 'string' && isValidPhone(value)) {
+            return value;
+        }
+    }
+
+    // Check phones array prop
+    const phones = props.phones;
+    if (Array.isArray(phones) && phones.length > 0) {
+        const firstPhone = phones[0];
+        if (typeof firstPhone === 'string' && isValidPhone(firstPhone)) {
+            return firstPhone;
+        }
+    }
+
+    // Check children as string
+    const children = props.children;
+    if (typeof children === 'string' && isValidPhone(children)) {
+        return children;
+    }
+
+    return null;
+};
+
 const PhoneModule = {
     /**
      * Search React fiber tree for phone number
      */
     searchFiber(fiber: ReactFiber | null | undefined, depth: number, direction: SearchDirection): string | null {
-        if (!fiber || depth > CONFIG.MAX_FIBER_DEPTH) return null;
-
-        const props = (fiber.memoizedProps || fiber.pendingProps || {}) as Record<string, unknown>;
-
-        // Check single-value phone props
-        const phoneProps = ['number', 'phoneNumber', 'phone'];
-        for (const propName of phoneProps) {
-            const value = props[propName];
-            if (typeof value === 'string' && isValidPhone(value)) {
-                return value;
-            }
-        }
-
-        // Check phones array prop
-        const phones = props.phones;
-        if (Array.isArray(phones) && phones.length > 0) {
-            const firstPhone = phones[0];
-            if (typeof firstPhone === 'string' && isValidPhone(firstPhone)) {
-                return firstPhone;
-            }
-        }
-
-        // Check children as string
-        const children = props.children;
-        if (typeof children === 'string' && isValidPhone(children)) {
-            return children;
-        }
-
-        // Traverse fiber tree
-        if (direction === 'down') {
-            const fromChild = this.searchFiber(fiber.child, depth + 1, 'down');
-            if (fromChild) return fromChild;
-
-            const fromSibling = this.searchFiber(fiber.sibling, depth + 1, 'down');
-            if (fromSibling) return fromSibling;
-        } else {
-            const fromParent = this.searchFiber(fiber.return, depth + 1, 'up');
-            if (fromParent) return fromParent;
-        }
-
-        return null;
+        return searchFiber(fiber, {
+            direction,
+            maxDepth: CONFIG.MAX_FIBER_DEPTH,
+            predicate: findPhoneInProps,
+        }, depth) as string | null;
     },
 
     /**
@@ -361,8 +309,6 @@ const PhoneModule = {
 
 // ==================== MAIN ====================
 
-const isListingPage = (): boolean => window.location.href.includes(CONFIG.LISTING_PATH);
-
 const runExtraction = (): void => {
     VinModule.reveal();
 
@@ -382,9 +328,4 @@ const init = (): void => {
 };
 
 // Start
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
-
+onDOMReady(init);

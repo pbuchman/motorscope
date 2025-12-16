@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import {resolve} from 'path';
 // @ts-ignore
 import fs from 'fs';
+// @ts-ignore
+import {build as esbuild} from 'esbuild';
 
 // Declare process.env types for Node environment
 declare const process: {
@@ -48,7 +50,33 @@ const getEnv = (): Environment => {
 const copyExtensionFiles = (env: Environment) => {
     return {
         name: 'copy-extension-files',
-        closeBundle: () => {
+        closeBundle: async () => {
+            // Build content scripts with esbuild in IIFE format (no imports)
+            console.log('[build] Building content scripts with esbuild (IIFE format)...');
+
+            const contentScripts = [
+                {
+                    input: resolve(__dirname, 'src/content-scripts/otomoto-main.ts'),
+                    output: resolve(__dirname, 'dist/content-scripts/otomoto.js'),
+                },
+                {
+                    input: resolve(__dirname, 'src/content-scripts/otomoto-listing.ts'),
+                    output: resolve(__dirname, 'dist/content-scripts/otomoto-listing.js'),
+                },
+            ];
+
+            for (const script of contentScripts) {
+                await esbuild({
+                    entryPoints: [script.input],
+                    bundle: true,
+                    minify: true,
+                    format: 'iife',
+                    target: 'chrome100',
+                    outfile: script.output,
+                });
+            }
+            console.log('[build] Content scripts built successfully');
+
             // Generate manifest from template
             const templatePath = resolve(__dirname, 'manifest.template.json');
             if (!fs.existsSync(templatePath)) {
@@ -106,11 +134,12 @@ export default defineConfig(() => {
         build: {
             outDir: 'dist',
             emptyOutDir: true,
+            minify: true,
             rollupOptions: {
                 input: {
                     main: resolve(__dirname, 'index.html'),
                     background: resolve(__dirname, 'src/background.ts'),
-                    'content-scripts/otomoto': resolve(__dirname, 'src/content-scripts/otomoto-main.ts'),
+                    // Content scripts are built separately by esbuild in IIFE format
                 },
                 output: {
                     entryFileNames: (chunkInfo) => {
@@ -118,12 +147,9 @@ export default defineConfig(() => {
                         if (chunkInfo.name === 'background') {
                             return 'background.js';
                         }
-                        // Content scripts go in content-scripts folder
-                        if (chunkInfo.name.startsWith('content-scripts/')) {
-                            return `${chunkInfo.name}.js`;
-                        }
                         return 'assets/[name]-[hash].js';
                     },
+                    chunkFileNames: 'assets/[name]-[hash].js',
                 },
             },
         },
