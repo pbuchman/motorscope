@@ -634,6 +634,32 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             .catch((error) => sendResponse({success: false, error: String(error)}));
         return true;
     }
+
+    // Get tracked listing URLs for content script
+    if (request.type === 'GET_TRACKED_URLS') {
+        getListings()
+            .then((listings) => {
+                const urls = listings.map((l) => l.source.url);
+                sendResponse({success: true, urls});
+            })
+            .catch((error) => {
+                console.error('[BG] Failed to get tracked URLs:', error);
+                sendResponse({success: false, urls: [], error: String(error)});
+            });
+        return true;
+    }
+
+    // Open dashboard with a specific listing
+    if (request.type === 'OPEN_DASHBOARD_WITH_LISTING') {
+        const listingUrl = request.url;
+        const dashboardUrl = chrome.runtime.getURL(
+            `index.html?view=dashboard&openListing=${encodeURIComponent(listingUrl)}`,
+        );
+        chrome.tabs.create({url: dashboardUrl}, () => {
+            sendResponse({success: true});
+        });
+        return true;
+    }
 });
 
 // Log that the service worker has started

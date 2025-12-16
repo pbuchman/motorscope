@@ -111,6 +111,7 @@ export default defineConfig(() => {
                     main: resolve(__dirname, 'index.html'),
                     background: resolve(__dirname, 'src/background.ts'),
                     'content-scripts/otomoto': resolve(__dirname, 'src/content-scripts/otomoto-main.ts'),
+                    'content-scripts/otomoto-listing': resolve(__dirname, 'src/content-scripts/otomoto-listing.ts'),
                 },
                 output: {
                     entryFileNames: (chunkInfo) => {

@@ -40,6 +40,8 @@ const Dashboard: React.FC = () => {
     // Check URL for listing ID to auto-open detail modal
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+
+        // Handle listing by ID
         const listingId = params.get('listing');
         if (listingId && listings.length > 0 && !isLoading) {
             const listing = listings.find(l => l.id === listingId);
@@ -48,6 +50,30 @@ const Dashboard: React.FC = () => {
                 // Remove the param from URL without reload
                 const newUrl = new URL(window.location.href);
                 newUrl.searchParams.delete('listing');
+                window.history.replaceState({}, '', newUrl.toString());
+            }
+        }
+
+        // Handle listing by URL (from content script)
+        const openListingUrl = params.get('openListing');
+        if (openListingUrl && listings.length > 0 && !isLoading) {
+            // Normalize URL for comparison
+            const normalizeUrl = (url: string): string => {
+                try {
+                    const parsed = new URL(url);
+                    return `${parsed.origin}${parsed.pathname}`.replace(/\/$/, '');
+                } catch {
+                    return url.replace(/\/$/, '');
+                }
+            };
+
+            const normalizedTarget = normalizeUrl(openListingUrl);
+            const listing = listings.find(l => normalizeUrl(l.source.url) === normalizedTarget);
+            if (listing) {
+                setSelectedListing(listing);
+                // Remove the param from URL without reload
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('openListing');
                 window.history.replaceState({}, '', newUrl.toString());
             }
         }

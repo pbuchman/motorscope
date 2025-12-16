@@ -57,6 +57,27 @@
       ],
       "run_at": "document_idle",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.otomoto.pl/osobowe/*",
+        "https://www.otomoto.pl/dostawcze/*",
+        "https://www.otomoto.pl/motocykle-i-quady/*",
+        "https://otomoto.pl/osobowe/*",
+        "https://otomoto.pl/dostawcze/*",
+        "https://otomoto.pl/motocykle-i-quady/*"
+      ],
+      "js": [
+        "content-scripts/otomoto-listing.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icon.png"],
+      "matches": ["https://www.otomoto.pl/*", "https://otomoto.pl/*"]
     }
   ],
   "content_security_policy": {
