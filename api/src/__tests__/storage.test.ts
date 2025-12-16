@@ -85,7 +85,8 @@ describe('Storage Service', () => {
                     metadata: expect.objectContaining({
                         contentType,
                     }),
-                    public: true,
+                    // Note: public access is controlled at bucket level via IAM (uniform bucket-level access)
+                    validation: 'crc32c',
                 }),
             );
         });
