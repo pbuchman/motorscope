@@ -2,6 +2,8 @@
 # Storage Module - Cloud Storage Bucket Configuration
 # =============================================================================
 # Creates and configures Cloud Storage bucket for listing images.
+# Images are stored publicly accessible at:
+# https://storage.googleapis.com/{bucket}/listings/{listingId}/{filename}
 
 # =============================================================================
 # Cloud Storage Bucket
@@ -18,8 +20,8 @@ resource "google_storage_bucket" "images" {
   # Uniform bucket-level access (recommended for security)
   uniform_bucket_level_access = true
 
-  # Public access prevention
-  public_access_prevention = "enforced"
+  # Allow public access for images (required for direct browser access)
+  public_access_prevention = "inherited"
 
   # Versioning (disabled to save storage costs)
   versioning {
@@ -30,7 +32,7 @@ resource "google_storage_bucket" "images" {
   lifecycle_rule {
     condition {
       age            = var.image_deletion_days
-      matches_prefix = ["images/deleted/"]
+      matches_prefix = ["listings/deleted/"]
     }
     action {
       type = "Delete"
@@ -60,3 +62,14 @@ resource "google_storage_bucket_iam_member" "storage_admin" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${var.storage_admin_email}"
 }
+
+# =============================================================================
+# IAM Binding - Grant Public Read Access to All Objects
+# =============================================================================
+
+resource "google_storage_bucket_iam_member" "public_read" {
+  bucket = google_storage_bucket.images.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
