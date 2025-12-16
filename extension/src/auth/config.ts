@@ -4,6 +4,8 @@
  * Configuration constants for OAuth and backend authentication.
  */
 
+import {IS_PRODUCTION_BUILD} from '@/config/environment';
+
 // =============================================================================
 // Backend URL Configuration
 // =============================================================================
@@ -24,8 +26,10 @@ export const BACKEND_SERVER_OPTIONS = [
     },
 ] as const;
 
-/** Default backend server (Development Cloud) */
-export const DEFAULT_BACKEND_URL = BACKEND_SERVER_OPTIONS[0].value;
+/** Default backend server - Production for prod builds, Dev Cloud for others */
+export const DEFAULT_BACKEND_URL = IS_PRODUCTION_BUILD
+    ? BACKEND_SERVER_OPTIONS[1].value  // Production (Cloud)
+    : BACKEND_SERVER_OPTIONS[0].value; // Development (Cloud)
 
 /** API path prefix - appended to base URL */
 export const API_PREFIX = '/api';
