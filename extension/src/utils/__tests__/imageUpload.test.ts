@@ -4,20 +4,16 @@
 
 import {CarListing, ListingStatus} from '@/types';
 import * as apiClient from '@/api/client';
-import * as localServerStorage from '@/auth/localServerStorage';
 import {uploadListingThumbnail, isApiImageUrl, isExternalImageUrl} from '../imageUpload';
 
 // Mock dependencies
 jest.mock('@/api/client');
-jest.mock('@/auth/localServerStorage');
 
 const mockUploadImageFromUrl = apiClient.uploadImageFromUrl as jest.MockedFunction<typeof apiClient.uploadImageFromUrl>;
-const mockGetBackendServerUrl = localServerStorage.getBackendServerUrl as jest.MockedFunction<typeof localServerStorage.getBackendServerUrl>;
 
 describe('imageUpload utility', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGetBackendServerUrl.mockResolvedValue('https://api.example.com');
     });
 
     describe('uploadListingThumbnail', () => {
@@ -89,8 +85,8 @@ describe('imageUpload utility', () => {
 
         it('should upload external thumbnail and update listing', async () => {
             mockUploadImageFromUrl.mockResolvedValue({
-                url: '/api/images/user123/vin_ABC123/12345.jpg',
-                path: 'images/user123/vin_ABC123/12345.jpg',
+                url: 'https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC123/12345.jpg',
+                path: 'listings/vin_ABC123/12345.jpg',
             });
 
             const result = await uploadListingThumbnail(mockListing);
@@ -99,19 +95,19 @@ describe('imageUpload utility', () => {
                 'https://external.com/image.jpg',
                 'vin_ABC123',
             );
-            expect(result.thumbnailUrl).toBe('https://api.example.com/api/images/user123/vin_ABC123/12345.jpg');
+            expect(result.thumbnailUrl).toBe('https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC123/12345.jpg');
         });
 
-        it('should skip upload for API image URLs', async () => {
-            const listingWithApiImage = {
+        it('should skip upload for GCS image URLs', async () => {
+            const listingWithGcsImage = {
                 ...mockListing,
-                thumbnailUrl: '/api/images/user123/vin_ABC123/12345.jpg',
+                thumbnailUrl: 'https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC123/12345.jpg',
             };
 
-            const result = await uploadListingThumbnail(listingWithApiImage);
+            const result = await uploadListingThumbnail(listingWithGcsImage);
 
             expect(mockUploadImageFromUrl).not.toHaveBeenCalled();
-            expect(result.thumbnailUrl).toBe('/api/images/user123/vin_ABC123/12345.jpg');
+            expect(result.thumbnailUrl).toBe('https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC123/12345.jpg');
         });
 
         it('should skip upload for placeholder images', async () => {
@@ -136,9 +132,9 @@ describe('imageUpload utility', () => {
     });
 
     describe('isApiImageUrl', () => {
-        it('should return true for API image URLs', () => {
-            expect(isApiImageUrl('/api/images/user123/vin_ABC/12345.jpg')).toBe(true);
-            expect(isApiImageUrl('https://api.example.com/api/images/user123/vin_ABC/12345.jpg')).toBe(true);
+        it('should return true for GCS storage URLs', () => {
+            expect(isApiImageUrl('https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC/12345.jpg')).toBe(true);
+            expect(isApiImageUrl('https://storage.googleapis.com/motorscope-prod-images/listings/vin_ABC/12345.jpg')).toBe(true);
         });
 
         it('should return false for external URLs', () => {
@@ -153,9 +149,8 @@ describe('imageUpload utility', () => {
             expect(isExternalImageUrl('http://example.com/photo.png')).toBe(true);
         });
 
-        it('should return false for API image URLs', () => {
-            expect(isExternalImageUrl('/api/images/user123/vin_ABC/12345.jpg')).toBe(false);
-            expect(isExternalImageUrl('https://api.example.com/api/images/user123/vin_ABC/12345.jpg')).toBe(false);
+        it('should return false for GCS storage URLs', () => {
+            expect(isExternalImageUrl('https://storage.googleapis.com/motorscope-dev-images/listings/vin_ABC/12345.jpg')).toBe(false);
         });
 
         it('should return false for placeholders', () => {

@@ -78,7 +78,7 @@ export async function uploadImage(
                 uploadedAt: new Date().toISOString(),
             },
         },
-        public: true,
+        // Note: public access is controlled at bucket level via IAM (uniform bucket-level access)
         validation: 'crc32c',
     });
 
