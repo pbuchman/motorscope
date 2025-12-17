@@ -13,6 +13,8 @@ jobs:
     name: Build, Test & Package
     runs-on: ubuntu-latest
     if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    env:
+      SCARF_ANALYTICS: false
 
     steps:
       - name: Checkout
