@@ -4,7 +4,39 @@
  * Tests the API client error handling, URL building, and request patterns.
  */
 
-import {ApiError} from '../client';
+import type {CarListing} from '@/types';
+
+// Mock fetch before imports
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
+// Create mock for getToken
+const mockGetToken = jest.fn();
+
+// Mock auth module
+jest.mock('../../auth/oauthClient', () => ({
+    getToken: (...args: unknown[]) => mockGetToken(...args),
+}));
+
+// Mock localServerStorage
+jest.mock('../../auth/localServerStorage', () => ({
+    getBackendServerUrl: jest.fn().mockResolvedValue('https://api.example.com'),
+}));
+
+// Import after mocks
+import {
+    ApiError,
+    getRemoteListings,
+    saveRemoteListing,
+    deleteRemoteListing,
+    checkBackendHealth,
+    getRemoteSettings,
+    patchRemoteSettings,
+    getRemoteGeminiHistory,
+    addRemoteGeminiHistory,
+    clearRemoteGeminiHistory,
+    uploadImageFromUrl,
+} from '../client';
 
 describe('ApiError', () => {
     describe('constructor', () => {
@@ -268,6 +300,293 @@ describe('API Request Patterns', () => {
 
             expect(successResponse.success).toBe(true);
             expect(successResponse.count).toBe(5);
+        });
+    });
+});
+
+// =============================================================================
+// API Function Tests with Mocking
+// =============================================================================
+
+describe('API Functions', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGetToken.mockResolvedValue('test-token');
+        mockFetch.mockReset();
+    });
+
+    const createMockResponse = <T>(data: T, ok = true, status = 200) => ({
+        ok,
+        status,
+        json: jest.fn().mockResolvedValue(data),
+    });
+
+    describe('getRemoteListings', () => {
+        it('should fetch and return listings', async () => {
+            const mockListings: Partial<CarListing>[] = [
+                {id: 'vin_1', title: 'BMW 320d'},
+                {id: 'vin_2', title: 'Audi A4'},
+            ];
+            mockFetch.mockResolvedValue(createMockResponse(mockListings));
+
+            const result = await getRemoteListings();
+
+            expect(result).toEqual(mockListings);
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.example.com/api/listings',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: 'Bearer test-token',
+                    }),
+                }),
+            );
+        });
+
+        it('should throw ApiError when not authenticated', async () => {
+            mockGetToken.mockResolvedValue(null);
+
+            await expect(getRemoteListings()).rejects.toThrow(ApiError);
+            await expect(getRemoteListings()).rejects.toMatchObject({
+                isAuthError: true,
+                statusCode: 401,
+            });
+        });
+
+        it('should throw ApiError on HTTP error', async () => {
+            mockFetch.mockResolvedValue(createMockResponse(
+                {message: 'Server error'},
+                false,
+                500,
+            ));
+
+            await expect(getRemoteListings()).rejects.toThrow(ApiError);
+        });
+    });
+
+    describe('saveRemoteListing', () => {
+        it('should save a listing via POST', async () => {
+            const listing: Partial<CarListing> = {id: 'vin_ABC', title: 'Test Car'};
+            mockFetch.mockResolvedValue(createMockResponse(listing));
+
+            const result = await saveRemoteListing(listing as CarListing);
+
+            expect(result).toEqual(listing);
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.example.com/api/listings',
+                expect.objectContaining({
+                    method: 'POST',
+                    body: JSON.stringify(listing),
+                }),
+            );
+        });
+    });
+
+    describe('deleteRemoteListing', () => {
+        it('should delete a listing via DELETE', async () => {
+            mockFetch.mockResolvedValue(createMockResponse({success: true}));
+
+            const result = await deleteRemoteListing('vin_123');
+
+            expect(result).toEqual({success: true});
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.example.com/api/listings/vin_123',
+                expect.objectContaining({method: 'DELETE'}),
+            );
+        });
+    });
+
+    describe('checkBackendHealth', () => {
+        it('should return health status without auth', async () => {
+            const healthResponse = {status: 'ok', firestore: 'connected'};
+            mockFetch.mockResolvedValue(createMockResponse(healthResponse));
+
+            const result = await checkBackendHealth();
+
+            expect(result).toEqual(healthResponse);
+            // Health check should NOT have auth header
+            expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/api/healthz');
+        });
+
+        it('should throw on health check failure', async () => {
+            mockFetch.mockResolvedValue(createMockResponse({}, false, 503));
+
+            await expect(checkBackendHealth()).rejects.toThrow('Backend health check failed');
+        });
+    });
+
+    describe('Settings API', () => {
+        describe('getRemoteSettings', () => {
+            it('should fetch settings', async () => {
+                const mockSettings = {
+                    geminiApiKey: 'test-key',
+                    checkFrequencyMinutes: 60,
+                    geminiStats: {totalCalls: 0, successfulCalls: 0, failedCalls: 0, totalInputTokens: 0, totalOutputTokens: 0},
+                };
+                mockFetch.mockResolvedValue(createMockResponse(mockSettings));
+
+                const result = await getRemoteSettings();
+
+                expect(result).toEqual(mockSettings);
+            });
+        });
+
+        describe('patchRemoteSettings', () => {
+            it('should patch settings with PATCH method', async () => {
+                const partialSettings = {checkFrequencyMinutes: 30};
+                const fullSettings = {
+                    geminiApiKey: 'existing-key',
+                    checkFrequencyMinutes: 30,
+                    geminiStats: {totalCalls: 0, successfulCalls: 0, failedCalls: 0, totalInputTokens: 0, totalOutputTokens: 0},
+                };
+                mockFetch.mockResolvedValue(createMockResponse(fullSettings));
+
+                const result = await patchRemoteSettings(partialSettings);
+
+                expect(result).toEqual(fullSettings);
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/settings',
+                    expect.objectContaining({
+                        method: 'PATCH',
+                        body: JSON.stringify(partialSettings),
+                    }),
+                );
+            });
+        });
+    });
+
+    describe('Gemini History API', () => {
+        describe('getRemoteGeminiHistory', () => {
+            it('should fetch history with default limit', async () => {
+                const history = [{id: '1', timestamp: '2024-01-01'}];
+                mockFetch.mockResolvedValue(createMockResponse(history));
+
+                const result = await getRemoteGeminiHistory();
+
+                expect(result).toEqual(history);
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/gemini-history?limit=100',
+                    expect.any(Object),
+                );
+            });
+
+            it('should fetch history with custom limit', async () => {
+                mockFetch.mockResolvedValue(createMockResponse([]));
+
+                await getRemoteGeminiHistory(50);
+
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/gemini-history?limit=50',
+                    expect.any(Object),
+                );
+            });
+        });
+
+        describe('addRemoteGeminiHistory', () => {
+            it('should add history entries', async () => {
+                const entry = {
+                    id: '1',
+                    url: 'https://example.com/listing',
+                    promptPreview: 'Test prompt',
+                    status: 'success' as const,
+                    timestamp: new Date().toISOString(),
+                };
+                mockFetch.mockResolvedValue(createMockResponse({success: true, count: 1}));
+
+                const result = await addRemoteGeminiHistory(entry);
+
+                expect(result).toEqual({success: true, count: 1});
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/gemini-history',
+                    expect.objectContaining({
+                        method: 'POST',
+                        body: JSON.stringify(entry),
+                    }),
+                );
+            });
+        });
+
+        describe('clearRemoteGeminiHistory', () => {
+            it('should clear history', async () => {
+                mockFetch.mockResolvedValue(createMockResponse({success: true, deleted: 10}));
+
+                const result = await clearRemoteGeminiHistory();
+
+                expect(result).toEqual({success: true, deleted: 10});
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/gemini-history',
+                    expect.objectContaining({method: 'DELETE'}),
+                );
+            });
+        });
+    });
+
+    describe('Image Storage API', () => {
+        describe('uploadImageFromUrl', () => {
+            it('should upload image and return stored URL', async () => {
+                const response = {
+                    url: 'https://storage.example.com/image.jpg',
+                    path: 'users/123/listings/456/image.jpg',
+                };
+                mockFetch.mockResolvedValue(createMockResponse(response));
+
+                const result = await uploadImageFromUrl(
+                    'https://external.com/image.jpg',
+                    'listing_123',
+                );
+
+                expect(result).toEqual(response);
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'https://api.example.com/api/images',
+                    expect.objectContaining({
+                        method: 'POST',
+                        body: JSON.stringify({
+                            imageUrl: 'https://external.com/image.jpg',
+                            listingId: 'listing_123',
+                        }),
+                    }),
+                );
+            });
+        });
+    });
+
+    describe('Error Handling', () => {
+        it('should parse error message from response', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 400,
+                json: jest.fn().mockResolvedValue({message: 'Custom error message'}),
+            });
+
+            await expect(getRemoteListings()).rejects.toMatchObject({
+                message: 'Custom error message',
+                statusCode: 400,
+            });
+        });
+
+        it('should handle non-JSON error response', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: jest.fn().mockRejectedValue(new Error('Not JSON')),
+            });
+
+            await expect(getRemoteListings()).rejects.toMatchObject({
+                message: 'Request failed',
+                statusCode: 500,
+            });
+        });
+
+        it('should flag 401 responses as auth errors', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 401,
+                json: jest.fn().mockResolvedValue({message: 'Unauthorized'}),
+            });
+
+            await expect(getRemoteListings()).rejects.toMatchObject({
+                isAuthError: true,
+                statusCode: 401,
+            });
         });
     });
 });

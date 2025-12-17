@@ -99,6 +99,11 @@ function createChromeMock() {
             sendMessage: jest.fn().mockResolvedValue(undefined),
             lastError: null as { message: string } | null,
             getURL: jest.fn((path: string) => `chrome-extension://mock-id/${path}`),
+            getManifest: jest.fn(() => ({
+                version: '1.0.0',
+                name: 'MotorScope',
+                manifest_version: 3,
+            })),
             id: 'mock-extension-id',
         },
 

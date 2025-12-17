@@ -6,13 +6,20 @@ on:
       - '**'
   pull_request:
     types:
+      - opened
       - synchronize
+      - reopened
 
 jobs:
-  build-test-package:
-    name: Build, Test & Package
+  # =============================================================================
+  # API: Lint, Typecheck, Test
+  # =============================================================================
+  api:
+    name: API
     runs-on: ubuntu-latest
     if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    env:
+      SCARF_ANALYTICS: false
 
     steps:
       - name: Checkout
@@ -22,7 +29,46 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Don't use npm cache - it causes issues with native optional deps
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci
+
+      - name: Lint
+        working-directory: api
+        run: npm run lint
+
+      - name: Type Check
+        working-directory: api
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: api
+        run: npm test
+
+      - name: Build
+        working-directory: api
+        run: tsc
+
+  # =============================================================================
+  # Extension: Lint, Typecheck, Test, Build
+  # =============================================================================
+  extension:
+    name: Extension
+    runs-on: ubuntu-latest
+    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    env:
+      SCARF_ANALYTICS: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install dependencies
         run: |
@@ -30,29 +76,97 @@ jobs:
           npm ci
           npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --save-optional
 
-      - name: Lint API
-        working-directory: api
-        run: npm run lint
-
-      - name: Lint Extension
+      - name: Lint
         working-directory: extension
         run: npm run lint
 
-      - name: Type Check API
-        working-directory: api
-        run: npm run typecheck
-
-      - name: Type Check Extension
+      - name: Type Check
         working-directory: extension
         run: npm run typecheck
 
-      - name: Test API
-        working-directory: api
-        run: npm test
-
-      - name: Test Extension
+      - name: Test
         working-directory: extension
         run: npm test
+
+      - name: Install native deps
+        working-directory: extension
+        run: |
+          mkdir -p node_modules
+          npm install lightningcss lightningcss-linux-x64-gnu --legacy-peer-deps
+
+      - name: Build
+        run: npm --workspace=extension exec vite build
+
+  # =============================================================================
+  # Terraform: Format, Validate
+  # =============================================================================
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Format Check
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+      - name: Initialize (root)
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: Validate (root)
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Initialize (dev)
+        working-directory: terraform/environments/dev
+        run: terraform init -backend=false
+
+      - name: Validate (dev)
+        working-directory: terraform/environments/dev
+        run: terraform validate
+
+      - name: Initialize (prod)
+        working-directory: terraform/environments/prod
+        run: terraform init -backend=false
+
+      - name: Validate (prod)
+        working-directory: terraform/environments/prod
+        run: terraform validate
+
+  # =============================================================================
+  # Package Artifacts (only on success of all jobs)
+  # =============================================================================
+  package:
+    name: Package Artifacts
+    runs-on: ubuntu-latest
+    needs: [api, extension, terraform]
+    if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    env:
+      SCARF_ANALYTICS: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci
+          npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --save-optional
 
       - name: Build API
         working-directory: api
@@ -111,3 +225,4 @@ jobs:
           path: artifacts/backend-*.zip
           retention-days: 30
           if-no-files-found: error
+

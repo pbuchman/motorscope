@@ -24,6 +24,7 @@
   "listing": {
     "failedToRefresh": "Failed to refresh",
     "loginRequired": "Login required - please log in to the marketplace site",
+    "facebookLoginRequired": "Please log in to Facebook to refresh this listing",
     "failedToSave": "Failed to save listing.",
     "failedToRemove": "Failed to remove listing.",
     "failedToExtract": "Failed to extract car data.",

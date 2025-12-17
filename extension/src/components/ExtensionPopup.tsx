@@ -78,10 +78,11 @@ const ExtensionPopup: React.FC = () => {
     const enabledMarketplaces = useMemo(() => getEnabledMarketplaces(), []);
 
     // Find existing saved item based on URL
+    // normalizeUrl handles Facebook-specific cleaning internally
     const savedItem = useMemo(() => {
         if (!currentUrl) return null;
-        const normalizedUrl = normalizeUrl(currentUrl);
-        return listings.find((l) => normalizeUrl(l.source.url) === normalizedUrl) || null;
+        const normalizedCurrentUrl = normalizeUrl(currentUrl);
+        return listings.find((l) => normalizeUrl(l.source.url) === normalizedCurrentUrl) || null;
     }, [listings, currentUrl]);
 
     // Reload settings when auth status changes
@@ -247,7 +248,7 @@ const ExtensionPopup: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full bg-white flex flex-col font-sans min-h-[500px]">
+        <div className="w-full h-full bg-white flex flex-col font-sans min-h-125">
             {/* Header */}
             <PopupHeader
                 isLoggedIn={isLoggedIn}
@@ -276,7 +277,9 @@ const ExtensionPopup: React.FC = () => {
 
             {/* Footer */}
             <div className="p-2 border-t border-gray-100 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400 truncate flex-1">{currentUrl}</span>
+                <span className="text-[10px] text-slate-400 truncate flex-1">
+                    v.{chrome.runtime.getManifest().version}
+                </span>
                 {isLoggedIn && (
                     <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">
             ☁️ {t('popup:footer.cloudSync')}

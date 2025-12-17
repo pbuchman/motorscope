@@ -27,6 +27,7 @@
     "dev:extension": "cd extension && npm run dev",
     "dev:api": "cd api && npm run dev",
     "start:api": "cd api && npm start",
+    "coverage": "cd api && npm run test:coverage && cd ../extension && npm run test:coverage",
     "clean": "rm -rf extension/dist api/dist"
   },
   "devDependencies": {

@@ -40,11 +40,31 @@ export const formatEuropeanDateShort = (date: string | number): string => {
 };
 
 /**
- * Normalize URL by removing query parameters
+ * Normalize URL by removing query parameters.
+ * Handles marketplace-specific URL cleaning:
+ * - Facebook Marketplace: extracts clean marketplace/item or commerce/listing URL
+ * - Facebook Groups: extracts clean group/permalink URL
+ * - Others: strips query params and hash
  */
 export const normalizeUrl = (url: string): string => {
     try {
         const urlObj = new URL(url);
+
+        // Facebook-specific URL cleaning
+        if (urlObj.hostname.includes('facebook.com')) {
+            // Marketplace item or commerce listing
+            const marketplaceMatch = urlObj.pathname.match(/\/(marketplace\/item|commerce\/listing)\/(\d+)/);
+            if (marketplaceMatch) {
+                return `${urlObj.origin}/${marketplaceMatch[1]}/${marketplaceMatch[2]}`;
+            }
+
+            // Group posts (permalink or posts format) - groupId can be numeric or slug
+            const groupMatch = urlObj.pathname.match(/\/groups\/([\w.-]+)\/(permalink|posts)\/(\d+)/);
+            if (groupMatch) {
+                return `${urlObj.origin}/groups/${groupMatch[1]}/permalink/${groupMatch[3]}`;
+            }
+        }
+
         return `${urlObj.origin}${urlObj.pathname}`;
     } catch {
         return url;
@@ -68,5 +88,62 @@ export const cleanVin = (vin: string | undefined | null): string | undefined => 
     if (!vin || typeof vin !== 'string') return undefined;
     const cleaned = vin.trim().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
     return isValidVin(cleaned) ? cleaned : undefined;
+};
+
+
+/**
+ * Extract Facebook listing ID from URL (marketplace item, commerce listing, or group post)
+ */
+export const extractFacebookListingId = (url: string): string | null => {
+    try {
+        const urlObj = new URL(url);
+
+        // Marketplace item or commerce listing
+        const marketplaceMatch = urlObj.pathname.match(/\/(marketplace\/item|commerce\/listing)\/(\d+)/);
+        if (marketplaceMatch) {
+            return marketplaceMatch[2];
+        }
+
+        // Group post (extract post ID, not group ID) - groupId can be numeric or slug
+        const groupMatch = urlObj.pathname.match(/\/groups\/[\w.-]+\/(permalink|posts)\/(\d+)/);
+        if (groupMatch) {
+            return groupMatch[2];
+        }
+
+        return null;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Check if URL is a Facebook Marketplace listing (including group posts)
+ */
+export const isFacebookMarketplaceUrl = (url: string): boolean => {
+    try {
+        const urlObj = new URL(url);
+        if (!urlObj.hostname.includes('facebook.com')) {
+            return false;
+        }
+
+        return urlObj.pathname.includes('/marketplace/item/') ||
+            urlObj.pathname.includes('/commerce/listing/') ||
+            /\/groups\/[\w.-]+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * Check if URL is specifically a Facebook Group post (not marketplace item)
+ */
+export const isFacebookGroupPost = (url: string): boolean => {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.includes('facebook.com') &&
+            /\/groups\/[\w.-]+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
+    } catch {
+        return false;
+    }
 };
 

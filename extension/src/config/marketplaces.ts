@@ -30,6 +30,11 @@ export interface MarketplaceConfig {
      * These take precedence - if matched, page is not considered an offer
      */
     excludePatterns?: (string | RegExp)[];
+    /**
+     * If true, never use fetch() for this marketplace - always open in background tab.
+     * Required for sites that block fetch requests or require authentication cookies.
+     */
+    neverFetch?: boolean;
 }
 
 /**
@@ -83,6 +88,35 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
             '/lista/',
             '?page=',
         ],
+    },
+    {
+        id: 'facebook-marketplace',
+        name: 'Facebook Marketplace',
+        domains: ['facebook.com', 'www.facebook.com', 'm.facebook.com'],
+        countries: ['PL', 'DE', 'US', 'GB', 'FR'], // Available globally
+        url: 'https://www.facebook.com/marketplace',
+        enabled: true,
+        // Facebook Marketplace listing URLs:
+        // - /marketplace/item/{id} - standard listing
+        // - /commerce/listing/{id} - commerce listing variant
+        // - /groups/{groupId}/permalink/{postId} - group posts (car sales)
+        // - /groups/{groupId}/posts/{postId} - alternative group post format
+        // Note: groupId can be numeric (123456789) or a slug (fordedgepl)
+        offerPagePatterns: [
+            /\/marketplace\/item\/\d+/,    // Standard marketplace item
+            /\/commerce\/listing\/\d+/,    // Commerce listing variant
+            /\/groups\/[\w.-]+\/permalink\/\d+/, // Group post (permalink format, alphanumeric group ID)
+            /\/groups\/[\w.-]+\/posts\/\d+/,     // Group post (posts format, alphanumeric group ID)
+        ],
+        excludePatterns: [
+            '/marketplace/search',
+            '/marketplace/category/',
+            '/marketplace/you/',
+            '/marketplace/create/',
+            '/marketplace?',
+        ],
+        // Facebook requires authentication and blocks fetch requests
+        neverFetch: true,
     },
 ];
 
@@ -200,48 +234,4 @@ export const getMarketplaceForUrl = (url: string): MarketplaceConfig | null => {
     }
 };
 
-/**
- * Get a formatted list of example marketplaces for display
- *
- * @param maxExamples - Maximum number of examples to show
- * @returns Formatted string like "otomoto.pl, mobile.de"
- */
-export const getMarketplaceExamples = (maxExamples: number = 2): string => {
-    const enabled = getEnabledMarketplaces();
-    const examples = enabled.slice(0, maxExamples);
-
-    // Use the base domain (first in the domains array, without www)
-    return examples
-        .map(m => m.domains[0].replace('www.', ''))
-        .join(', ');
-};
-
-/**
- * Get marketplace names for display
- *
- * @param maxNames - Maximum number of names to show
- * @returns Formatted string like "OTOMOTO, mobile.de, and more"
- */
-export const getMarketplaceNames = (maxNames: number = 3): string => {
-    const enabled = getEnabledMarketplaces();
-
-    if (enabled.length <= maxNames) {
-        return enabled.map(m => m.name).join(', ');
-    }
-
-    const shown = enabled.slice(0, maxNames).map(m => m.name).join(', ');
-    const remaining = enabled.length - maxNames;
-    return `${shown}, and ${remaining} more`;
-};
-
-/**
- * Get the primary URL for a marketplace (for linking)
- *
- * @param marketplaceId - The marketplace ID
- * @returns The URL or null if not found
- */
-export const getMarketplaceUrl = (marketplaceId: string): string | null => {
-    const marketplace = SUPPORTED_MARKETPLACES.find(m => m.id === marketplaceId);
-    return marketplace?.url || null;
-};
 

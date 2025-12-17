@@ -23,8 +23,24 @@ This is the single source of truth for deploying the MotorScope infrastructure t
 |-------------|---------|--------|
 | [OTOMOTO](https://otomoto.pl) | Poland 🇵🇱 | ✅ Fully tested |
 | [Autoplac](https://autoplac.pl) | Poland 🇵🇱 | ✅ Supported |
+| [Facebook Marketplace](https://www.facebook.com/marketplace) | Global 🌍 | ✅ Supported |
+| Facebook Groups (buy/sell) | Global 🌍 | ✅ Supported |
 
-> 📝 **Note**: Some features may require you to be logged in to the marketplace platform.
+> 📝 **Note**: Some features may require you to be logged in to the marketplace platform. Facebook listings require you to be logged into Facebook.
+
+### Facebook Support Details
+
+MotorScope supports two types of Facebook car listings:
+
+1. **Marketplace Items**: Standard Facebook Marketplace listings
+   - URLs like: `facebook.com/marketplace/item/{id}`
+   - URLs like: `facebook.com/commerce/listing/{id}`
+
+2. **Group Posts**: Car listings posted in Facebook buy/sell groups
+   - URLs like: `facebook.com/groups/{groupId}/permalink/{postId}`
+   - URLs like: `facebook.com/groups/{groupId}/posts/{postId}`
+
+**Important**: Facebook requires authentication and blocks server-side fetch requests. MotorScope opens Facebook listings in background tabs for refresh operations, which requires you to be logged into Facebook in your browser.
 
 ## 🎯 Why MotorScope?
 
@@ -265,6 +281,19 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📚 Documentation Structure
+
+| Document | Purpose |
+|----------|---------|
+| **This README** | Complete project overview (functional + technical) |
+| [`terraform/DEPLOYMENT.md`](terraform/DEPLOYMENT.md) | Infrastructure deployment guide (single source of truth) |
+| [`extension/docs/architecture.md`](extension/docs/architecture.md) | Extension architecture details |
+| [`docs/auth-flow.md`](docs/auth-flow.md) | Backend authentication flow |
+
+> **Note:** Documentation is intentionally minimal. Each document has a single purpose. Do not duplicate content across documents — reference other files instead.
 
 ---
 

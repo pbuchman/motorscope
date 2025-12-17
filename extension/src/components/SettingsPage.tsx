@@ -378,7 +378,12 @@ const SettingsPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <Car className="w-8 h-8 text-blue-400"/>
                         <div>
-                            <h1 className="text-xl font-bold">{t('settings:pageTitle')}</h1>
+                            <h1 className="text-xl font-bold">
+                                {t('settings:pageTitle')}
+                                <span className="ml-2 text-sm font-normal text-slate-400">
+                                    v.{chrome.runtime.getManifest().version}
+                                </span>
+                            </h1>
                             <p className="text-slate-400 text-sm">{t('settings:pageSubtitle')}</p>
                         </div>
                     </div>

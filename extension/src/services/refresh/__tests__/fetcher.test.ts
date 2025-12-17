@@ -394,4 +394,73 @@ describe('fetchListingPage', () => {
                 .rejects.toThrow();
         });
     });
+
+    describe('neverFetch marketplace behavior', () => {
+        it('should skip fetch and use background tab directly for Facebook URLs', async () => {
+            const mockTabId = 456;
+            (chrome.tabs.create as jest.Mock).mockImplementation((options, callback) => {
+                callback({id: mockTabId});
+                return Promise.resolve({id: mockTabId});
+            });
+
+            (chrome.scripting.executeScript as jest.Mock).mockResolvedValue([
+                {
+                    result: {
+                        title: 'Facebook Marketplace Item',
+                        html: '<html lang="pl"><body>Item content</body></html>',
+                        is404: false,
+                        is410: false,
+                        facebookLoginRequired: false,
+                    },
+                },
+            ]);
+
+            (chrome.tabs.onUpdated.addListener as jest.Mock).mockImplementation((listener) => {
+                setTimeout(() => {
+                    listener(mockTabId, {status: 'complete'}, {id: mockTabId});
+                }, 10);
+            });
+
+            const result = await fetchListingPage('https://www.facebook.com/marketplace/item/12345');
+
+            // Should NOT have tried fetch
+            expect(global.fetch).not.toHaveBeenCalled();
+            // Should use background tab
+            expect(chrome.tabs.create).toHaveBeenCalled();
+            expect(result.usedBackgroundTab).toBe(true);
+            expect(result.status).toBe(200);
+        });
+
+        it('should detect Facebook login required and return 401', async () => {
+            const mockTabId = 789;
+            (chrome.tabs.create as jest.Mock).mockImplementation((options, callback) => {
+                callback({id: mockTabId});
+                return Promise.resolve({id: mockTabId});
+            });
+
+            (chrome.scripting.executeScript as jest.Mock).mockResolvedValue([
+                {
+                    result: {
+                        title: 'Facebook - Log In',
+                        html: '<html lang="pl"><body>Log into Facebook</body></html>',
+                        is404: false,
+                        is410: false,
+                        facebookLoginRequired: true,
+                    },
+                },
+            ]);
+
+            (chrome.tabs.onUpdated.addListener as jest.Mock).mockImplementation((listener) => {
+                setTimeout(() => {
+                    listener(mockTabId, {status: 'complete'}, {id: mockTabId});
+                }, 10);
+            });
+
+            const result = await fetchListingPage('https://www.facebook.com/marketplace/item/12345');
+
+            expect(result.status).toBe(401);
+            expect(result.expired).toBe(false);
+            expect(result.textContent).toBeUndefined();
+        });
+    });
 });

@@ -12,14 +12,17 @@ const SCHEMA_VERSION = '1.0.0';
 
 /**
  * Generate listing ID from VIN or URL
- * Prefers VIN if available for deduplication across URLs
+ * Prefers VIN if available for deduplication across URLs.
+ * When VIN is not available, uses full URL hash to ensure uniqueness.
  */
 export function generateListingId(vin: string | undefined, normalizedUrl: string): string {
     const validVin = cleanVin(vin);
     if (validVin) {
         return `vin_${validVin}`;
     }
-    return `url_${btoa(normalizedUrl).substring(0, 16)}`;
+    // Use complete URL base64 hash - no truncation to avoid collisions
+    const hash = btoa(normalizedUrl).replace(/[+/=]/g, '');
+    return `url_${hash}`;
 }
 
 /**
@@ -117,6 +120,7 @@ export function mapToCarListing(
     const location = buildLocation(data);
     const seller = buildSeller(data);
 
+    // normalizeUrl handles Facebook-specific cleaning internally
     const normalizedUrl = normalizeUrl(url);
     const id = generateListingId(vehicle.vin ?? undefined, normalizedUrl);
 

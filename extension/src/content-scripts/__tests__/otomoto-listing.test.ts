@@ -3,7 +3,18 @@
  * Tests the shared modules used by content scripts
  */
 
-import {normalizeUrl, isSearchUrl, isListingUrl} from '../shared';
+import {
+    normalizeUrl,
+    isSearchUrl,
+    isListingUrl,
+    normalizeTrackedUrls,
+    isUrlTracked,
+    createMotorScopeIcon,
+    processArticleElement,
+    processArticles,
+    resetArticleProcessingState,
+} from '../shared';
+import type {ListingDependencies} from '../shared';
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -86,51 +97,18 @@ describe('otomoto-listing content script utilities', () => {
     });
 
     describe('URL tracking detection', () => {
-        const isUrlTracked = (url: string, trackedUrls: Set<string>): boolean => {
-            const normalized = normalizeUrl(url);
-            return trackedUrls.has(normalized);
-        };
-
-        it('should detect tracked URLs', () => {
-            const trackedUrls = new Set([
+        it('should detect tracked URLs using helper', () => {
+            const tracked = normalizeTrackedUrls([
                 'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html',
             ]);
-
-            expect(isUrlTracked(
-                'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html',
-                trackedUrls,
-            )).toBe(true);
+            expect(isUrlTracked('https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html', tracked)).toBe(true);
         });
 
-        it('should detect tracked URLs with query params', () => {
-            const trackedUrls = new Set([
+        it('should ignore untracked URLs using helper', () => {
+            const tracked = normalizeTrackedUrls([
                 'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html',
             ]);
-
-            expect(isUrlTracked(
-                'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html?from=search',
-                trackedUrls,
-            )).toBe(true);
-        });
-
-        it('should not detect untracked URLs', () => {
-            const trackedUrls = new Set([
-                'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html',
-            ]);
-
-            expect(isUrlTracked(
-                'https://www.otomoto.pl/osobowe/oferta/bmw-x5-ID123.html',
-                trackedUrls,
-            )).toBe(false);
-        });
-
-        it('should handle empty tracked set', () => {
-            const trackedUrls = new Set<string>();
-
-            expect(isUrlTracked(
-                'https://www.otomoto.pl/osobowe/oferta/ford-edge-ID6HMJxa.html',
-                trackedUrls,
-            )).toBe(false);
+            expect(isUrlTracked('https://www.otomoto.pl/osobowe/oferta/bmw-x5-ID123.html', tracked)).toBe(false);
         });
     });
 });
@@ -142,65 +120,36 @@ describe('otomoto-listing DOM utilities', () => {
     });
 
     describe('MotorScope icon structure', () => {
-        /**
-         * Creates a MotorScope icon button matching OTOMOTO's button structure
-         * This is a copy of the production function for testing
-         */
-        const createMotorScopeIcon = (_listingUrl: string): HTMLButtonElement => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.setAttribute('aria-label', 'Otwórz w MotorScope');
-            button.setAttribute('tabindex', '0');
-            button.className = 'motorscope-tracked-icon ooa-xaeen7';
-            button.setAttribute('data-button-variant', 'flat');
-
-            const svgWrapper = document.createElement('div');
-            svgWrapper.className = 'n-button-svg-wrapper n-button-svg-wrapper-pre';
-            svgWrapper.setAttribute('aria-hidden', 'true');
-
-            const img = document.createElement('img');
-            img.src = mockChrome.runtime.getURL('icon.png');
-            img.width = 30;
-            img.height = 30;
-            img.alt = 'MotorScope';
-            img.style.cssText = 'display: block;';
-
-            svgWrapper.appendChild(img);
-
-            const textWrapper = document.createElement('span');
-            textWrapper.className = 'n-button-text-wrapper';
-
-            button.appendChild(svgWrapper);
-            button.appendChild(textWrapper);
-
-            return button;
-        };
+        const buildIcon = (listingUrl: string) => createMotorScopeIcon(listingUrl, {
+            getIconUrl: () => mockChrome.runtime.getURL('icon.png'),
+            onClick: jest.fn(),
+        });
 
         it('should create a button element', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             expect(icon.tagName).toBe('BUTTON');
             expect(icon.type).toBe('button');
         });
 
         it('should have correct accessibility attributes', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             expect(icon.getAttribute('aria-label')).toBe('Otwórz w MotorScope');
             expect(icon.getAttribute('tabindex')).toBe('0');
         });
 
         it('should have correct CSS classes', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             expect(icon.classList.contains('motorscope-tracked-icon')).toBe(true);
             expect(icon.classList.contains('ooa-xaeen7')).toBe(true);
         });
 
         it('should have correct data attributes', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             expect(icon.getAttribute('data-button-variant')).toBe('flat');
         });
 
         it('should contain SVG wrapper with correct structure', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             const svgWrapper = icon.querySelector('.n-button-svg-wrapper');
 
             expect(svgWrapper).not.toBeNull();
@@ -209,7 +158,7 @@ describe('otomoto-listing DOM utilities', () => {
         });
 
         it('should contain image with correct attributes', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             const img = icon.querySelector('img');
 
             expect(img).not.toBeNull();
@@ -220,7 +169,7 @@ describe('otomoto-listing DOM utilities', () => {
         });
 
         it('should contain text wrapper span', () => {
-            const icon = createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            const icon = buildIcon('https://otomoto.pl/oferta/test');
             const textWrapper = icon.querySelector('.n-button-text-wrapper');
 
             expect(textWrapper).not.toBeNull();
@@ -228,7 +177,7 @@ describe('otomoto-listing DOM utilities', () => {
         });
 
         it('should use chrome.runtime.getURL for icon path', () => {
-            createMotorScopeIcon('https://otomoto.pl/oferta/test');
+            buildIcon('https://otomoto.pl/oferta/test');
             expect(mockChrome.runtime.getURL).toHaveBeenCalledWith('icon.png');
         });
     });
@@ -244,6 +193,10 @@ describe('otomoto-listing DOM utilities', () => {
         const DATA_ATTRIBUTES = {
             PROCESSED: 'data-motorscope-processed',
             TRACKED: 'data-motorscope-tracked',
+        };
+
+        const CSS_CLASSES = {
+            TRACKED_ICON: 'motorscope-tracked-icon',
         };
 
         /**
@@ -270,60 +223,75 @@ describe('otomoto-listing DOM utilities', () => {
             return article;
         };
 
-        it('should find listing link in article', () => {
-            const article = createMockArticle('123', 'https://otomoto.pl/oferta/test');
-            document.body.appendChild(article);
+        const config = {
+            selectors: {
+                article: SELECTORS.ARTICLE,
+                listingLink: SELECTORS.LISTING_LINK,
+                favoritesButton: SELECTORS.FAVORITES_BUTTON,
+                iconContainer: SELECTORS.ICON_CONTAINER,
+            },
+            dataAttributes: {
+                processed: DATA_ATTRIBUTES.PROCESSED,
+                tracked: DATA_ATTRIBUTES.TRACKED,
+            },
+            cssClasses: {
+                trackedIcon: CSS_CLASSES.TRACKED_ICON,
+            },
+        } as const;
 
-            const link = article.querySelector(SELECTORS.LISTING_LINK);
-            expect(link).not.toBeNull();
-            expect((link as HTMLAnchorElement).href).toContain('/oferta/');
+        const deps = {
+            log: jest.fn(),
+            buildIcon: jest.fn((url: string) => buildTestIcon(url)),
+        } satisfies ListingDependencies;
+
+        const buildTestIcon = (listingUrl: string) => createMotorScopeIcon(listingUrl, {
+            getIconUrl: () => mockChrome.runtime.getURL('icon.png'),
+            onClick: jest.fn(),
         });
 
-        it('should find favorites button in article', () => {
-            const article = createMockArticle('123', 'https://otomoto.pl/oferta/test');
+        it('should append icon for tracked listings', () => {
+            const article = createMockArticle('1', 'https://otomoto.pl/oferta/test');
             document.body.appendChild(article);
 
-            const button = article.querySelector(SELECTORS.FAVORITES_BUTTON);
-            expect(button).not.toBeNull();
+            const tracked = normalizeTrackedUrls(['https://otomoto.pl/oferta/test']);
+            const added = processArticleElement(article, tracked, config, deps);
+
+            expect(added).toBe(true);
+            expect(article.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)).not.toBeNull();
         });
 
-        it('should find icon container in article', () => {
-            const article = createMockArticle('123', 'https://otomoto.pl/oferta/test');
-            document.body.appendChild(article);
-
-            const container = article.querySelector(SELECTORS.ICON_CONTAINER);
-            expect(container).not.toBeNull();
-        });
-
-        it('should be able to mark article as processed', () => {
-            const article = createMockArticle('123', 'https://otomoto.pl/oferta/test');
-            document.body.appendChild(article);
-
-            expect(article.hasAttribute(DATA_ATTRIBUTES.PROCESSED)).toBe(false);
+        it('should skip already processed articles', () => {
+            const article = createMockArticle('1', 'https://otomoto.pl/oferta/test');
             article.setAttribute(DATA_ATTRIBUTES.PROCESSED, 'true');
-            expect(article.hasAttribute(DATA_ATTRIBUTES.PROCESSED)).toBe(true);
-        });
-
-        it('should be able to mark article as tracked', () => {
-            const article = createMockArticle('123', 'https://otomoto.pl/oferta/test');
             document.body.appendChild(article);
 
-            article.setAttribute(DATA_ATTRIBUTES.TRACKED, 'true');
-            expect(article.getAttribute(DATA_ATTRIBUTES.TRACKED)).toBe('true');
+            const tracked = normalizeTrackedUrls(['https://otomoto.pl/oferta/test']);
+            const added = processArticleElement(article, tracked, config, deps);
+
+            expect(added).toBe(false);
         });
 
-        it('should query all articles with selector', () => {
-            const article1 = createMockArticle('1', 'https://otomoto.pl/oferta/test1');
-            const article2 = createMockArticle('2', 'https://otomoto.pl/oferta/test2');
-            document.body.appendChild(article1);
-            document.body.appendChild(article2);
+        it('should process multiple articles via helper', () => {
+            const first = createMockArticle('1', 'https://otomoto.pl/oferta/test1');
+            const second = createMockArticle('2', 'https://otomoto.pl/oferta/test2');
+            document.body.appendChild(first);
+            document.body.appendChild(second);
 
-            const articles = document.querySelectorAll(SELECTORS.ARTICLE);
-            expect(articles.length).toBe(2);
+            const tracked = normalizeTrackedUrls(['https://otomoto.pl/oferta/test1']);
+            const count = processArticles(document, tracked, config, deps);
+
+            expect(count).toBe(1);
         });
     });
 
     describe('reset processing state', () => {
+        const SELECTORS = {
+            ARTICLE: 'article[data-id]',
+            LISTING_LINK: 'h2 a[href*="/oferta/"]',
+            FAVORITES_BUTTON: 'button[aria-label="Dodaj do obserwowanych"]',
+            ICON_CONTAINER: '.ooa-1m6nx9w',
+        } as const;
+
         const DATA_ATTRIBUTES = {
             PROCESSED: 'data-motorscope-processed',
             TRACKED: 'data-motorscope-tracked',
@@ -372,6 +340,37 @@ describe('otomoto-listing DOM utilities', () => {
                 el.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)?.remove();
             });
 
+            expect(container.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)).toBeNull();
+        });
+
+        it('should reset via helper', () => {
+            const container = document.createElement('div');
+            container.setAttribute(DATA_ATTRIBUTES.PROCESSED, 'true');
+            container.setAttribute(DATA_ATTRIBUTES.TRACKED, 'true');
+
+            const icon = document.createElement('button');
+            icon.className = CSS_CLASSES.TRACKED_ICON;
+            container.appendChild(icon);
+            document.body.appendChild(container);
+
+            resetArticleProcessingState(document, {
+                selectors: {
+                    article: SELECTORS.ARTICLE,
+                    listingLink: SELECTORS.LISTING_LINK,
+                    favoritesButton: SELECTORS.FAVORITES_BUTTON,
+                    iconContainer: SELECTORS.ICON_CONTAINER,
+                },
+                dataAttributes: {
+                    processed: DATA_ATTRIBUTES.PROCESSED,
+                    tracked: DATA_ATTRIBUTES.TRACKED,
+                },
+                cssClasses: {
+                    trackedIcon: CSS_CLASSES.TRACKED_ICON,
+                },
+            });
+
+            expect(container.hasAttribute(DATA_ATTRIBUTES.PROCESSED)).toBe(false);
+            expect(container.hasAttribute(DATA_ATTRIBUTES.TRACKED)).toBe(false);
             expect(container.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)).toBeNull();
         });
     });
