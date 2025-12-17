@@ -13,7 +13,7 @@ describe('Gemini Mapper', () => {
 
         it('should generate URL-based ID when VIN is undefined', () => {
             const id = generateListingId(undefined, 'https://example.com/listing/123');
-            expect(id).toMatch(/^url_[A-Za-z0-9+/=]+$/);
+            expect(id).toMatch(/^url_[A-Za-z0-9]+$/);
         });
 
         it('should generate URL-based ID for invalid VIN', () => {
@@ -42,6 +42,48 @@ describe('Gemini Mapper', () => {
             const id1 = generateListingId(undefined, 'https://example.com/listing/123');
             const id2 = generateListingId(undefined, 'https://different-domain.com/other/path');
             expect(id1).not.toBe(id2);
+        });
+
+        describe('URL collision prevention', () => {
+            it('should generate unique IDs for different Facebook listings', () => {
+                const id1 = generateListingId(undefined, 'https://www.facebook.com/marketplace/item/1944127496500770');
+                const id2 = generateListingId(undefined, 'https://www.facebook.com/marketplace/item/799722522879718');
+                const id3 = generateListingId(undefined, 'https://www.facebook.com/marketplace/item/12345');
+
+                expect(id1).not.toBe(id2);
+                expect(id1).not.toBe(id3);
+                expect(id2).not.toBe(id3);
+            });
+
+            it('should generate unique IDs for different OTOMOTO listings', () => {
+                const id1 = generateListingId(undefined, 'https://www.otomoto.pl/osobowe/oferta/ford-ranger-ID6HEcgy.html');
+                const id2 = generateListingId(undefined, 'https://www.otomoto.pl/osobowe/oferta/bmw-320d-IDabc123.html');
+                const id3 = generateListingId(undefined, 'https://www.otomoto.pl/osobowe/oferta/audi-a4-IDxyz789.html');
+
+                expect(id1).not.toBe(id2);
+                expect(id1).not.toBe(id3);
+                expect(id2).not.toBe(id3);
+            });
+
+            it('should generate unique IDs for different Autoplac listings', () => {
+                const id1 = generateListingId(undefined, 'https://autoplac.pl/ogloszenie/test-123');
+                const id2 = generateListingId(undefined, 'https://autoplac.pl/ogloszenie/test-456');
+                const id3 = generateListingId(undefined, 'https://autoplac.pl/samochod/789');
+
+                expect(id1).not.toBe(id2);
+                expect(id1).not.toBe(id3);
+                expect(id2).not.toBe(id3);
+            });
+
+            it('should generate unique IDs across different marketplaces', () => {
+                const fbId = generateListingId(undefined, 'https://www.facebook.com/marketplace/item/12345');
+                const otomotoId = generateListingId(undefined, 'https://www.otomoto.pl/osobowe/oferta/test-ID12345.html');
+                const autoplacId = generateListingId(undefined, 'https://autoplac.pl/ogloszenie/12345');
+
+                expect(fbId).not.toBe(otomotoId);
+                expect(fbId).not.toBe(autoplacId);
+                expect(otomotoId).not.toBe(autoplacId);
+            });
         });
     });
 

@@ -24,6 +24,7 @@
   "listing": {
     "failedToRefresh": "Nie udało się odświeżyć",
     "loginRequired": "Wymagane logowanie - zaloguj się na stronie serwisu",
+    "facebookLoginRequired": "Zaloguj się na Facebooku, aby odświeżyć to ogłoszenie",
     "failedToSave": "Nie udało się zapisać ogłoszenia.",
     "failedToRemove": "Nie udało się usunąć ogłoszenia.",
     "failedToExtract": "Nie udało się wyodrębnić danych pojazdu.",

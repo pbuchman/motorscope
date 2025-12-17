@@ -30,6 +30,11 @@ export interface MarketplaceConfig {
      * These take precedence - if matched, page is not considered an offer
      */
     excludePatterns?: (string | RegExp)[];
+    /**
+     * If true, never use fetch() for this marketplace - always open in background tab.
+     * Required for sites that block fetch requests or require authentication cookies.
+     */
+    neverFetch?: boolean;
 }
 
 /**
@@ -83,6 +88,34 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
             '/lista/',
             '?page=',
         ],
+    },
+    {
+        id: 'facebook-marketplace',
+        name: 'Facebook Marketplace',
+        domains: ['facebook.com', 'www.facebook.com', 'm.facebook.com'],
+        countries: ['PL', 'DE', 'US', 'GB', 'FR'], // Available globally
+        url: 'https://www.facebook.com/marketplace',
+        enabled: true,
+        // Facebook Marketplace listing URLs:
+        // - /marketplace/item/{id} - standard listing
+        // - /commerce/listing/{id} - commerce listing variant
+        // - /groups/{groupId}/permalink/{postId} - group posts (car sales)
+        // - /groups/{groupId}/posts/{postId} - alternative group post format
+        offerPagePatterns: [
+            /\/marketplace\/item\/\d+/,    // Standard marketplace item
+            /\/commerce\/listing\/\d+/,    // Commerce listing variant
+            /\/groups\/\d+\/permalink\/\d+/, // Group post (permalink format)
+            /\/groups\/\d+\/posts\/\d+/,     // Group post (posts format)
+        ],
+        excludePatterns: [
+            '/marketplace/search',
+            '/marketplace/category/',
+            '/marketplace/you/',
+            '/marketplace/create/',
+            '/marketplace?',
+        ],
+        // Facebook requires authentication and blocks fetch requests
+        neverFetch: true,
     },
 ];
 

@@ -173,7 +173,32 @@ useStorageListener → State Update → Re-render
 - Defines supported car marketplaces
 - URL patterns for offer detection
 - Domain matching rules
-- Background tab configuration for marketplaces with restrictions (e.g., Cloudflare)
+- Background tab configuration for marketplaces with restrictions (e.g., Cloudflare, Facebook)
+
+Supported marketplaces:
+- **OTOMOTO**: Polish car marketplace (otomoto.pl)
+- **Autoplac**: Polish car marketplace (autoplac.pl)
+- **Facebook Marketplace**: Marketplace items and commerce listings
+- **Facebook Groups**: Buy/sell group posts
+
+**Facebook-specific handling:**
+- Group post URLs (`/groups/{id}/permalink/{postId}`, `/groups/{id}/posts/{postId}`) are supported
+- `neverFetch: true` - Facebook blocks server-side requests, requires background tab
+- URL normalization strips tracking parameters
+
+**Prompt Templates (`src/services/gemini/prompts.ts`)**
+
+The Gemini prompt builder includes marketplace-specific extraction rules:
+
+- **OTOMOTO/Autoplac**: Standard extraction with Polish date parsing
+- **Facebook Marketplace**: 
+  - Uses "Informacje o pojeździe" structured data + "Opis sprzedawcy" description
+  - Handles invalid data (e.g., "-1.0 L" engine capacity)
+  - Relative date conversion ("2 tygodnie temu" → ISO timestamp)
+- **Facebook Groups**: 
+  - Parses unstructured post text
+  - Extracts VIN, price, mileage from Polish patterns
+  - Supports common Polish car listing patterns (e.g., "Cena:", "Przebieg:", "VIN:")
 
 **Auth Config (`src/auth/config.ts`)**
 

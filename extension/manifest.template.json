@@ -17,7 +17,8 @@
     "https://otomoto.pl/*",
     "https://www.otomoto.pl/*",
     "https://autoplac.pl/*",
-    "https://www.autoplac.pl/*"
+    "https://www.autoplac.pl/*",
+    "https://*.facebook.com/*"
   ],
   "oauth2": {
     "client_id": "{{OAUTH_CLIENT_ID}}",

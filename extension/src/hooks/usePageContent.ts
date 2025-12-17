@@ -23,11 +23,38 @@ interface UsePageContentResult {
 /**
  * Function to inject into the page to extract content
  */
-const extractPageContent = (): PageContentResult => ({
-    title: document.title,
-    content: document.body.innerText.substring(0, 20000),
-    image: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null,
-});
+const extractPageContent = (): PageContentResult => {
+    // Try og:image first (works for most sites)
+    let image = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+
+    // Facebook-specific: Look for product images if og:image not found
+    if (!image) {
+        // Try to find Facebook Marketplace product image
+        // Facebook uses img tags with alt text like "Zdjęcie produktu" or product name
+        const fbProductImg = document.querySelector('img[alt^="Zdjęcie produktu"]') as HTMLImageElement
+            || document.querySelector('img[alt*="Photo of"]') as HTMLImageElement;
+        if (fbProductImg?.src) {
+            image = fbProductImg.src;
+        }
+    }
+
+    // Fallback: Find the largest image on the page (likely the main product image)
+    if (!image) {
+        const images = Array.from(document.querySelectorAll('img[src]')) as HTMLImageElement[];
+        const largeImage = images
+            .filter(img => img.naturalWidth > 200 && img.naturalHeight > 200)
+            .sort((a, b) => (b.naturalWidth * b.naturalHeight) - (a.naturalWidth * a.naturalHeight))[0];
+        if (largeImage?.src) {
+            image = largeImage.src;
+        }
+    }
+
+    return {
+        title: document.title,
+        content: document.body.innerText.substring(0, 20000),
+        image,
+    };
+};
 
 /**
  * Execute content extraction script in a tab

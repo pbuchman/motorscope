@@ -8,6 +8,7 @@ import {CarListing, ListingStatus} from '@/types';
 import {RateLimitError, refreshListingWithGemini} from '../gemini';
 import {FetchError, fetchListingPage} from './fetcher';
 import {hasPriceChangedFromPreviousDay, updateDailyPriceHistory} from './priceHistory';
+import {isFacebookMarketplaceUrl} from '@/utils/formatters';
 
 /**
  * Result of a listing refresh operation
@@ -60,10 +61,18 @@ export async function refreshSingleListing(
         // Non-OK response (including status 0, which indicates a network error)
         if (fetchResult.status !== 200) {
             // 520 is a Cloudflare error typically meaning the origin needs authentication
-            const isLoginRequired = fetchResult.status === 520 || fetchResult.status === 0;
-            const errorMsg = isLoginRequired
-                ? 'Login required - please log in to the marketplace site'
-                : `HTTP ${fetchResult.status}`;
+            // 401 is returned when Facebook login is required
+            const isLoginRequired = fetchResult.status === 520 || fetchResult.status === 0 || fetchResult.status === 401;
+            const isFacebookLogin = fetchResult.status === 401 && isFacebookMarketplaceUrl(listing.source.url);
+
+            let errorMsg: string;
+            if (isFacebookLogin) {
+                errorMsg = 'Facebook login required - please log in to Facebook';
+            } else if (isLoginRequired) {
+                errorMsg = 'Login required - please log in to the marketplace site';
+            } else {
+                errorMsg = `HTTP ${fetchResult.status}`;
+            }
 
             return {
                 listing: {

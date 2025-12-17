@@ -6,7 +6,10 @@
  *
  * Strategy: Always try fetch() first, then automatically fallback to background tab
  * if Cloudflare or network errors are detected.
+ * Exception: Marketplaces with neverFetch=true always use background tab.
  */
+
+import {getMarketplaceForUrl} from '@/config/marketplaces';
 
 // Constants for content extraction and timeouts
 const MAX_TEXT_CONTENT_LENGTH = 20000;
@@ -95,6 +98,7 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
                                 const title = document.title || '';
                                 const bodyText = document.body?.innerText || '';
                                 const html = document.documentElement?.outerHTML || '';
+                                const currentUrl = window.location.href;
 
                                 // Check for common error indicators (case-insensitive)
                                 const lowerTitle = title.toLowerCase();
@@ -108,11 +112,34 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
                                 const is410 = lowerTitle.includes('410') ||
                                     lowerTitle.includes('gone');
 
+                                // Facebook-specific: Check if user is logged out
+                                // Indicators: redirected to login page, or login form visible
+                                const isFacebookUrl = currentUrl.includes('facebook.com');
+                                let facebookLoginRequired = false;
+
+                                if (isFacebookUrl) {
+                                    // Check if redirected to login page
+                                    const isLoginPage = currentUrl.includes('/login') ||
+                                        currentUrl.includes('login.php') ||
+                                        currentUrl.includes('/checkpoint/');
+
+                                    // Check for login form elements
+                                    const hasLoginForm = !!document.querySelector('input[name="email"]') &&
+                                        !!document.querySelector('input[name="pass"]');
+
+                                    // Check for "Log In" or "Zaloguj się" button prominently displayed
+                                    const hasLoginButton = lowerBody.includes('log into facebook') ||
+                                        lowerBody.includes('zaloguj się');
+
+                                    facebookLoginRequired = isLoginPage || hasLoginForm || hasLoginButton;
+                                }
+
                                 return {
                                     title,
                                     html,
                                     is404,
                                     is410,
+                                    facebookLoginRequired,
                                 };
                             },
                         });
@@ -125,6 +152,17 @@ async function fetchListingPageWithTab(url: string): Promise<FetchPageResult> {
                         }
 
                         const pageData = results[0].result;
+
+                        // Check for Facebook login required
+                        if (pageData.facebookLoginRequired) {
+                            resolve({
+                                expired: false,
+                                status: 401, // Unauthorized - login required
+                                textContent: undefined,
+                                pageTitle: pageData.title,
+                            });
+                            return;
+                        }
 
                         // Check for expired listing
                         if (pageData.is404) {
@@ -266,13 +304,18 @@ function isCloudflareStatusCode(status: number): boolean {
  * This combines the expired check and content fetch to avoid duplicate HTTP requests
  *
  * Strategy:
- * 1. First attempt using standard fetch()
- * 2. If Cloudflare/network error occurs, automatically fallback to background tab
- * 3. This provides a generic approach that works for all marketplaces
+ * 1. Check if marketplace has neverFetch=true - if so, use background tab directly
+ * 2. Otherwise, attempt using standard fetch()
+ * 3. If Cloudflare/network error occurs, automatically fallback to background tab
+ * 4. This provides a generic approach that works for all marketplaces
  */
 export async function fetchListingPage(url: string, forceBackgroundTab: boolean = false): Promise<FetchPageResult> {
-    // If forced to use background tab, skip fetch attempt
-    if (forceBackgroundTab) {
+    // Check marketplace config for neverFetch flag
+    const marketplace = getMarketplaceForUrl(url);
+    const requiresBackgroundTab = forceBackgroundTab || marketplace?.neverFetch === true;
+
+    // If forced to use background tab or marketplace requires it, skip fetch attempt
+    if (requiresBackgroundTab) {
         const result = await fetchListingPageWithTab(url);
         return {...result, usedBackgroundTab: true};
     }

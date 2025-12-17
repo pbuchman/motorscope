@@ -78,10 +78,11 @@ const ExtensionPopup: React.FC = () => {
     const enabledMarketplaces = useMemo(() => getEnabledMarketplaces(), []);
 
     // Find existing saved item based on URL
+    // normalizeUrl handles Facebook-specific cleaning internally
     const savedItem = useMemo(() => {
         if (!currentUrl) return null;
-        const normalizedUrl = normalizeUrl(currentUrl);
-        return listings.find((l) => normalizeUrl(l.source.url) === normalizedUrl) || null;
+        const normalizedCurrentUrl = normalizeUrl(currentUrl);
+        return listings.find((l) => normalizeUrl(l.source.url) === normalizedCurrentUrl) || null;
     }, [listings, currentUrl]);
 
     // Reload settings when auth status changes

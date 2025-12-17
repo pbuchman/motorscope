@@ -431,4 +431,67 @@ describe('Refresh Listing Service', () => {
             expect(result.listing.currency).toBe('EUR');
         });
     });
+
+    describe('Facebook Marketplace specific', () => {
+        const facebookListing: CarListing = {
+            ...baseListing,
+            source: {
+                platform: 'www.facebook.com',
+                url: 'https://www.facebook.com/marketplace/item/12345',
+                listingId: 'fb_12345',
+                countryCode: 'PL',
+            },
+        };
+
+        it('should handle Facebook login required (401 status)', async () => {
+            mockFetchListingPage.mockResolvedValue({
+                expired: false,
+                status: 401,
+                textContent: undefined,
+                pageTitle: 'Facebook - Log In',
+            });
+
+            const result = await refreshSingleListing(facebookListing);
+
+            expect(result.success).toBe(false);
+            expect(result.listing.lastRefreshStatus).toBe('error');
+            expect(result.listing.lastRefreshError).toContain('Facebook login required');
+        });
+
+        it('should handle successful Facebook listing refresh', async () => {
+            mockFetchListingPage.mockResolvedValue({
+                expired: false,
+                status: 200,
+                textContent: 'Sprzedam Ford Mondeo MK5 2016',
+                pageTitle: 'Sprzedam Ford Mondeo - Facebook Marketplace',
+                usedBackgroundTab: true,
+            });
+
+            mockRefreshWithGemini.mockResolvedValue({
+                price: 36000,
+                currency: 'PLN',
+                status: ListingStatus.ACTIVE,
+            });
+
+            const result = await refreshSingleListing(facebookListing);
+
+            expect(result.success).toBe(true);
+            expect(result.listing.currentPrice).toBe(36000);
+            expect(result.usedBackgroundTab).toBe(true);
+        });
+
+        it('should handle Facebook listing expired (404)', async () => {
+            mockFetchListingPage.mockResolvedValue({
+                expired: true,
+                status: 404,
+                usedBackgroundTab: true,
+            });
+
+            const result = await refreshSingleListing(facebookListing);
+
+            expect(result.success).toBe(true);
+            expect(result.listing.status).toBe(ListingStatus.ENDED);
+            expect(result.usedBackgroundTab).toBe(true);
+        });
+    });
 });
