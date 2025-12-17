@@ -277,7 +277,9 @@ const ExtensionPopup: React.FC = () => {
 
             {/* Footer */}
             <div className="p-2 border-t border-gray-100 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400 truncate flex-1">{currentUrl}</span>
+                <span className="text-[10px] text-slate-400 truncate flex-1">
+                    v.{chrome.runtime.getManifest().version}
+                </span>
                 {isLoggedIn && (
                     <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">
             ☁️ {t('popup:footer.cloudSync')}
