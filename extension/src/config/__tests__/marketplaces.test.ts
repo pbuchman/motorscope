@@ -239,6 +239,13 @@ describe('Facebook Marketplace', () => {
             expect(isOfferPage('https://www.facebook.com/groups/123456789/posts/987654321/')).toBe(true);
         });
 
+        it('should recognize group posts with alphanumeric group IDs (slugs)', () => {
+            expect(isOfferPage('https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/')).toBe(true);
+            expect(isOfferPage('https://www.facebook.com/groups/fordedgepl/permalink/2441235006294035/')).toBe(true);
+            expect(isOfferPage('https://www.facebook.com/groups/bmw-e36-fans/posts/123456789/')).toBe(true);
+            expect(isOfferPage('https://www.facebook.com/groups/audi.a4.club/permalink/987654321/')).toBe(true);
+        });
+
         it('should reject marketplace search/browse pages', () => {
             expect(isOfferPage('https://www.facebook.com/marketplace/')).toBe(false);
             expect(isOfferPage('https://www.facebook.com/marketplace/search')).toBe(false);
@@ -260,6 +267,11 @@ describe('Facebook Marketplace', () => {
         it('should be trackable for group posts', () => {
             expect(isTrackableOfferPage('https://www.facebook.com/groups/2745745475668729/permalink/4268638163379445/')).toBe(true);
             expect(isTrackableOfferPage('https://www.facebook.com/groups/123456789/posts/987654321/')).toBe(true);
+        });
+
+        it('should be trackable for group posts with alphanumeric group IDs', () => {
+            expect(isTrackableOfferPage('https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/')).toBe(true);
+            expect(isTrackableOfferPage('https://www.facebook.com/groups/bmw-e36-fans/permalink/123456789/')).toBe(true);
         });
     });
 

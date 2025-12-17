@@ -58,8 +58,8 @@ export const normalizeUrl = (url: string): string => {
                 return `${urlObj.origin}/${marketplaceMatch[1]}/${marketplaceMatch[2]}`;
             }
 
-            // Group posts (permalink or posts format)
-            const groupMatch = urlObj.pathname.match(/\/groups\/(\d+)\/(permalink|posts)\/(\d+)/);
+            // Group posts (permalink or posts format) - groupId can be numeric or slug
+            const groupMatch = urlObj.pathname.match(/\/groups\/([\w.-]+)\/(permalink|posts)\/(\d+)/);
             if (groupMatch) {
                 return `${urlObj.origin}/groups/${groupMatch[1]}/permalink/${groupMatch[3]}`;
             }
@@ -104,8 +104,8 @@ export const extractFacebookListingId = (url: string): string | null => {
             return marketplaceMatch[2];
         }
 
-        // Group post (extract post ID, not group ID)
-        const groupMatch = urlObj.pathname.match(/\/groups\/\d+\/(permalink|posts)\/(\d+)/);
+        // Group post (extract post ID, not group ID) - groupId can be numeric or slug
+        const groupMatch = urlObj.pathname.match(/\/groups\/[\w.-]+\/(permalink|posts)\/(\d+)/);
         if (groupMatch) {
             return groupMatch[2];
         }
@@ -128,7 +128,7 @@ export const isFacebookMarketplaceUrl = (url: string): boolean => {
 
         return urlObj.pathname.includes('/marketplace/item/') ||
             urlObj.pathname.includes('/commerce/listing/') ||
-            /\/groups\/\d+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
+            /\/groups\/[\w.-]+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
     } catch {
         return false;
     }
@@ -141,7 +141,7 @@ export const isFacebookGroupPost = (url: string): boolean => {
     try {
         const urlObj = new URL(url);
         return urlObj.hostname.includes('facebook.com') &&
-            /\/groups\/\d+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
+            /\/groups\/[\w.-]+\/(permalink|posts)\/\d+/.test(urlObj.pathname);
     } catch {
         return false;
     }

@@ -138,6 +138,17 @@ describe('URL Utilities', () => {
                 expect(normalized).toContain('2745745475668729');
                 expect(normalized).toContain('4268638163379445');
             });
+
+            it('should normalize group URLs with alphanumeric group IDs (slugs)', () => {
+                const postsUrl = 'https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/?ref=test';
+                expect(normalizeUrl(postsUrl)).toBe('https://www.facebook.com/groups/fordedgepl/permalink/2441235006294035');
+
+                const permalinkUrl = 'https://www.facebook.com/groups/bmw-e36-fans/permalink/123456789/?rdid=XIBj';
+                expect(normalizeUrl(permalinkUrl)).toBe('https://www.facebook.com/groups/bmw-e36-fans/permalink/123456789');
+
+                const dotUrl = 'https://www.facebook.com/groups/audi.a4.club/posts/987654321/';
+                expect(normalizeUrl(dotUrl)).toBe('https://www.facebook.com/groups/audi.a4.club/permalink/987654321');
+            });
         });
     });
 });
@@ -215,6 +226,13 @@ describe('Facebook URL Utilities', () => {
             expect(isFacebookMarketplaceUrl('https://www.facebook.com/groups/123456789/posts/987654321/')).toBe(true);
         });
 
+        it('should return true for group post URLs with alphanumeric group IDs', () => {
+            expect(isFacebookMarketplaceUrl('https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/')).toBe(true);
+            expect(isFacebookMarketplaceUrl('https://www.facebook.com/groups/fordedgepl/permalink/2441235006294035/')).toBe(true);
+            expect(isFacebookMarketplaceUrl('https://www.facebook.com/groups/bmw-e36-fans/posts/123456789/')).toBe(true);
+            expect(isFacebookMarketplaceUrl('https://www.facebook.com/groups/audi.a4.club/permalink/987654321/')).toBe(true);
+        });
+
         it('should return false for marketplace browse pages', () => {
             expect(isFacebookMarketplaceUrl('https://www.facebook.com/marketplace/')).toBe(false);
             expect(isFacebookMarketplaceUrl('https://www.facebook.com/marketplace/search')).toBe(false);
@@ -254,6 +272,12 @@ describe('Facebook URL Utilities', () => {
             expect(extractFacebookListingId('https://www.facebook.com/groups/123456789/posts/987654321/')).toBe('987654321');
         });
 
+        it('should extract post ID from group URLs with alphanumeric group IDs', () => {
+            expect(extractFacebookListingId('https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/')).toBe('2441235006294035');
+            expect(extractFacebookListingId('https://www.facebook.com/groups/fordedgepl/permalink/2441235006294035/')).toBe('2441235006294035');
+            expect(extractFacebookListingId('https://www.facebook.com/groups/bmw-e36-fans/posts/123456789/')).toBe('123456789');
+        });
+
         it('should return null for non-listing URLs', () => {
             expect(extractFacebookListingId('https://www.facebook.com/marketplace/')).toBeNull();
             expect(extractFacebookListingId('https://www.facebook.com/groups/123456789/')).toBeNull();
@@ -271,6 +295,13 @@ describe('Facebook URL Utilities', () => {
 
         it('should return true for group posts URLs', () => {
             expect(isFacebookGroupPost('https://www.facebook.com/groups/123456789/posts/987654321/')).toBe(true);
+        });
+
+        it('should return true for group posts with alphanumeric group IDs', () => {
+            expect(isFacebookGroupPost('https://www.facebook.com/groups/fordedgepl/posts/2441235006294035/')).toBe(true);
+            expect(isFacebookGroupPost('https://www.facebook.com/groups/fordedgepl/permalink/2441235006294035/')).toBe(true);
+            expect(isFacebookGroupPost('https://www.facebook.com/groups/bmw-e36-fans/posts/123456789/')).toBe(true);
+            expect(isFacebookGroupPost('https://www.facebook.com/groups/audi.a4.club/permalink/987654321/')).toBe(true);
         });
 
         it('should return false for marketplace item URLs', () => {

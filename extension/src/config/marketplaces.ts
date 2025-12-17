@@ -101,11 +101,12 @@ export const SUPPORTED_MARKETPLACES: MarketplaceConfig[] = [
         // - /commerce/listing/{id} - commerce listing variant
         // - /groups/{groupId}/permalink/{postId} - group posts (car sales)
         // - /groups/{groupId}/posts/{postId} - alternative group post format
+        // Note: groupId can be numeric (123456789) or a slug (fordedgepl)
         offerPagePatterns: [
             /\/marketplace\/item\/\d+/,    // Standard marketplace item
             /\/commerce\/listing\/\d+/,    // Commerce listing variant
-            /\/groups\/\d+\/permalink\/\d+/, // Group post (permalink format)
-            /\/groups\/\d+\/posts\/\d+/,     // Group post (posts format)
+            /\/groups\/[\w.-]+\/permalink\/\d+/, // Group post (permalink format, alphanumeric group ID)
+            /\/groups\/[\w.-]+\/posts\/\d+/,     // Group post (posts format, alphanumeric group ID)
         ],
         excludePatterns: [
             '/marketplace/search',
