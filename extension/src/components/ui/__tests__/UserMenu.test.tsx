@@ -43,14 +43,14 @@ describe('UserMenu', () => {
             const {user} = render(<UserMenu {...defaultProps} />);
 
             // Menu should be closed initially
-            expect(screen.queryByText('Log Out')).not.toBeInTheDocument();
+            expect(screen.queryByText('Log out')).not.toBeInTheDocument();
 
             // Click to open
             const menuButton = screen.getByRole('button', {name: /test@example.com/i});
             await user.click(menuButton);
 
             // Menu should be open
-            expect(screen.getByText('Log Out')).toBeInTheDocument();
+            expect(screen.getByText('Log out')).toBeInTheDocument();
         });
 
         it('closes menu when clicking outside', async () => {
@@ -64,7 +64,7 @@ describe('UserMenu', () => {
             // Open menu
             const menuButton = screen.getByRole('button', {name: /test@example.com/i});
             await user.click(menuButton);
-            expect(screen.getByText('Log Out')).toBeInTheDocument();
+            expect(screen.getByText('Log out')).toBeInTheDocument();
 
             // Click outside
             const outsideButton = screen.getByRole('button', {name: /outside/i});
@@ -72,7 +72,7 @@ describe('UserMenu', () => {
 
             // Menu should be closed
             await waitFor(() => {
-                expect(screen.queryByText('Log Out')).not.toBeInTheDocument();
+                expect(screen.queryByText('Log out')).not.toBeInTheDocument();
             });
         });
 
@@ -82,14 +82,14 @@ describe('UserMenu', () => {
             // Open menu
             const menuButton = screen.getByRole('button', {name: /test@example.com/i});
             await user.click(menuButton);
-            expect(screen.getByText('Log Out')).toBeInTheDocument();
+            expect(screen.getByText('Log out')).toBeInTheDocument();
 
             // Press Escape
             await user.keyboard('{Escape}');
 
             // Menu should be closed
             await waitFor(() => {
-                expect(screen.queryByText('Log Out')).not.toBeInTheDocument();
+                expect(screen.queryByText('Log out')).not.toBeInTheDocument();
             });
         });
 
@@ -118,7 +118,7 @@ describe('UserMenu', () => {
             await user.click(menuButton);
 
             // Click logout
-            const logoutButton = screen.getByText('Log Out');
+            const logoutButton = screen.getByText('Log out');
             await user.click(logoutButton);
 
             expect(onLogout).toHaveBeenCalledTimes(1);
@@ -132,12 +132,12 @@ describe('UserMenu', () => {
             await user.click(menuButton);
 
             // Click logout
-            const logoutButton = screen.getByText('Log Out');
+            const logoutButton = screen.getByText('Log out');
             await user.click(logoutButton);
 
             // Menu should be closed
             await waitFor(() => {
-                expect(screen.queryByText('Log Out')).not.toBeInTheDocument();
+                expect(screen.queryByText('Log out')).not.toBeInTheDocument();
             });
         });
     });
