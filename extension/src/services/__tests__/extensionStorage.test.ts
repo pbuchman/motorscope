@@ -42,6 +42,41 @@ describe('Extension Storage', () => {
             await extensionStorage.get('someKey');
             expect(chrome.storage.session.get).toHaveBeenCalled();
         });
+
+        it('should reject when chrome.runtime.lastError is set', async () => {
+            chrome.storage.session.get = jest.fn((keys: string[], callback: (result: Record<string, any>) => void) => {
+                chrome.runtime.lastError = {message: 'Storage error'};
+                callback({});
+                chrome.runtime.lastError = null;
+            }) as any;
+
+            await expect(extensionStorage.get('errorKey')).rejects.toThrow('Storage error');
+        });
+
+        it('should fall back to sessionStorage when chrome is not available', async () => {
+            const originalChrome = (globalThis as any).chrome;
+            delete (globalThis as any).chrome;
+
+            // Set value in sessionStorage
+            sessionStorage.setItem('fallbackKey', JSON.stringify('fallbackValue'));
+
+            const result = await extensionStorage.get<string>('fallbackKey');
+            expect(result).toBe('fallbackValue');
+
+            // Clean up
+            sessionStorage.removeItem('fallbackKey');
+            (globalThis as any).chrome = originalChrome;
+        });
+
+        it('should return undefined from sessionStorage fallback for non-existent key', async () => {
+            const originalChrome = (globalThis as any).chrome;
+            delete (globalThis as any).chrome;
+
+            const result = await extensionStorage.get<string>('nonExistent');
+            expect(result).toBeUndefined();
+
+            (globalThis as any).chrome = originalChrome;
+        });
     });
 
     describe('set', () => {
@@ -75,6 +110,30 @@ describe('Extension Storage', () => {
         it('should call chrome.storage.session.set', async () => {
             await extensionStorage.set('key', 'value');
             expect(chrome.storage.session.set).toHaveBeenCalled();
+        });
+
+        it('should reject when chrome.runtime.lastError is set', async () => {
+            chrome.storage.session.set = jest.fn((items: Record<string, any>, callback: () => void) => {
+                chrome.runtime.lastError = {message: 'Set error'};
+                callback();
+                chrome.runtime.lastError = null;
+            }) as any;
+
+            await expect(extensionStorage.set('errorKey', 'value')).rejects.toThrow('Set error');
+        });
+
+        it('should fall back to sessionStorage when chrome is not available', async () => {
+            const originalChrome = (globalThis as any).chrome;
+            delete (globalThis as any).chrome;
+
+            await extensionStorage.set('fallbackSetKey', {test: 123});
+
+            const stored = sessionStorage.getItem('fallbackSetKey');
+            expect(stored).toBe(JSON.stringify({test: 123}));
+
+            // Clean up
+            sessionStorage.removeItem('fallbackSetKey');
+            (globalThis as any).chrome = originalChrome;
         });
     });
 
