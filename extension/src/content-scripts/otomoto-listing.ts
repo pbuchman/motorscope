@@ -9,9 +9,13 @@ import {
     createLogger,
     onDOMReady,
     isSearchPage,
-    normalizeUrl,
     createSelectorObserver,
+    normalizeTrackedUrls,
+    processArticles,
+    resetArticleProcessingState,
+    createMotorScopeIcon,
 } from './shared';
+import type {ListingDomConfig, ListingDependencies} from './shared';
 
 // ==================== CONSTANTS ====================
 
@@ -42,6 +46,30 @@ const CSS_CLASSES = {
     TRACKED_ICON: 'motorscope-tracked-icon',
 } as const;
 
+const LISTING_DOM_CONFIG: ListingDomConfig = {
+    selectors: {
+        article: SELECTORS.ARTICLE,
+        listingLink: SELECTORS.LISTING_LINK,
+        favoritesButton: SELECTORS.FAVORITES_BUTTON,
+        iconContainer: SELECTORS.ICON_CONTAINER,
+    },
+    dataAttributes: {
+        processed: DATA_ATTRIBUTES.PROCESSED,
+        tracked: DATA_ATTRIBUTES.TRACKED,
+    },
+    cssClasses: {
+        trackedIcon: CSS_CLASSES.TRACKED_ICON,
+    },
+};
+
+const listingDependencies: ListingDependencies = {
+    log,
+    buildIcon: (listingUrl: string) => createMotorScopeIcon(listingUrl, {
+        getIconUrl: () => chrome.runtime.getURL('icon.png'),
+        onClick: () => openDashboardWithListing(listingUrl),
+    }),
+};
+
 // ==================== STATE ====================
 
 let trackedUrls: Set<string> = new Set();
@@ -49,58 +77,9 @@ let isInitialized = false;
 
 // ==================== UTILITIES ====================
 
-/**
- * Check if a URL is tracked
- */
-const isUrlTracked = (url: string): boolean => {
-    const normalized = normalizeUrl(url);
-    return trackedUrls.has(normalized);
-};
-
-// ==================== ICON CREATION ====================
-
-/**
- * Create the MotorScope icon button matching OTOMOTO's button structure
- */
-const createMotorScopeIcon = (listingUrl: string): HTMLButtonElement => {
-    // Create button matching OTOMOTO's button structure
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.setAttribute('aria-label', 'Otwórz w MotorScope');
-    button.setAttribute('tabindex', '0');
-    button.className = `${CSS_CLASSES.TRACKED_ICON} ooa-xaeen7`;
-    button.setAttribute('data-button-variant', 'flat');
-
-    // Create SVG wrapper div matching .n-button-svg-wrapper
-    const svgWrapper = document.createElement('div');
-    svgWrapper.className = 'n-button-svg-wrapper n-button-svg-wrapper-pre';
-    svgWrapper.setAttribute('aria-hidden', 'true');
-
-    // Create icon image
-    const img = document.createElement('img');
-    img.src = chrome.runtime.getURL('icon.png');
-    img.width = 30;
-    img.height = 30;
-    img.alt = 'MotorScope';
-    img.style.cssText = 'display: block;';
-
-    svgWrapper.appendChild(img);
-
-    // Create empty span matching .n-button-text-wrapper
-    const textWrapper = document.createElement('span');
-    textWrapper.className = 'n-button-text-wrapper';
-
-    button.appendChild(svgWrapper);
-    button.appendChild(textWrapper);
-
-    // Click handler - open dashboard with this listing
-    button.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openDashboardWithListing(listingUrl);
-    });
-
-    return button;
+const processAllArticles = (): void => {
+    const added = processArticles(document, trackedUrls, LISTING_DOM_CONFIG, listingDependencies);
+    log(`Processed articles - icons added: ${added}`);
 };
 
 // ==================== DASHBOARD NAVIGATION ====================
@@ -129,69 +108,6 @@ const openDashboardWithListing = async (listingUrl: string): Promise<void> => {
     }
 };
 
-// ==================== ARTICLE PROCESSING ====================
-
-/**
- * Process a single article element
- */
-const processArticle = (article: Element): void => {
-    // Skip if already processed
-    if (article.hasAttribute(DATA_ATTRIBUTES.PROCESSED)) {
-        return;
-    }
-
-    // Find the listing link
-    const link = article.querySelector(SELECTORS.LISTING_LINK) as HTMLAnchorElement | null;
-    if (!link?.href) {
-        return;
-    }
-
-    // Mark as processed
-    article.setAttribute(DATA_ATTRIBUTES.PROCESSED, 'true');
-
-    // Check if this URL is tracked
-    if (!isUrlTracked(link.href)) {
-        return;
-    }
-
-    // Mark as tracked
-    article.setAttribute(DATA_ATTRIBUTES.TRACKED, 'true');
-
-    // Find the favorites button container
-    const favoritesButton = article.querySelector(SELECTORS.FAVORITES_BUTTON);
-    if (!favoritesButton) {
-        log('Favorites button not found for tracked listing');
-        return;
-    }
-
-    // Find the wrapper div (parent with class ooa-1m6nx9w)
-    const favoritesWrapper = favoritesButton.closest(SELECTORS.ICON_CONTAINER);
-    if (!favoritesWrapper) {
-        log('Favorites wrapper not found for tracked listing');
-        return;
-    }
-
-    // Check if icon already exists
-    if (favoritesWrapper.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)) {
-        return;
-    }
-
-    // Create icon button and append inside the same wrapper div
-    const icon = createMotorScopeIcon(link.href);
-    favoritesWrapper.appendChild(icon);
-    log('Added icon for tracked listing:', link.href);
-};
-
-/**
- * Process all articles on the page
- */
-const processAllArticles = (): void => {
-    const articles = document.querySelectorAll(SELECTORS.ARTICLE);
-    log(`Processing ${articles.length} articles`);
-
-    articles.forEach(processArticle);
-};
-
 // ==================== TRACKING DATA ====================
 
 /**
@@ -202,7 +118,7 @@ const fetchTrackedListings = async (): Promise<void> => {
         const response = await chrome.runtime.sendMessage({type: 'GET_TRACKED_URLS'}) as {urls?: string[]} | undefined;
 
         if (response?.urls && Array.isArray(response.urls)) {
-            trackedUrls = new Set(response.urls.map(normalizeUrl));
+            trackedUrls = normalizeTrackedUrls(response.urls);
             log(`Loaded ${trackedUrls.size} tracked URLs`);
         }
     } catch (error) {
@@ -210,16 +126,8 @@ const fetchTrackedListings = async (): Promise<void> => {
     }
 };
 
-/**
- * Reset processing state for all articles (for re-processing after data update)
- */
-const resetArticleProcessingState = (): void => {
-    document.querySelectorAll(`[${DATA_ATTRIBUTES.PROCESSED}]`).forEach(el => {
-        el.removeAttribute(DATA_ATTRIBUTES.PROCESSED);
-        el.removeAttribute(DATA_ATTRIBUTES.TRACKED);
-        // Remove existing icons
-        el.querySelector(`.${CSS_CLASSES.TRACKED_ICON}`)?.remove();
-    });
+const resetArticles = (): void => {
+    resetArticleProcessingState(document, LISTING_DOM_CONFIG);
 };
 
 // ==================== MESSAGE HANDLING ====================
@@ -232,7 +140,7 @@ const setupMessageListener = (): void => {
         if (message.type === 'TRACKED_LISTINGS_UPDATED') {
             log('Tracked listings updated, refreshing...');
             fetchTrackedListings().then(() => {
-                resetArticleProcessingState();
+                resetArticles();
                 processAllArticles();
             });
             sendResponse({success: true});

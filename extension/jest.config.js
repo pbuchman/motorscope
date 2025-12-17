@@ -28,9 +28,9 @@ export default {
         '!src/**/__tests__/**',
         '!src/test-utils/**',
         '!src/__mocks__/**',
+        'src/content-scripts/*.ts',
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
     setupFilesAfterEnv: ['<rootDir>/src/test-utils/setupTests.ts'],
 };
-

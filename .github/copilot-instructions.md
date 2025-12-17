@@ -98,6 +98,8 @@ Run from repo root:
 | Build all | `npm run build` |
 | Coverage | `npm run coverage` |
 
+Always finish a task by running the appropriate coverage command (default `npm run coverage`; use path-specific variants like `npm run test -- --coverage` for the extension) and reviewing the report.
+
 ---
 
 ## Task Completion Checklist
@@ -107,6 +109,7 @@ Run from repo root:
 - [ ] `npm run typecheck` passes
 - [ ] `npm run lint` passes
 - [ ] `npm run test` passes
+- [ ] Coverage command (global or domain-specific) completes and meets expectations
 - [ ] No new warnings introduced
 - [ ] Changes to logic have corresponding tests
 - [ ] Domain-specific checklist completed (see path-specific instructions)
