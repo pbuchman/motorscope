@@ -17,6 +17,10 @@ import {getRemoteSettings, patchRemoteSettings} from '../../../api/client';
 const mockGetRemoteSettings = getRemoteSettings as jest.MockedFunction<typeof getRemoteSettings>;
 const mockPatchRemoteSettings = patchRemoteSettings as jest.MockedFunction<typeof patchRemoteSettings>;
 
+// Frequency limits from extensionSettings.ts clampFrequency function
+const MIN_FREQUENCY_MINUTES = 0.167; // 10 seconds
+const MAX_FREQUENCY_MINUTES = 43200; // 30 days
+
 describe('Extension Settings Service', () => {
     let consoleWarnSpy: jest.SpyInstance;
 
@@ -101,7 +105,7 @@ describe('Extension Settings Service', () => {
 
             const settings = await getSettings();
 
-            expect(settings.checkFrequencyMinutes).toBeGreaterThanOrEqual(0.167);
+            expect(settings.checkFrequencyMinutes).toBeGreaterThanOrEqual(MIN_FREQUENCY_MINUTES);
         });
 
         it('should clamp frequency to maximum of 43200 minutes', async () => {
