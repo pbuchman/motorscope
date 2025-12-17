@@ -716,4 +716,303 @@ describe('API Routes', () => {
         });
 
     });
+
+    // ==========================================================================
+    // Image API
+    // ==========================================================================
+    describe('Image API', () => {
+        describe('POST /images', () => {
+            it('should upload image from URL', async () => {
+                mockDownloadImageFromUrl.mockResolvedValue({
+                    buffer: Buffer.from('mock-image-data'),
+                    contentType: 'image/jpeg',
+                });
+                mockUploadImage.mockResolvedValue({
+                    url: '/api/images/user/listing/image.jpg',
+                    path: 'images/user/listing/image.jpg',
+                });
+
+                const response = await testRequest(app, 'POST', '/api/images', {
+                    imageUrl: 'https://example.com/image.jpg',
+                    listingId: 'listing-123',
+                }, {
+                    authorization: 'Bearer test-token',
+                });
+
+                expect(response.status).toBe(200);
+                expect(response.body.url).toBe('/api/images/user/listing/image.jpg');
+                expect(response.body.path).toBe('images/user/listing/image.jpg');
+            });
+
+            it('should return 400 when imageUrl is missing', async () => {
+                const response = await testRequest(app, 'POST', '/api/images', {
+                    listingId: 'listing-123',
+                }, {
+                    authorization: 'Bearer test-token',
+                });
+
+                expect(response.status).toBe(400);
+                expect(response.body.message).toContain('imageUrl');
+            });
+
+            it('should return 400 when listingId is missing', async () => {
+                const response = await testRequest(app, 'POST', '/api/images', {
+                    imageUrl: 'https://example.com/image.jpg',
+                }, {
+                    authorization: 'Bearer test-token',
+                });
+
+                expect(response.status).toBe(400);
+                expect(response.body.message).toContain('listingId');
+            });
+
+            it('should return 400 for invalid URL format', async () => {
+                const response = await testRequest(app, 'POST', '/api/images', {
+                    imageUrl: 'not-a-valid-url',
+                    listingId: 'listing-123',
+                }, {
+                    authorization: 'Bearer test-token',
+                });
+
+                expect(response.status).toBe(400);
+                expect(response.body.message).toContain('valid URL');
+            });
+
+            it('should return 500 when download fails', async () => {
+                mockDownloadImageFromUrl.mockRejectedValue(new Error('Download failed'));
+
+                const response = await testRequest(app, 'POST', '/api/images', {
+                    imageUrl: 'https://example.com/image.jpg',
+                    listingId: 'listing-123',
+                }, {
+                    authorization: 'Bearer test-token',
+                });
+
+                expect(response.status).toBe(500);
+            });
+        });
+
+        describe('GET /images/:userId/:listingId/:filename', () => {
+            it('should redirect to signed URL', async () => {
+                mockGetImageMetadata.mockResolvedValue({
+                    url: 'https://storage.googleapis.com/signed-url',
+                });
+
+                // Special helper for testing routes with complex params
+                const result = await new Promise<{status: number; redirectUrl?: string}>((resolve) => {
+                    const mockReq: any = {
+                        method: 'GET',
+                        url: '/api/images/google_123/vin_ABC/image.jpg',
+                        path: '/images/google_123/vin_ABC/image.jpg',
+                        headers: {authorization: 'Bearer test-token'},
+                        body: {},
+                        query: {},
+                        params: {
+                            userId: 'google_123',
+                            listingId: 'vin_ABC',
+                            filename: 'image.jpg',
+                        },
+                        user: undefined,
+                    };
+
+                    const mockRes: any = {
+                        statusCode: 200,
+                        _body: null,
+                        status: function(code: number) {
+                            this.statusCode = code;
+                            return this;
+                        },
+                        redirect: function(code: number, url: string) {
+                            resolve({status: code, redirectUrl: url});
+                            return this;
+                        },
+                        json: function(data: any) {
+                            this._body = data;
+                            resolve({status: this.statusCode});
+                            return this;
+                        },
+                    };
+
+                    app(mockReq, mockRes, () => {
+                        resolve({status: mockRes.statusCode});
+                    });
+                });
+
+                expect(result.status).toBe(302);
+                expect(result.redirectUrl).toBe('https://storage.googleapis.com/signed-url');
+            });
+
+            it('should return 500 when getImageMetadata fails', async () => {
+                mockGetImageMetadata.mockRejectedValue(new Error('Image not found'));
+
+                const result = await new Promise<{status: number; body?: any}>((resolve) => {
+                    const mockReq: any = {
+                        method: 'GET',
+                        url: '/api/images/google_123/vin_ABC/image.jpg',
+                        path: '/images/google_123/vin_ABC/image.jpg',
+                        headers: {authorization: 'Bearer test-token'},
+                        body: {},
+                        query: {},
+                        params: {
+                            userId: 'google_123',
+                            listingId: 'vin_ABC',
+                            filename: 'image.jpg',
+                        },
+                        user: undefined,
+                    };
+
+                    const mockRes: any = {
+                        statusCode: 200,
+                        _body: null,
+                        status: function(code: number) {
+                            this.statusCode = code;
+                            return this;
+                        },
+                        redirect: function(code: number, _url: string) {
+                            resolve({status: code});
+                            return this;
+                        },
+                        json: function(data: any) {
+                            this._body = data;
+                            resolve({status: this.statusCode, body: data});
+                            return this;
+                        },
+                    };
+
+                    app(mockReq, mockRes, () => {
+                        resolve({status: mockRes.statusCode, body: mockRes._body});
+                    });
+                });
+
+                expect(result.status).toBe(500);
+            });
+        });
+
+        describe('DELETE /images/:userId/:listingId/:filename', () => {
+            it('should schedule image for deletion', async () => {
+                mockScheduleImageDeletion.mockResolvedValue(true);
+
+                const result = await new Promise<{status: number; body?: any}>((resolve) => {
+                    const mockReq: any = {
+                        method: 'DELETE',
+                        url: '/api/images/google_123/vin_ABC/image.jpg',
+                        path: '/images/google_123/vin_ABC/image.jpg',
+                        headers: {authorization: 'Bearer test-token'},
+                        body: {},
+                        query: {},
+                        params: {
+                            userId: 'google_123',
+                            listingId: 'vin_ABC',
+                            filename: 'image.jpg',
+                        },
+                        user: undefined,
+                    };
+
+                    const mockRes: any = {
+                        statusCode: 200,
+                        _body: null,
+                        status: function(code: number) {
+                            this.statusCode = code;
+                            return this;
+                        },
+                        json: function(data: any) {
+                            this._body = data;
+                            resolve({status: this.statusCode, body: data});
+                            return this;
+                        },
+                    };
+
+                    app(mockReq, mockRes, () => {
+                        resolve({status: mockRes.statusCode, body: mockRes._body});
+                    });
+                });
+
+                expect(result.status).toBe(200);
+                expect(result.body?.success).toBe(true);
+                expect(mockScheduleImageDeletion).toHaveBeenCalledWith('images/google_123/vin_ABC/image.jpg');
+            });
+
+            it('should return 404 when image not found', async () => {
+                mockScheduleImageDeletion.mockResolvedValue(false);
+
+                const result = await new Promise<{status: number; body?: any}>((resolve) => {
+                    const mockReq: any = {
+                        method: 'DELETE',
+                        url: '/api/images/google_123/vin_ABC/image.jpg',
+                        path: '/images/google_123/vin_ABC/image.jpg',
+                        headers: {authorization: 'Bearer test-token'},
+                        body: {},
+                        query: {},
+                        params: {
+                            userId: 'google_123',
+                            listingId: 'vin_ABC',
+                            filename: 'image.jpg',
+                        },
+                        user: undefined,
+                    };
+
+                    const mockRes: any = {
+                        statusCode: 200,
+                        _body: null,
+                        status: function(code: number) {
+                            this.statusCode = code;
+                            return this;
+                        },
+                        json: function(data: any) {
+                            this._body = data;
+                            resolve({status: this.statusCode, body: data});
+                            return this;
+                        },
+                    };
+
+                    app(mockReq, mockRes, () => {
+                        resolve({status: mockRes.statusCode, body: mockRes._body});
+                    });
+                });
+
+                expect(result.status).toBe(404);
+            });
+
+            it('should return 500 when deletion fails', async () => {
+                mockScheduleImageDeletion.mockRejectedValue(new Error('Deletion failed'));
+
+                const result = await new Promise<{status: number; body?: any}>((resolve) => {
+                    const mockReq: any = {
+                        method: 'DELETE',
+                        url: '/api/images/google_123/vin_ABC/image.jpg',
+                        path: '/images/google_123/vin_ABC/image.jpg',
+                        headers: {authorization: 'Bearer test-token'},
+                        body: {},
+                        query: {},
+                        params: {
+                            userId: 'google_123',
+                            listingId: 'vin_ABC',
+                            filename: 'image.jpg',
+                        },
+                        user: undefined,
+                    };
+
+                    const mockRes: any = {
+                        statusCode: 200,
+                        _body: null,
+                        status: function(code: number) {
+                            this.statusCode = code;
+                            return this;
+                        },
+                        json: function(data: any) {
+                            this._body = data;
+                            resolve({status: this.statusCode, body: data});
+                            return this;
+                        },
+                    };
+
+                    app(mockReq, mockRes, () => {
+                        resolve({status: mockRes.statusCode, body: mockRes._body});
+                    });
+                });
+
+                expect(result.status).toBe(500);
+            });
+        });
+    });
 });

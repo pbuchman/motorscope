@@ -7,6 +7,8 @@ import {
     normalizeUrl,
     isListingUrl,
     isSearchUrl,
+    isListingPage,
+    isSearchPage,
     onDOMReady,
     findButtonByText,
     createDebouncer,
@@ -86,6 +88,34 @@ describe('url module', () => {
 
         it('should return true for homepage', () => {
             expect(isSearchUrl('https://www.otomoto.pl/')).toBe(true);
+        });
+    });
+
+    describe('isListingPage', () => {
+        it('should check window.location.href for listing URL pattern', () => {
+            // isListingPage calls isListingUrl with window.location.href
+            // Since we can't easily mock window.location in jsdom, we verify:
+            // 1. The function exists and is callable
+            // 2. It uses isListingUrl internally (covered by isListingUrl tests)
+            expect(typeof isListingPage).toBe('function');
+
+            // In jsdom, window.location.href is usually 'http://localhost/'
+            // which doesn't contain '/oferta/', so should return false
+            expect(isListingPage()).toBe(false);
+        });
+    });
+
+    describe('isSearchPage', () => {
+        it('should check window.location.href for search URL pattern', () => {
+            // isSearchPage calls isSearchUrl with window.location.href
+            // Since we can't easily mock window.location in jsdom, we verify:
+            // 1. The function exists and is callable
+            // 2. It uses isSearchUrl internally (covered by isSearchUrl tests)
+            expect(typeof isSearchPage).toBe('function');
+
+            // In jsdom, window.location.href is usually 'http://localhost/'
+            // which doesn't contain '/oferta/', so isSearchPage returns true
+            expect(isSearchPage()).toBe(true);
         });
     });
 });
