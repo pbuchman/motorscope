@@ -4,6 +4,26 @@
  * Tests the API client error handling, URL building, and request patterns.
  */
 
+import type {CarListing} from '@/types';
+
+// Mock fetch before imports
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
+// Create mock for getToken
+const mockGetToken = jest.fn();
+
+// Mock auth module
+jest.mock('../../auth/oauthClient', () => ({
+    getToken: (...args: unknown[]) => mockGetToken(...args),
+}));
+
+// Mock localServerStorage
+jest.mock('../../auth/localServerStorage', () => ({
+    getBackendServerUrl: jest.fn().mockResolvedValue('https://api.example.com'),
+}));
+
+// Import after mocks
 import {
     ApiError,
     getRemoteListings,
@@ -17,26 +37,6 @@ import {
     clearRemoteGeminiHistory,
     uploadImageFromUrl,
 } from '../client';
-import type {CarListing} from '@/types';
-
-// Mock auth module
-jest.mock('../../auth/oauthClient', () => ({
-    getToken: jest.fn(),
-}));
-
-// Mock localServerStorage
-jest.mock('../../auth/localServerStorage', () => ({
-    getBackendServerUrl: jest.fn().mockResolvedValue('https://api.example.com'),
-}));
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const {getToken} = require('../../auth/oauthClient');
-
-const mockGetToken = getToken as jest.MockedFunction<typeof import('../../auth/oauthClient').getToken>;
-
-// Mock fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
 
 describe('ApiError', () => {
     describe('constructor', () => {

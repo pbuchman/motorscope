@@ -31,6 +31,7 @@ Domain-specific rules are in `.github/instructions/*.instructions.md`.
 - No ESLint warnings.
 - No test runner warnings.
 - No unused imports, variables, deprecated APIs.
+- Always remove unused imports/exports as part of each change before considering a task complete.
 
 **If tooling reports it, you fix it.**
 
