@@ -122,7 +122,7 @@ describe('Extension Settings Service', () => {
 
             const settings = await getSettings();
 
-            expect(settings.checkFrequencyMinutes).toBeLessThanOrEqual(43200);
+            expect(settings.checkFrequencyMinutes).toBeLessThanOrEqual(MAX_FREQUENCY_MINUTES);
         });
 
         it('should use default frequency for NaN values', async () => {
