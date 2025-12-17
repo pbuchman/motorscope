@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MotorScope - Car Listing Tracker",
   "key": "{{MANIFEST_KEY}}",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Track car listings, monitor price changes, and extract vehicle data from online marketplaces",
   "permissions": [
     "storage",
