@@ -233,48 +233,4 @@ export const getMarketplaceForUrl = (url: string): MarketplaceConfig | null => {
     }
 };
 
-/**
- * Get a formatted list of example marketplaces for display
- *
- * @param maxExamples - Maximum number of examples to show
- * @returns Formatted string like "otomoto.pl, mobile.de"
- */
-export const getMarketplaceExamples = (maxExamples: number = 2): string => {
-    const enabled = getEnabledMarketplaces();
-    const examples = enabled.slice(0, maxExamples);
-
-    // Use the base domain (first in the domains array, without www)
-    return examples
-        .map(m => m.domains[0].replace('www.', ''))
-        .join(', ');
-};
-
-/**
- * Get marketplace names for display
- *
- * @param maxNames - Maximum number of names to show
- * @returns Formatted string like "OTOMOTO, mobile.de, and more"
- */
-export const getMarketplaceNames = (maxNames: number = 3): string => {
-    const enabled = getEnabledMarketplaces();
-
-    if (enabled.length <= maxNames) {
-        return enabled.map(m => m.name).join(', ');
-    }
-
-    const shown = enabled.slice(0, maxNames).map(m => m.name).join(', ');
-    const remaining = enabled.length - maxNames;
-    return `${shown}, and ${remaining} more`;
-};
-
-/**
- * Get the primary URL for a marketplace (for linking)
- *
- * @param marketplaceId - The marketplace ID
- * @returns The URL or null if not found
- */
-export const getMarketplaceUrl = (marketplaceId: string): string | null => {
-    const marketplace = SUPPORTED_MARKETPLACES.find(m => m.id === marketplaceId);
-    return marketplace?.url || null;
-};
 
