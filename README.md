@@ -284,5 +284,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+## 📚 Documentation Structure
+
+| Document | Purpose |
+|----------|---------|
+| **This README** | Complete project overview (functional + technical) |
+| [`terraform/DEPLOYMENT.md`](terraform/DEPLOYMENT.md) | Infrastructure deployment guide (single source of truth) |
+| [`extension/docs/architecture.md`](extension/docs/architecture.md) | Extension architecture details |
+| [`docs/auth-flow.md`](docs/auth-flow.md) | Backend authentication flow |
+
+> **Note:** Documentation is intentionally minimal. Each document has a single purpose. Do not duplicate content across documents — reference other files instead.
+
+---
+
 **Made with ❤️ for car enthusiasts**
 
