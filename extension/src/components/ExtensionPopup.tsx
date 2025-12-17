@@ -248,7 +248,7 @@ const ExtensionPopup: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full bg-white flex flex-col font-sans min-h-[500px]">
+        <div className="w-full h-full bg-white flex flex-col font-sans min-h-125">
             {/* Header */}
             <PopupHeader
                 isLoggedIn={isLoggedIn}

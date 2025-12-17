@@ -407,7 +407,7 @@ describe('fetchListingPage', () => {
                 {
                     result: {
                         title: 'Facebook Marketplace Item',
-                        html: '<html><body>Item content</body></html>',
+                        html: '<html lang="pl"><body>Item content</body></html>',
                         is404: false,
                         is410: false,
                         facebookLoginRequired: false,
@@ -442,7 +442,7 @@ describe('fetchListingPage', () => {
                 {
                     result: {
                         title: 'Facebook - Log In',
-                        html: '<html><body>Log into Facebook</body></html>',
+                        html: '<html lang="pl"><body>Log into Facebook</body></html>',
                         is404: false,
                         is410: false,
                         facebookLoginRequired: true,
