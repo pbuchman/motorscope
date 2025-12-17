@@ -25,13 +25,20 @@ on:
       - closed
     branches:
       - main
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.github/instructions/**'
 
 jobs:
   version-bump:
     name: Bump Extension Version
     runs-on: ubuntu-latest
     # Only run when PR is actually merged (not just closed)
-    if: github.event.pull_request.merged == true
+    # Skip if PR title indicates it's a version bump (prevents loops)
+    if: |
+      github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.title, 'chore: release')
 
     permissions:
       contents: write
@@ -46,6 +53,7 @@ jobs:
           # Use PAT to bypass branch protection; falls back to GITHUB_TOKEN if not set
           token: ${{ secrets.VERSION_BUMP_TOKEN || secrets.GITHUB_TOKEN }}
           ref: main
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -82,16 +90,19 @@ jobs:
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Commit and push version bump
+      - name: Commit, tag and push version bump
         run: |
           set -euo pipefail
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          VERSION="v${{ steps.bump.outputs.new_version }}"
+
           git add extension/manifest.template.json extension/package.json
-          git commit -m "chore: bump extension version to ${{ steps.bump.outputs.new_version }} [skip ci]"
-          git push origin main
+          git commit -m "chore: release ${VERSION}"
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          git push origin main --tags
 
   # =============================================================================
   # Build and Package with new version
