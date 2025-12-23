@@ -516,6 +516,116 @@ describe('Background Service Worker', () => {
     });
 
     // ==========================================================================
+    // Stale Sync Recovery
+    // ==========================================================================
+
+    describe('Stale Sync Recovery', () => {
+        it('should recover stale sync state on startup', async () => {
+            // Simulate interrupted sync state
+            mockStorageValue = createMockRefreshStatus({
+                isRefreshing: true,
+                currentIndex: 5,
+                totalCount: 10,
+                currentListingTitle: 'Test listing',
+                pendingItems: [
+                    {id: '1', title: 'Item 1', url: 'http://a.com', status: 'success'},
+                    {id: '2', title: 'Item 2', url: 'http://b.com', status: 'refreshing'},
+                    {id: '3', title: 'Item 3', url: 'http://c.com', status: 'pending'},
+                ],
+            });
+
+            triggerOnStartup();
+            await new Promise(r => setTimeout(r, 200));
+
+            // Should have reset isRefreshing to false
+            const recoveredCall = mockStorageSetCalls.find(
+                call => call.value?.isRefreshing === false && call.value?.pendingItems,
+            );
+            expect(recoveredCall).toBeDefined();
+
+            // The "refreshing" item should be reset to "pending"
+            const pendingItems = recoveredCall?.value?.pendingItems;
+            expect(pendingItems).toBeDefined();
+            const item2 = pendingItems?.find((i: any) => i.id === '2');
+            expect(item2?.status).toBe('pending');
+
+            // Should notify UI of state change
+            expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+                expect.objectContaining({type: 'REFRESH_STATUS_CHANGED'}),
+            );
+        });
+
+        it('should recover stale sync state on install', async () => {
+            // Simulate interrupted sync state (can happen on extension update)
+            mockStorageValue = createMockRefreshStatus({
+                isRefreshing: true,
+                pendingItems: [
+                    {id: '1', title: 'Item 1', url: 'http://a.com', status: 'refreshing'},
+                ],
+            });
+
+            triggerOnInstalled({reason: 'update'});
+            await new Promise(r => setTimeout(r, 200));
+
+            // Should have reset isRefreshing to false
+            const recoveredCall = mockStorageSetCalls.find(
+                call => call.value?.isRefreshing === false,
+            );
+            expect(recoveredCall).toBeDefined();
+        });
+
+        it('should not modify state when not refreshing', async () => {
+            mockStorageValue = createMockRefreshStatus({
+                isRefreshing: false,
+                pendingItems: [],
+            });
+
+            triggerOnStartup();
+            await new Promise(r => setTimeout(r, 200));
+
+            // When not already refreshing, the recovery function should not be invoked.
+            // Recovery specifically resets "refreshing" items to "pending".
+            // Since there are no "refreshing" items to reset, we verify no pendingItems
+            // were modified with status changes.
+            const storageCallsWithPendingItems = mockStorageSetCalls.filter(
+                call => call.value?.pendingItems && call.value.pendingItems.length > 0,
+            );
+            // Since initial state has empty pendingItems, no call should have pendingItems with items
+            expect(storageCallsWithPendingItems.length).toBe(0);
+        });
+
+        it('should preserve success/error status of already-processed items', async () => {
+            mockStorageValue = createMockRefreshStatus({
+                isRefreshing: true,
+                pendingItems: [
+                    {id: '1', title: 'Item 1', url: 'http://a.com', status: 'success'},
+                    {id: '2', title: 'Item 2', url: 'http://b.com', status: 'error'},
+                    {id: '3', title: 'Item 3', url: 'http://c.com', status: 'refreshing'},
+                    {id: '4', title: 'Item 4', url: 'http://d.com', status: 'pending'},
+                ],
+            });
+
+            triggerOnStartup();
+            await new Promise(r => setTimeout(r, 200));
+
+            const recoveredCall = mockStorageSetCalls.find(
+                call => call.value?.isRefreshing === false && call.value?.pendingItems,
+            );
+            const pendingItems = recoveredCall?.value?.pendingItems;
+
+            // Success and error should remain unchanged
+            expect(pendingItems?.find((i: any) => i.id === '1')?.status).toBe('success');
+            expect(pendingItems?.find((i: any) => i.id === '2')?.status).toBe('error');
+
+            // Refreshing should become pending
+            expect(pendingItems?.find((i: any) => i.id === '3')?.status).toBe('pending');
+
+            // Pending should remain pending
+            expect(pendingItems?.find((i: any) => i.id === '4')?.status).toBe('pending');
+        });
+    });
+
+    // ==========================================================================
     // Refresh Status Updates
     // ==========================================================================
 

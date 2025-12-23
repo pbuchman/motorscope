@@ -554,8 +554,56 @@ const initializeAlarm = async (): Promise<void> => {
     await scheduleAlarm(settings.checkFrequencyMinutes);
 };
 
+// ============ Stale Sync Recovery ============
+
+/**
+ * Recover from interrupted sync state on extension startup.
+ *
+ * When browser closes during sync:
+ * - isRefreshing remains true
+ * - Some items stuck as "refreshing"
+ * - Remaining items stuck as "pending"
+ *
+ * This function detects and fixes this stale state.
+ */
+const recoverStaleSyncState = async (): Promise<void> => {
+    const status = await getRefreshStatus();
+
+    if (!status.isRefreshing) {
+        return; // No recovery needed
+    }
+
+    console.log('[BG] Detected stale sync state, recovering...');
+
+    // Reset any items stuck in "refreshing" back to "pending"
+    const recoveredPendingItems = status.pendingItems.map(item =>
+        item.status === 'refreshing'
+            ? {...item, status: 'pending' as const}
+            : item,
+    );
+
+    // Count unfinished items for logging
+    const unfinishedCount = recoveredPendingItems.filter(
+        item => item.status === 'pending',
+    ).length;
+
+    await updateRefreshStatus({
+        isRefreshing: false,
+        currentListingTitle: null,
+        pendingItems: recoveredPendingItems,
+    });
+
+    console.log(`[BG] Sync state recovered. ${unfinishedCount} items remain pending.`);
+
+    // Notify UI that state has changed
+    chrome.runtime.sendMessage({type: 'REFRESH_STATUS_CHANGED'}).catch(() => {
+        // Ignore - UI might not be open
+    });
+};
+
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
+    await recoverStaleSyncState(); // Recover from any stale sync state first
     await initializeAlarm();
     await scheduleAuthCheck();
     await initializeAuth().catch(err => console.error('[BG] Auth init failed:', err));
@@ -566,6 +614,7 @@ chrome.runtime.onStartup.addListener(async () => {
     await initializeAlarm();
     await scheduleAuthCheck();
     await checkAndRefreshAuth().catch(err => console.error('[BG] Auth check failed:', err));
+    await recoverStaleSyncState(); // Recover from any stale sync state
 });
 
 // Handle alarms
