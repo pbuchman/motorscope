@@ -364,10 +364,10 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({listing, onClose
                                 <RefreshCw className="w-4 h-4"/>
                                 <span>{t('listing:tracking.lastChecked')}: {formatEuropeanDateTime(listing.lastSeenAt)}</span>
                             </div>
-                            {listing.status === ListingStatus.ENDED && listing.statusChangedAt && (
+                            {listing.status === ListingStatus.ENDED && (
                                 <div className="flex items-center gap-2 text-red-500">
                                     <XCircle className="w-4 h-4"/>
-                                    <span>{t('listing:tracking.endedAt')}: {formatEuropeanDateTime(listing.statusChangedAt)}</span>
+                                    <span>{t('listing:tracking.endedAt')}: {formatEuropeanDateTime(listing.statusChangedAt || listing.lastSeenAt)}</span>
                                 </div>
                             )}
                             <div className="flex items-center gap-2 text-slate-500">

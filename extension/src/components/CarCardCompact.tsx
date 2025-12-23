@@ -135,9 +135,9 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
                                         {formatEuropeanDateShort(listing.postedDate)}
                                     </span>
                                 )}
-                                {listing.statusChangedAt && listing.status === ListingStatus.ENDED && (
+                                {listing.status === ListingStatus.ENDED && (
                                     <span className="flex items-center gap-1 text-red-600">
-                                        → {formatEuropeanDateShort(listing.statusChangedAt)}
+                                        → {formatEuropeanDateShort(listing.statusChangedAt || listing.lastSeenAt)}
                                     </span>
                                 )}
                                 {v.productionYear && (

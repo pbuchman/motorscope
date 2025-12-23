@@ -225,11 +225,11 @@ const CarCard: React.FC<CarCardProps> = ({
                             {t('common:time.posted', {date: formatEuropeanDateTime(listing.postedDate)})}
                         </span>
                     )}
-                    {listing.statusChangedAt && listing.status === ListingStatus.ENDED && (
+                    {listing.status === ListingStatus.ENDED && (
                         <span
                             className="inline-flex items-center text-[10px] text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
                             <XCircle className="w-3 h-3 mr-1"/>
-                            {t('common:time.ended', {date: formatEuropeanDateTime(listing.statusChangedAt)})}
+                            {t('common:time.ended', {date: formatEuropeanDateTime(listing.statusChangedAt || listing.lastSeenAt)})}
                         </span>
                     )}
                     {vehicleData.vin && (

@@ -97,8 +97,10 @@ describe('CarCard', () => {
             const endedListing = createMockListing({status: ListingStatus.ENDED});
             render(<CarCard {...defaultProps} listing={endedListing}/>);
 
-            const statusBadge = screen.getByText(/ended/i);
-            expect(statusBadge).toHaveClass('text-red-900');
+            // The status badge (not the ended date badge)
+            const statusBadges = screen.getAllByText(/ended/i);
+            // First one is the status badge
+            expect(statusBadges[0]).toHaveClass('text-red-900');
         });
 
         it('shows final price label for ended listings', () => {
