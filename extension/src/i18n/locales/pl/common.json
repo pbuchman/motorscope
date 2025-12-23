@@ -38,7 +38,8 @@
   "time": {
     "trackedSince": "Śledzone od {{date}}",
     "lastChecked": "Ostatnio sprawdzone {{date}}",
-    "posted": "Dodane {{date}}"
+    "posted": "Dodane {{date}}",
+    "ended": "Zakończone {{date}}"
   },
   "filter": {
     "all": "Wszystkie",

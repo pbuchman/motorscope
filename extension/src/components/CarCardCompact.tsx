@@ -130,6 +130,16 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
 
                             {/* Vehicle details */}
                             <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                                {listing.postedDate && (
+                                    <span className="flex items-center gap-1 text-green-600">
+                                        {formatEuropeanDateShort(listing.postedDate)}
+                                    </span>
+                                )}
+                                {listing.statusChangedAt && listing.status === ListingStatus.ENDED && (
+                                    <span className="flex items-center gap-1 text-red-600">
+                                        → {formatEuropeanDateShort(listing.statusChangedAt)}
+                                    </span>
+                                )}
                                 {v.productionYear && (
                                     <span className="flex items-center gap-1">
                                         <Calendar className="w-3 h-3"/>

@@ -38,7 +38,8 @@
   "time": {
     "trackedSince": "Tracked since {{date}}",
     "lastChecked": "Last checked {{date}}",
-    "posted": "Posted {{date}}"
+    "posted": "Posted {{date}}",
+    "ended": "Ended {{date}}"
   },
   "filter": {
     "all": "All",

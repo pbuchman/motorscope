@@ -650,6 +650,7 @@ router.delete('/listings/:id', authMiddleware, async (req: Request, res: Respons
 interface SettingsResponse {
     geminiApiKey: string;
     checkFrequencyMinutes: number;
+    endedListingGracePeriodDays: number;
     geminiStats: UserSettings['geminiStats'];
     language: 'en' | 'pl';
     lastRefreshTime: string | null;
@@ -667,6 +668,7 @@ function formatSettingsResponse(settings: UserSettings): SettingsResponse {
     return {
         geminiApiKey: settings.geminiApiKey,
         checkFrequencyMinutes: settings.checkFrequencyMinutes,
+        endedListingGracePeriodDays: settings.endedListingGracePeriodDays ?? 3,
         geminiStats: settings.geminiStats,
         language: settings.language ?? 'en',
         lastRefreshTime: settings.lastRefreshTime ?? null,
@@ -685,6 +687,7 @@ function extractSettingsUpdate(body: Record<string, unknown>): Partial<UserSetti
     const fields = [
         'geminiApiKey',
         'checkFrequencyMinutes',
+        'endedListingGracePeriodDays',
         'geminiStats',
         'language',
         'lastRefreshTime',
