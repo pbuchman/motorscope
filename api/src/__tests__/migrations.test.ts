@@ -100,8 +100,8 @@ describe('Migration Runner', () => {
     describe('runMigrations', () => {
         it('skips already applied migrations without touching locks', async () => {
             const migrationsData = getCollectionData('_migrations');
-            migrationsData.set('20241209_status_sold_expired_to_ended', {
-                id: '20241209_status_sold_expired_to_ended',
+            migrationsData.set('20251209_status_sold_expired_to_ended', {
+                id: '20251209_status_sold_expired_to_ended',
                 description: 'Migrate listing statuses from sold/expired to ENDED',
                 appliedAt: mockTimestamp.now(),
                 durationMs: 120,
@@ -109,14 +109,14 @@ describe('Migration Runner', () => {
 
             const {runMigrations} = await importMigrationRunner();
             await expect(runMigrations()).resolves.not.toThrow();
-            expect(migrationsData.has('20241209_status_sold_expired_to_ended_lock')).toBe(false);
+            expect(migrationsData.has('20251209_status_sold_expired_to_ended_lock')).toBe(false);
         });
 
         it('runs pending migrations exactly once and records completion', async () => {
             const {runMigrations, getMigrationStatus} = await importMigrationRunner();
             await runMigrations();
             const status = await getMigrationStatus();
-            const migration = status.find((entry) => entry.id === '20241209_status_sold_expired_to_ended');
+            const migration = status.find((entry) => entry.id === '20251209_status_sold_expired_to_ended');
 
             expect(migration).toBeDefined();
             expect(migration?.applied).toBe(true);
@@ -131,7 +131,7 @@ describe('Migration Runner', () => {
             expect(status).toEqual(
                 expect.arrayContaining([
                     expect.objectContaining({
-                        id: '20241209_status_sold_expired_to_ended',
+                        id: '20251209_status_sold_expired_to_ended',
                         description: expect.any(String),
                         applied: expect.any(Boolean),
                     }),
@@ -141,7 +141,7 @@ describe('Migration Runner', () => {
     });
 });
 
-describe('Status normalization migration (20241209)', () => {
+describe('Status normalization migration (20251209)', () => {
     const createTestFirestore = (docs: Record<string, { status: string }>): Firestore => {
         type StatusDoc = { status: string } & Record<string, unknown>;
         const collectionDocs = new Map<string, StatusDoc>(
