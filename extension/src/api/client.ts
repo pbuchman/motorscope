@@ -149,6 +149,7 @@ export const checkBackendHealth = async (): Promise<{ status: string; firestore:
 export interface RemoteSettings {
     geminiApiKey: string;
     checkFrequencyMinutes: number;
+    endedListingGracePeriodDays?: number; // Days to keep refreshing ENDED listings (1-30, default 3)
     geminiStats: GeminiStats;
     // User preferences
     language?: 'en' | 'pl';

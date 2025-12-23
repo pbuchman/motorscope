@@ -113,6 +113,7 @@ export interface CarListing {
 
     // Status & Tracking
     status: ListingStatus;
+    statusChangedAt: string | null; // When status changed to ENDED (ISO string)
     postedDate: string | null; // When the listing was posted (ISO string)
     firstSeenAt: string; // When we first saw this listing (ISO string)
     lastSeenAt: string; // When we last checked this listing (ISO string)
@@ -160,6 +161,7 @@ export interface DashboardPreferences {
 export interface ExtensionSettings {
     geminiApiKey: string;
     checkFrequencyMinutes: number;
+    endedListingGracePeriodDays: number; // Days to keep refreshing ENDED listings (1-30, default 3)
     dashboardPreferences?: DashboardPreferences;
 }
 

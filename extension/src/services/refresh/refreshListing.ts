@@ -31,6 +31,11 @@ export interface RefreshResult {
  * - Always records a new price point on each refresh (full audit trail)
  * - Deduplication (one per day) happens on UI side based on user's timezone
  * - priceChanged flag indicates if price changed from previous day
+ * - ENDED listings do NOT record new price points (price is frozen at end)
+ *
+ * Status change tracking:
+ * - When status changes to ENDED, statusChangedAt is recorded
+ * - This timestamp is used to determine grace period for refresh exclusion
  *
  * @param listing The listing to refresh
  * @param forceBackgroundTab If true, skip fetch() and use background tab directly
@@ -45,11 +50,14 @@ export async function refreshSingleListing(
 
         // Check for expired listing (404/410)
         if (fetchResult.expired) {
+            const now = new Date().toISOString();
             return {
                 listing: {
                     ...listing,
                     status: ListingStatus.ENDED,
-                    lastSeenAt: new Date().toISOString(),
+                    // Record when status changed to ENDED (if not already set)
+                    statusChangedAt: listing.statusChangedAt ?? now,
+                    lastSeenAt: now,
                     lastRefreshStatus: 'success',
                     lastRefreshError: undefined,
                 },
@@ -94,34 +102,49 @@ export async function refreshSingleListing(
         );
 
         const updatedListing = {...listing};
+        const now = new Date().toISOString();
+
+        // Check if status is changing to ENDED
+        const statusChangingToEnded = listing.status === ListingStatus.ACTIVE && result.status === ListingStatus.ENDED;
+
+        // If listing is already ENDED, don't record new price points
+        const isAlreadyEnded = listing.status === ListingStatus.ENDED;
 
         // Determine the price to record (use result price if valid, otherwise keep current)
         const priceToRecord = result.price > 0 ? result.price : listing.currentPrice;
         const currencyToUse = result.currency || listing.currency;
 
         // Check if price changed from previous day (for UI notification purposes)
-        const priceChanged = hasPriceChangedFromPreviousDay(
+        const priceChanged = !isAlreadyEnded && hasPriceChangedFromPreviousDay(
             listing.priceHistory,
             priceToRecord,
         );
 
-        // Always add new price point to history (deduplication happens on UI)
-        updatedListing.priceHistory = updateDailyPriceHistory(
-            listing.priceHistory,
-            priceToRecord,
-            currencyToUse,
-        );
+        // Only add new price point if listing is not already ENDED
+        // ENDED listings have frozen price history
+        if (!isAlreadyEnded) {
+            updatedListing.priceHistory = updateDailyPriceHistory(
+                listing.priceHistory,
+                priceToRecord,
+                currencyToUse,
+            );
+        }
 
-        // Update current price if we got a valid new price
-        if (result.price > 0) {
+        // Update current price if we got a valid new price (and not already ended)
+        if (result.price > 0 && !isAlreadyEnded) {
             updatedListing.currentPrice = result.price;
         }
 
         updatedListing.currency = currencyToUse;
         updatedListing.status = result.status;
-        updatedListing.lastSeenAt = new Date().toISOString();
+        updatedListing.lastSeenAt = now;
         updatedListing.lastRefreshStatus = 'success';
         updatedListing.lastRefreshError = undefined;
+
+        // Record statusChangedAt when transitioning to ENDED
+        if (statusChangingToEnded) {
+            updatedListing.statusChangedAt = now;
+        }
 
         return {
             listing: updatedListing,

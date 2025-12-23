@@ -78,6 +78,7 @@ describe('imageUpload utility', () => {
             location: {city: null, region: null, postalCode: null, countryCode: 'PL'},
             seller: {type: null, name: null, phone: null, isCompany: null},
             status: ListingStatus.ACTIVE,
+            statusChangedAt: null,
             postedDate: null,
             firstSeenAt: '2024-01-01T00:00:00.000Z',
             lastSeenAt: '2024-01-01T00:00:00.000Z',

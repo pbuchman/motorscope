@@ -22,6 +22,13 @@
     "rangeMin": "10 sec",
     "rangeMax": "1 month"
   },
+  "endedGracePeriod": {
+    "title": "Ended Listing Grace Period",
+    "description": "ENDED listings are refreshed for this many days to verify the status. After this period, they are excluded from auto-refresh.",
+    "days": "days",
+    "rangeMin": "1 day",
+    "rangeMax": "30 days"
+  },
   "backendServer": {
     "title": "Backend Server",
     "description": "Server where your data is stored",

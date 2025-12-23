@@ -12,8 +12,15 @@ export type {RefreshResult} from './refreshListing';
 export {fetchListingPage, FetchError} from './fetcher';
 export type {FetchPageResult} from './fetcher';
 
-// Sorting utilities
-export {sortListingsByRefreshPriority} from './sorter';
+// Sorting and filtering utilities
+export {
+    sortListingsByRefreshPriority,
+    shouldExcludeEndedListing,
+    filterListingsForRefresh,
+    DEFAULT_ENDED_GRACE_PERIOD_DAYS,
+    MIN_ENDED_GRACE_PERIOD_DAYS,
+    MAX_ENDED_GRACE_PERIOD_DAYS,
+} from './sorter';
 
 // Price history utilities
 export {

@@ -1,7 +1,12 @@
 // Background service worker for MotorScope (ES Module)
 import {CarListing, RefreshedListingInfo, RefreshPendingItem, RefreshStatus} from '@/types';
 import {extensionStorage} from '@/services/extensionStorage';
-import {refreshSingleListing, sortListingsByRefreshPriority} from '@/services/refresh';
+import {
+    DEFAULT_ENDED_GRACE_PERIOD_DAYS,
+    filterListingsForRefresh,
+    refreshSingleListing,
+    sortListingsByRefreshPriority,
+} from '@/services/refresh';
 import {STORAGE_KEYS} from '@/services/settings/storageKeys';
 import {DEFAULT_REFRESH_STATUS} from '@/services/settings/refreshStatus';
 import {getToken, initializeAuth, isTokenExpired, trySilentLogin} from '@/auth/oauthClient';
@@ -31,12 +36,17 @@ const setInSessionStorage = async <T>(key: string, value: T): Promise<void> => {
 interface Settings {
     checkFrequencyMinutes: number;
     geminiApiKey: string;
+    endedListingGracePeriodDays: number;
 }
 
 const getSettings = async (): Promise<Settings> => {
     const token = await getToken();
     if (!token) {
-        return {checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: ''};
+        return {
+            checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES,
+            geminiApiKey: '',
+            endedListingGracePeriodDays: DEFAULT_ENDED_GRACE_PERIOD_DAYS,
+        };
     }
 
     const backendUrl = await getBackendServerUrl();
@@ -52,17 +62,26 @@ const getSettings = async (): Promise<Settings> => {
 
         if (!response.ok) {
             console.warn(`[BG] Settings fetch failed with status: ${response.status}`);
-            return {checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: ''};
+            return {
+                checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES,
+                geminiApiKey: '',
+                endedListingGracePeriodDays: DEFAULT_ENDED_GRACE_PERIOD_DAYS,
+            };
         }
 
         const settings = await response.json();
         return {
             checkFrequencyMinutes: settings.checkFrequencyMinutes || DEFAULT_FREQUENCY_MINUTES,
             geminiApiKey: settings.geminiApiKey || '',
+            endedListingGracePeriodDays: settings.endedListingGracePeriodDays ?? DEFAULT_ENDED_GRACE_PERIOD_DAYS,
         };
     } catch (error) {
         console.warn('[BG] Failed to fetch settings from API:', error);
-        return {checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES, geminiApiKey: ''};
+        return {
+            checkFrequencyMinutes: DEFAULT_FREQUENCY_MINUTES,
+            geminiApiKey: '',
+            endedListingGracePeriodDays: DEFAULT_ENDED_GRACE_PERIOD_DAYS,
+        };
     }
 };
 
@@ -249,10 +268,22 @@ const runBackgroundRefresh = async (): Promise<void> => {
     }
 
     // Filter out archived listings - they should only be refreshed manually
-    const activeListings = allListings.filter(l => !l.isArchived);
+    const nonArchivedListings = allListings.filter(l => !l.isArchived);
+
+    if (nonArchivedListings.length === 0) {
+        console.log('All listings are archived, skipping background refresh');
+        await scheduleAlarm(settings.checkFrequencyMinutes);
+        return;
+    }
+
+    // Filter out ENDED listings past the grace period
+    const activeListings = filterListingsForRefresh(
+        nonArchivedListings,
+        settings.endedListingGracePeriodDays,
+    );
 
     if (activeListings.length === 0) {
-        console.log('All listings are archived, skipping background refresh');
+        console.log('All listings are archived or ended past grace period, skipping background refresh');
         await scheduleAlarm(settings.checkFrequencyMinutes);
         return;
     }

@@ -73,18 +73,20 @@ const CarCardCompact: React.FC<CarCardCompactProps> = ({
     };
 
     // Last refresh failed
+    // Last refresh failed
     const lastRefreshFailed = listing.lastRefreshStatus === 'error';
 
     // Final price display (for ended listings)
     const isInactive = listing.status === ListingStatus.ENDED;
 
     return (
-        <div className={`bg-white rounded-lg border ${
-            listing.isArchived ? 'border-gray-200 opacity-75' :
-                justRefreshed ? 'border-green-400 ring-2 ring-green-200' :
-                    lastRefreshFailed ? 'border-red-200' :
-                        'border-gray-200'
-        } hover:shadow-md transition-all duration-300 relative overflow-hidden`}>
+        <div className={`rounded-lg border relative overflow-hidden ${
+            listing.isArchived ? 'bg-white border-gray-200 opacity-75' :
+                isInactive ? 'bg-red-50/50 border-red-200' :
+                    justRefreshed ? 'bg-white border-green-400 ring-2 ring-green-200' :
+                        lastRefreshFailed ? 'bg-white border-red-200' :
+                            'bg-white border-gray-200'
+        } hover:shadow-md transition-all duration-300`}>
             {/* Loading Overlay */}
             {isRefreshing && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">

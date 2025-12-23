@@ -54,7 +54,8 @@
   "tracking": {
     "posted": "Dodano",
     "firstSeen": "Pierwszy raz widziano",
-    "lastChecked": "Ostatnio sprawdzono"
+    "lastChecked": "Ostatnio sprawdzono",
+    "endedAt": "Zakończono"
   }
 }
 

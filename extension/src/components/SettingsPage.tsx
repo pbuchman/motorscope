@@ -523,6 +523,39 @@ const SettingsPage: React.FC = () => {
                         <p className="text-xs text-slate-400 mt-2">{t('settings:refreshFrequency.descriptionAlt')}</p>
                     </div>
 
+                    {/* Ended Listing Grace Period */}
+                    <div>
+                        <label
+                            className="block text-sm font-medium text-slate-700 mb-1">{t('settings:endedGracePeriod.title')}</label>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={30}
+                                    value={formSettings.endedListingGracePeriodDays}
+                                    onChange={(e) => {
+                                        const days = parseInt(e.target.value, 10);
+                                        setFormSettings(prev => ({
+                                            ...prev,
+                                            endedListingGracePeriodDays: days,
+                                        }));
+                                    }}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                />
+                                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                                    <span>{t('settings:endedGracePeriod.rangeMin')}</span>
+                                    <span>{t('settings:endedGracePeriod.rangeMax')}</span>
+                                </div>
+                            </div>
+                            <span
+                                className="w-20 text-sm font-medium text-slate-700 text-center bg-slate-100 px-2 py-1 rounded">
+                                {formSettings.endedListingGracePeriodDays} {t('settings:endedGracePeriod.days')}
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2">{t('settings:endedGracePeriod.description')}</p>
+                    </div>
+
                     {/* Save Button */}
                     <button
                         type="submit"

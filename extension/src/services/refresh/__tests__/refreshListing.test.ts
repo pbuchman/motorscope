@@ -125,6 +125,7 @@ describe('Refresh Listing Service', () => {
             isCompany: true,
         },
         status: ListingStatus.ACTIVE,
+        statusChangedAt: null,
         postedDate: '2024-11-01T10:00:00Z',
         firstSeenAt: '2024-11-05T10:00:00Z',
         lastSeenAt: '2024-12-05T10:00:00Z',

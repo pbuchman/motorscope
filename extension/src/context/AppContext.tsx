@@ -150,6 +150,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                 setSettings({
                     geminiApiKey: remoteSettings.geminiApiKey || '',
                     checkFrequencyMinutes: remoteSettings.checkFrequencyMinutes || DEFAULT_SETTINGS.checkFrequencyMinutes,
+                    endedListingGracePeriodDays: remoteSettings.endedListingGracePeriodDays ?? DEFAULT_SETTINGS.endedListingGracePeriodDays,
                     dashboardPreferences: remoteSettings.dashboardFilters ? {
                         filters: remoteSettings.dashboardFilters,
                         sortBy: remoteSettings.dashboardSort || 'newest',
@@ -304,6 +305,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({children}) => {
             await patchRemoteSettings({
                 geminiApiKey: newSettings.geminiApiKey,
                 checkFrequencyMinutes: newSettings.checkFrequencyMinutes,
+                endedListingGracePeriodDays: newSettings.endedListingGracePeriodDays,
             });
 
             setSettings(newSettings);

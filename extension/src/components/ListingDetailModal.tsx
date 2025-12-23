@@ -31,6 +31,7 @@ import {
     Tag,
     User,
     X,
+    XCircle,
 } from 'lucide-react';
 import {formatEuropeanDateTime} from '@/utils/formatters';
 import {getMarketplaceDisplayName} from '@/config/marketplaces';
@@ -363,6 +364,12 @@ const ListingDetailModal: React.FC<ListingDetailModalProps> = ({listing, onClose
                                 <RefreshCw className="w-4 h-4"/>
                                 <span>{t('listing:tracking.lastChecked')}: {formatEuropeanDateTime(listing.lastSeenAt)}</span>
                             </div>
+                            {listing.status === ListingStatus.ENDED && listing.statusChangedAt && (
+                                <div className="flex items-center gap-2 text-red-500">
+                                    <XCircle className="w-4 h-4"/>
+                                    <span>{t('listing:tracking.endedAt')}: {formatEuropeanDateTime(listing.statusChangedAt)}</span>
+                                </div>
+                            )}
                             <div className="flex items-center gap-2 text-slate-500">
                                 <Globe className="w-4 h-4"/>
                                 <span>{t('listing:info.listingId')}: {listing.source.listingId || t('listing:values.na')}</span>

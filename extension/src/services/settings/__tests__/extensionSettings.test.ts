@@ -7,12 +7,12 @@
 import {DEFAULT_SETTINGS, getSettings, saveSettings, getGeminiApiKey, saveGeminiApiKey} from '../extensionSettings';
 
 // Mock the API client
-jest.mock('../../../api/client', () => ({
+jest.mock('@/api/client', () => ({
     getRemoteSettings: jest.fn(),
     patchRemoteSettings: jest.fn(),
 }));
 
-import {getRemoteSettings, patchRemoteSettings} from '../../../api/client';
+import {getRemoteSettings, patchRemoteSettings} from '@/api/client';
 
 const mockGetRemoteSettings = getRemoteSettings as jest.MockedFunction<typeof getRemoteSettings>;
 const mockPatchRemoteSettings = patchRemoteSettings as jest.MockedFunction<typeof patchRemoteSettings>;
@@ -176,11 +176,13 @@ describe('Extension Settings Service', () => {
             await saveSettings({
                 geminiApiKey: 'new-key',
                 checkFrequencyMinutes: 30,
+                endedListingGracePeriodDays: 3,
             });
 
             expect(mockPatchRemoteSettings).toHaveBeenCalledWith({
                 geminiApiKey: 'new-key',
                 checkFrequencyMinutes: 30,
+                endedListingGracePeriodDays: 3,
             });
         });
 
@@ -199,6 +201,7 @@ describe('Extension Settings Service', () => {
             await saveSettings({
                 geminiApiKey: 'key',
                 checkFrequencyMinutes: 0.001, // Very low
+                endedListingGracePeriodDays: 3,
             });
 
             expect(mockPatchRemoteSettings).toHaveBeenCalledWith(
@@ -217,6 +220,7 @@ describe('Extension Settings Service', () => {
             await expect(saveSettings({
                 geminiApiKey: 'key',
                 checkFrequencyMinutes: 60,
+                endedListingGracePeriodDays: 3,
             })).rejects.toThrow('Save failed');
 
             expect(consoleWarnSpy).toHaveBeenCalledWith(

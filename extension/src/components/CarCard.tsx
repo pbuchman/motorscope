@@ -113,9 +113,15 @@ const CarCard: React.FC<CarCardProps> = ({
         <div
             className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all duration-300 relative ${
                 listing.isArchived ? 'border-amber-200 opacity-80' :
-                    justRefreshed ? 'border-green-400 ring-2 ring-green-200' :
-                        'border-gray-200'
+                    isInactive ? 'border-red-200' :
+                        justRefreshed ? 'border-green-400 ring-2 ring-green-200' :
+                            'border-gray-200'
             }`}>
+            {/* ENDED overlay - subtle red tint */}
+            {isInactive && !listing.isArchived && (
+                <div className="absolute inset-0 bg-red-50/40 pointer-events-none z-[1]"/>
+            )}
+
             {/* Archived badge */}
             {listing.isArchived && (
                 <div

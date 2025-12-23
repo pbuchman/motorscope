@@ -144,3 +144,44 @@ With one price point per day:
 - `extension/src/components/PriceChart.tsx` - Chart display component
 - `extension/src/types.ts` - PricePoint type definition
 
+## ENDED Listing Behavior
+
+When a listing status changes to ENDED (sold, expired, or removed):
+
+### Price History Freeze
+
+- **No new price points are recorded** after a listing becomes ENDED
+- The price history is frozen at the moment of status change
+- This preserves the accurate final price before the listing ended
+
+### Visual Styling
+
+- ENDED listings are displayed with a subtle pastel red overlay/tint
+- The "Ended at" date is shown in the listing details modal
+- Status badge shows "ENDED" in red
+
+### Grace Period for Auto-Refresh
+
+- ENDED listings continue to be refreshed for a **configurable grace period** (default: 3 days)
+- This allows verification that the ENDED status is correct (not a temporary error)
+- After the grace period, listings are excluded from automatic background refresh
+- Users can still manually refresh ENDED listings
+
+### Grace Period Configuration
+
+The grace period is configurable in Settings:
+- **Range**: 1-30 days
+- **Default**: 3 days
+- **Purpose**: Margin to ensure ENDED status wasn't mistakenly detected
+
+### Status Change Tracking
+
+- `statusChangedAt` field records when a listing first became ENDED
+- Used to calculate grace period expiration
+- For existing ENDED listings without this field, `lastSeenAt` is used as fallback
+
+### Migration
+
+Existing ENDED listings without `statusChangedAt` are backfilled via database migration:
+- Migration ID: `20251223_backfill_status_changed_at`
+- Uses `lastSeenAt` as the baseline for grace period calculations

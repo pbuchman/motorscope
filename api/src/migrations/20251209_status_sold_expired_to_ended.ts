@@ -13,7 +13,7 @@ import type {Migration} from './types.js';
 const BATCH_SIZE = 500;
 
 const migration: Migration = {
-    id: '20241209_status_sold_expired_to_ended',
+    id: '20251209_status_sold_expired_to_ended',
     description: 'Migrate listing statuses from sold/expired to ENDED',
     up: async (db: Firestore): Promise<void> => {
         const listingsCollection = db.collection(FIRESTORE_LISTINGS_COLLECTION);

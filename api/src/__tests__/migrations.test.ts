@@ -5,7 +5,7 @@
  */
 
 import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals';
-import statusSoldExpiredToEnded from '../migrations/20241209_status_sold_expired_to_ended.js';
+import statusSoldExpiredToEnded from '../migrations/20251209_status_sold_expired_to_ended.js';
 import type {Firestore} from '@google-cloud/firestore';
 
 // Shared in-memory store for mocked Firestore collections

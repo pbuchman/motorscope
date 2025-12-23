@@ -128,9 +128,13 @@ export interface CarListing {
 
     // Status & Tracking
     status: ListingStatus;
+    statusChangedAt: string | null; // When status changed to ENDED (ISO string)
     postedDate: string | null; // When the listing was posted (ISO string)
     firstSeenAt: string; // When we first saw this listing (ISO string)
     lastSeenAt: string; // When we last checked this listing (ISO string)
+
+    // Archive status - archived listings are excluded from auto-refresh
+    isArchived?: boolean;
 
     // Refresh status tracking
     lastRefreshStatus?: 'success' | 'error' | 'pending';
@@ -206,6 +210,9 @@ export interface UserSettings {
 
     /** Check frequency in minutes */
     checkFrequencyMinutes: number;
+
+    /** Days to keep refreshing ENDED listings before exclusion (1-30, default 3) */
+    endedListingGracePeriodDays?: number;
 
     /** Gemini API usage statistics */
     geminiStats: GeminiStats;

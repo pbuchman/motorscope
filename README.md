@@ -65,6 +65,7 @@ Tracking car prices manually is tedious. MotorScope automates the process:
 - **🏷️ Source Tags**: See which marketplace each listing comes from at a glance
 - **📉 Price Comparison**: Compact view shows total price change since first tracked
 - **🗄️ Archive System**: Archive listings to exclude them from auto-refresh while keeping the data
+- **🔴 ENDED Listing Handling**: ENDED listings (sold/expired) are visually highlighted, price history is frozen, and they're excluded from auto-refresh after a configurable grace period (1-30 days)
 
 ### Data Management
 - **💾 Cloud Sync**: Data synchronized with backend (when logged in with Google)

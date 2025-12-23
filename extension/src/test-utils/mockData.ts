@@ -27,6 +27,7 @@ export function createMockListing(overrides: Partial<CarListing> = {}): CarListi
         negotiable: false,
         postedDate: '2024-01-15T10:00:00Z',
         status: ListingStatus.ACTIVE,
+        statusChangedAt: null,
         isArchived: false,
         vehicle: {
             vin: 'WBAXXXXXXXX123456',
@@ -103,6 +104,7 @@ export function createMockSettings(overrides: Partial<ExtensionSettings> = {}): 
     return {
         geminiApiKey: 'test-gemini-api-key',
         checkFrequencyMinutes: 60,
+        endedListingGracePeriodDays: 3,
         dashboardPreferences: {
             viewMode: 'grid',
             sortBy: 'newest',

@@ -54,7 +54,8 @@
   "tracking": {
     "posted": "Posted",
     "firstSeen": "First seen",
-    "lastChecked": "Last checked"
+    "lastChecked": "Last checked",
+    "endedAt": "Ended"
   }
 }
 

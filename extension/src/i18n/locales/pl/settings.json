@@ -22,6 +22,13 @@
     "rangeMin": "10 sek",
     "rangeMax": "1 miesiąc"
   },
+  "endedGracePeriod": {
+    "title": "Okres karencji zakończonych ogłoszeń",
+    "description": "Zakończone ogłoszenia są odświeżane przez tyle dni w celu weryfikacji statusu. Po tym okresie są wyłączane z automatycznego odświeżania.",
+    "days": "dni",
+    "rangeMin": "1 dzień",
+    "rangeMax": "30 dni"
+  },
   "backendServer": {
     "title": "Serwer backendu",
     "description": "Serwer, na którym przechowywane są Twoje dane",

@@ -2,7 +2,11 @@
  * Tests for Listing Sorter
  */
 
-import {sortListingsByRefreshPriority} from '../sorter';
+import {
+    filterListingsForRefresh,
+    shouldExcludeEndedListing,
+    sortListingsByRefreshPriority,
+} from '../sorter';
 import {CarListing, ListingStatus} from '@/types';
 
 // Helper to create a minimal listing for testing
@@ -77,6 +81,7 @@ const createListing = (overrides: Partial<CarListing> = {}): CarListing => ({
         isCompany: null,
     },
     status: ListingStatus.ACTIVE,
+    statusChangedAt: null,
     postedDate: null,
     firstSeenAt: new Date().toISOString(),
     lastSeenAt: undefined,
@@ -200,5 +205,114 @@ describe('Listing Sorter', () => {
             expect(result).toHaveLength(2);
         });
     });
-});
 
+    describe('shouldExcludeEndedListing', () => {
+        it('should return false for ACTIVE listings', () => {
+            const listing = createListing({status: ListingStatus.ACTIVE});
+            expect(shouldExcludeEndedListing(listing)).toBe(false);
+        });
+
+        it('should return false for ENDED listing within grace period', () => {
+            // statusChangedAt 1 day ago, grace period 3 days
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const listing = createListing({
+                status: ListingStatus.ENDED,
+                statusChangedAt: oneDayAgo,
+            });
+            expect(shouldExcludeEndedListing(listing, 3)).toBe(false);
+        });
+
+        it('should return true for ENDED listing past grace period', () => {
+            // statusChangedAt 5 days ago, grace period 3 days
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const listing = createListing({
+                status: ListingStatus.ENDED,
+                statusChangedAt: fiveDaysAgo,
+            });
+            expect(shouldExcludeEndedListing(listing, 3)).toBe(true);
+        });
+
+        it('should use lastSeenAt as fallback when statusChangedAt is missing', () => {
+            // lastSeenAt 5 days ago, no statusChangedAt, grace period 3 days
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const listing = createListing({
+                status: ListingStatus.ENDED,
+                statusChangedAt: null,
+                lastSeenAt: fiveDaysAgo,
+            });
+            expect(shouldExcludeEndedListing(listing, 3)).toBe(true);
+        });
+
+        it('should use default grace period when not specified', () => {
+            // statusChangedAt 5 days ago, default grace period is 3 days
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const listing = createListing({
+                status: ListingStatus.ENDED,
+                statusChangedAt: fiveDaysAgo,
+            });
+            // Default is 3 days, so 5 days ago should be excluded
+            expect(shouldExcludeEndedListing(listing)).toBe(true);
+        });
+
+        it('should respect custom grace period', () => {
+            // statusChangedAt 5 days ago, grace period 7 days
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const listing = createListing({
+                status: ListingStatus.ENDED,
+                statusChangedAt: fiveDaysAgo,
+            });
+            // 7 day grace period, so 5 days ago should NOT be excluded
+            expect(shouldExcludeEndedListing(listing, 7)).toBe(false);
+        });
+    });
+
+    describe('filterListingsForRefresh', () => {
+        it('should keep all ACTIVE listings', () => {
+            const listings = [
+                createListing({id: 'active-1', status: ListingStatus.ACTIVE}),
+                createListing({id: 'active-2', status: ListingStatus.ACTIVE}),
+            ];
+            const result = filterListingsForRefresh(listings);
+            expect(result).toHaveLength(2);
+        });
+
+        it('should filter out ENDED listings past grace period', () => {
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+            const listings = [
+                createListing({id: 'active', status: ListingStatus.ACTIVE}),
+                createListing({
+                    id: 'ended-old',
+                    status: ListingStatus.ENDED,
+                    statusChangedAt: fiveDaysAgo,
+                }),
+                createListing({
+                    id: 'ended-recent',
+                    status: ListingStatus.ENDED,
+                    statusChangedAt: oneDayAgo,
+                }),
+            ];
+
+            const result = filterListingsForRefresh(listings, 3);
+            expect(result).toHaveLength(2);
+            expect(result.map(l => l.id)).toContain('active');
+            expect(result.map(l => l.id)).toContain('ended-recent');
+            expect(result.map(l => l.id)).not.toContain('ended-old');
+        });
+
+        it('should use default grace period when not specified', () => {
+            const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+            const listings = [
+                createListing({
+                    id: 'ended-old',
+                    status: ListingStatus.ENDED,
+                    statusChangedAt: fiveDaysAgo,
+                }),
+            ];
+
+            const result = filterListingsForRefresh(listings);
+            expect(result).toHaveLength(0);
+        });
+    });
+});

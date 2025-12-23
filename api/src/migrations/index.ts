@@ -11,8 +11,10 @@
  */
 
 import type {Migration} from './types.js';
-import statusSoldExpiredToEnded from './20241209_status_sold_expired_to_ended.js';
+import statusSoldExpiredToEnded from './20251209_status_sold_expired_to_ended.js';
+import backfillStatusChangedAt from './20251223_backfill_status_changed_at.js';
 
 export const migrations: Migration[] = [
     statusSoldExpiredToEnded,
+    backfillStatusChangedAt,
 ];
